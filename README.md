@@ -137,3 +137,14 @@ It runs every instance in both arms, scores them as they finish
 (`score2.sh`) and stops on a web tool, a kit fault, or team-solve ending
 worse than its own direct attempt (`stop-rule2.sh`). Results in `~/out2`;
 `collect.py` writes the per-instance logs and traces.
+
+On several machines: `prep-main.sh <k> <n> <usage> <cap>` on machine k of n
+writes its shard, then `start2.sh 6 ~/kit/shard.txt` on each, and from the
+machine that watches them
+
+    BENCH_VMS="vm-1 vm-2 vm-3 vm-4" BENCH_PROJECT=<project> BENCH_ZONE=<zone> bash kit/watch4.sh
+
+which stops all of them on the first alert on any. `rerun-prep.sh` and
+`rerun-one.sh` are how the 126 instances and the two killed runs were run
+again; `webaudit.py` checks a machine's reruns for a web tool offered or
+called.
