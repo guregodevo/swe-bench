@@ -1,0 +1,239 @@
+diff --git a/sklearn/feature_selection/_base.py b/sklearn/feature_selection/_base.py
+index da2185eac..5eed79c18 100644
+--- a/sklearn/feature_selection/_base.py
++++ b/sklearn/feature_selection/_base.py
+@@ -13,8 +13,8 @@ from scipy.sparse import issparse, csc_matrix
+ from ..base import TransformerMixin
+ from ..cross_decomposition._pls import _PLS
+ from ..utils import (
++    _safe_indexing,
+     check_array,
+-    safe_mask,
+     safe_sqr,
+ )
+ from ..utils._tags import _safe_tags
+@@ -30,6 +30,11 @@ class SelectorMixin(TransformerMixin, metaclass=ABCMeta):
+     `_get_support_mask`.
+     """
+ 
++    # Selectors only select a subset of the input columns and do not modify the
++    # values. The output wrapper uses this flag to restore the input dtypes of
++    # the selected columns when pandas output is requested.
++    _sklearn_preserves_dtypes = True
++
+     def get_support(self, indices=False):
+         """
+         Get a mask, or integer index, of the features selected.
+@@ -101,7 +106,7 @@ class SelectorMixin(TransformerMixin, metaclass=ABCMeta):
+             return np.empty(0, dtype=X.dtype).reshape((X.shape[0], 0))
+         if len(mask) != X.shape[1]:
+             raise ValueError("X has a different shape than during fitting.")
+-        return X[:, safe_mask(X, mask)]
++        return _safe_indexing(X, mask, axis=1)
+ 
+     def inverse_transform(self, X):
+         """Reverse the transformation operation.
+diff --git a/sklearn/feature_selection/tests/test_feature_select.py b/sklearn/feature_selection/tests/test_feature_select.py
+index df8d2134e..c8504d627 100644
+--- a/sklearn/feature_selection/tests/test_feature_select.py
++++ b/sklearn/feature_selection/tests/test_feature_select.py
+@@ -15,7 +15,7 @@ from sklearn.utils._testing import assert_array_almost_equal
+ from sklearn.utils._testing import ignore_warnings
+ from sklearn.utils import safe_mask
+ 
+-from sklearn.datasets import make_classification, make_regression
++from sklearn.datasets import load_iris, make_classification, make_regression
+ from sklearn.feature_selection import (
+     chi2,
+     f_classif,
+@@ -450,6 +450,52 @@ def test_select_kbest_all():
+     assert_array_equal(X_r, X_r2)
+ 
+ 
++def test_select_kbest_preserves_input_dtypes_with_pandas_output():
++    """SelectKBest preserves the input dtypes of selected columns.
++
++    Non-regression test for the pandas output path losing extension and small
++    float dtypes.
++    """
++    pd = pytest.importorskip("pandas")
++
++    X, y = load_iris(return_X_y=True, as_frame=True)
++    X = X.astype(
++        {
++            "petal width (cm)": np.float16,
++            "petal length (cm)": np.float16,
++        }
++    )
++    X["cat"] = y.astype("category")
++
++    selector = SelectKBest(chi2, k=2).set_output(transform="pandas")
++    X_out = selector.fit_transform(X, y)
++
++    expected = X.loc[:, selector.get_support()]
++    pd.testing.assert_series_equal(X_out.dtypes, expected.dtypes)
++    assert isinstance(X_out["cat"].dtype, pd.CategoricalDtype)
++    assert X_out["petal length (cm)"].dtype == np.float16
++
++
++def test_selector_does_not_cast_modified_values_back():
++    """A selector does not cast a value-modifying transformer's output back.
++
++    The dtype restoration in the pandas output wrapper is gated on the
++    selector capability flag; a transformer without it keeps its own dtypes.
++    """
++    pd = pytest.importorskip("pandas")
++    from sklearn.preprocessing import StandardScaler
++
++    X = pd.DataFrame(
++        {
++            "a": np.array([1, 2, 3], dtype=np.int64),
++            "b": np.array([4, 5, 6], dtype=np.int64),
++        }
++    )
++    scaler = StandardScaler().set_output(transform="pandas")
++    X_out = scaler.fit_transform(X)
++    assert X_out["a"].dtype == np.float64
++
++
+ @pytest.mark.parametrize("dtype_in", [np.float32, np.float64])
+ def test_select_kbest_zero(dtype_in):
+     # Test whether k=0 correctly returns no features.
+diff --git a/sklearn/utils/_set_output.py b/sklearn/utils/_set_output.py
+index 335773c6a..99f8dc9dc 100644
+--- a/sklearn/utils/_set_output.py
++++ b/sklearn/utils/_set_output.py
+@@ -12,6 +12,7 @@ def _wrap_in_pandas_container(
+     *,
+     columns,
+     index=None,
++    dtypes=None,
+ ):
+     """Create a Pandas DataFrame.
+ 
+@@ -36,6 +37,11 @@ def _wrap_in_pandas_container(
+     index : array-like, default=None
+         Index for data.
+ 
++    dtypes : dict, default=None
++        Mapping from column name to dtype to apply to the resulting DataFrame.
++        Only columns present in `data_to_wrap` are cast; other keys are ignored.
++        If `None`, the dtypes are left unchanged.
++
+     Returns
+     -------
+     dataframe : DataFrame
+@@ -57,9 +63,15 @@ def _wrap_in_pandas_container(
+             data_to_wrap.columns = columns
+         if index is not None:
+             data_to_wrap.index = index
+-        return data_to_wrap
++    else:
++        data_to_wrap = pd.DataFrame(data_to_wrap, index=index, columns=columns)
+ 
+-    return pd.DataFrame(data_to_wrap, index=index, columns=columns)
++    if dtypes is not None:
++        dtypes = {col: dtype for col, dtype in dtypes.items() if col in data_to_wrap}
++        if dtypes:
++            data_to_wrap = data_to_wrap.astype(dtypes)
++
++    return data_to_wrap
+ 
+ 
+ def _get_output_config(method, estimator=None):
+@@ -127,10 +139,21 @@ def _wrap_data_with_container(method, data_to_wrap, original_input, estimator):
+         return data_to_wrap
+ 
+     # dense_config == "pandas"
++    dtypes = None
++    if (
++        getattr(estimator, "_sklearn_preserves_dtypes", False)
++        and hasattr(original_input, "dtypes")
++        and hasattr(estimator, "get_support")
++    ):
++        support = estimator.get_support(indices=False)
++        if support.shape[0] == original_input.shape[1]:
++            dtypes = original_input.dtypes[support].to_dict()
++
+     return _wrap_in_pandas_container(
+         data_to_wrap=data_to_wrap,
+         index=getattr(original_input, "index", None),
+         columns=estimator.get_feature_names_out,
++        dtypes=dtypes,
+     )
+ 
+ 
+diff --git a/sklearn/utils/tests/test_set_output.py b/sklearn/utils/tests/test_set_output.py
+index ac73ca094..5f3eeef31 100644
+--- a/sklearn/utils/tests/test_set_output.py
++++ b/sklearn/utils/tests/test_set_output.py
+@@ -239,6 +239,69 @@ def test__wrap_in_pandas_container_column_errors():
+     assert_array_equal(X_wrapped.columns, range(X_np.shape[1]))
+ 
+ 
++def test__wrap_in_pandas_container_dtypes():
++    """Check that `dtypes` restores the dtype of matching output columns."""
++    pd = pytest.importorskip("pandas")
++
++    X = pd.DataFrame({"a": np.array([1, 2], dtype=np.float16)})
++    X_wrapped = _wrap_in_pandas_container(
++        X.to_numpy(), columns=["a"], dtypes={"a": np.float16}
++    )
++    assert X_wrapped["a"].dtype == np.float16
++
++    # Keys that are not output columns are ignored.
++    X_wrapped = _wrap_in_pandas_container(
++        X.to_numpy(), columns=["a"], dtypes={"a": np.float16, "b": np.float32}
++    )
++    assert X_wrapped["a"].dtype == np.float16
++    assert list(X_wrapped.columns) == ["a"]
++
++
++def test_selector_preserves_dtypes_with_pandas_output():
++    """Only estimators declaring dtype preservation restore the input dtypes."""
++
++    class Selector(_SetOutputMixin):
++        _sklearn_preserves_dtypes = True
++
++        def fit(self, X, y=None):
++            self.n_features_in_ = X.shape[1]
++            return self
++
++        def transform(self, X):
++            return np.asarray(X)[:, :1]
++
++        def get_support(self, indices=False):
++            support = np.array([True] + [False] * (self.n_features_in_ - 1))
++            return np.flatnonzero(support) if indices else support
++
++        def get_feature_names_out(self, input_features=None):
++            return np.asarray(["a"], dtype=object)
++
++    class ValueChangingTransformer(Selector):
++        _sklearn_preserves_dtypes = False
++
++        def transform(self, X):
++            return np.asarray(X)[:, :1].astype(np.float64)
++
++    pd = pytest.importorskip("pandas")
++    X = pd.DataFrame(
++        {
++            "a": np.array([1, 2], dtype=np.float16),
++            "b": np.array([3, 4], dtype=np.float16),
++        }
++    )
++
++    est = Selector().set_output(transform="pandas")
++    assert est.fit(X).transform(X)["a"].dtype == np.float16
++
++    est = ValueChangingTransformer().set_output(transform="pandas")
++    assert est.fit(X).transform(X)["a"].dtype == np.float64
++
++    # Default output is unchanged.
++    est = Selector().set_output(transform="default")
++    assert isinstance(est.fit(X).transform(X), np.ndarray)
++
++
+ def test_set_output_mro():
+     """Check that multi-inheritance resolves to the correct class method.
+ 

@@ -1,0 +1,27 @@
+diff --git a/tmp_pt/pyproject.toml b/tmp_pt/pyproject.toml
+new file mode 100644
+index 00000000..bc53488c
+--- /dev/null
++++ b/tmp_pt/pyproject.toml
+@@ -0,0 +1,5 @@
++[tool.pylint.MASTER]
++ignore-paths = [
++  # Auto generated
++  "^src/gen/.*$",
++]
+diff --git a/tmp_pt/src/gen/about.py b/tmp_pt/src/gen/about.py
+new file mode 100644
+index 00000000..46a05cd9
+--- /dev/null
++++ b/tmp_pt/src/gen/about.py
+@@ -0,0 +1,2 @@
++def f():
++    x=1
+diff --git a/tmp_pt/src/region_selection.py b/tmp_pt/src/region_selection.py
+new file mode 100644
+index 00000000..f38f7c6a
+--- /dev/null
++++ b/tmp_pt/src/region_selection.py
+@@ -0,0 +1,2 @@
++def g():
++    y=1

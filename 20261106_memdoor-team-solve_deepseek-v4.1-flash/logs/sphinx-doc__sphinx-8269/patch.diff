@@ -1,0 +1,71 @@
+diff --git a/CHANGES b/CHANGES
+index 22876d43b..aa5c61507 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -38,6 +38,7 @@ Bugs fixed
+ * #8142: napoleon: Potential of regex denial of service in google style docs
+ * #8169: LaTeX: pxjahyper loaded even when latex_engine is not platex
+ * #8175: intersphinx: Potential of regex denial of service by broken inventory
++* #8187: linkcheck: Report HTTP errors when ``linkcheck_anchors`` is True
+ * #8093: The highlight warning has wrong location in some builders (LaTeX,
+   singlehtml and so on)
+ * #8239: Failed to refer a token in productionlist if it is indented
+diff --git a/sphinx/builders/linkcheck.py b/sphinx/builders/linkcheck.py
+index 9b54afc7c..1083e82ec 100644
+--- a/sphinx/builders/linkcheck.py
++++ b/sphinx/builders/linkcheck.py
+@@ -166,6 +166,7 @@ class CheckExternalLinksBuilder(Builder):
+                     # Read the whole document and see if #anchor exists
+                     response = requests.get(req_url, stream=True, config=self.app.config,
+                                             auth=auth_info, **kwargs)
++                    response.raise_for_status()
+                     found = check_anchor(response, unquote(anchor))
+ 
+                     if not found:
+diff --git a/tests/test_build_linkcheck.py b/tests/test_build_linkcheck.py
+index 7d85f10c5..c4d1fb188 100644
+--- a/tests/test_build_linkcheck.py
++++ b/tests/test_build_linkcheck.py
+@@ -12,6 +12,7 @@ import json
+ import re
+ from unittest import mock
+ import pytest
++import requests
+ 
+ 
+ @pytest.mark.sphinx('linkcheck', testroot='linkcheck', freshenv=True)
+@@ -129,6 +130,34 @@ def test_auth(app, status, warning):
+                 assert not c_kwargs['auth']
+ 
+ 
++@pytest.mark.sphinx('linkcheck', testroot='linkcheck', freshenv=True)
++def test_anchors_http_error(app, status, warning):
++    def request(url, *args, **kwargs):
++        response = mock.MagicMock()
++        response.url = url
++        response.history = []
++        if url == 'https://www.google.com/':
++            response.status_code = 404
++            error = requests.HTTPError(
++                "404 Client Error: Not Found for url: %s" % url)
++            error.response = response
++            response.raise_for_status.side_effect = error
++        else:
++            response.status_code = 200
++            response.raise_for_status.return_value = None
++            response.iter_content.return_value = [b'<html></html>']
++        return response
++
++    mock_req = mock.MagicMock(side_effect=request)
++    with mock.patch.multiple('requests', get=mock_req, head=mock_req):
++        app.builder.build_all()
++
++    content = (app.outdir / 'output.txt').read_text()
++    assert "https://www.google.com/#top" in content
++    assert "404 Client Error: Not Found" in content
++    assert "Anchor 'top' not found" not in content
++
++
+ @pytest.mark.sphinx(
+     'linkcheck', testroot='linkcheck', freshenv=True,
+     confoverrides={'linkcheck_request_headers': {

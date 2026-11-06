@@ -1,0 +1,137 @@
+diff --git a/django/db/models/expressions.py b/django/db/models/expressions.py
+index d913658291..08295a186d 100644
+--- a/django/db/models/expressions.py
++++ b/django/db/models/expressions.py
+@@ -422,6 +422,25 @@ class Expression(BaseExpression, Combinable):
+     pass
+ 
+ 
++def _resolve_combined_type(connector, lhs_type, rhs_type):
++    combinable_types = (
++        fields.DateField, fields.DateTimeField, fields.DurationField,
++        fields.TimeField,
++    )
++    if connector in {Combinable.ADD, Combinable.SUB}:
++        if issubclass(lhs_type, fields.DurationField) and issubclass(rhs_type, combinable_types):
++            return rhs_type
++        if issubclass(lhs_type, combinable_types) and issubclass(rhs_type, fields.DurationField):
++            return lhs_type
++        if (
++            connector == Combinable.SUB and
++            issubclass(lhs_type, (fields.DateField, fields.DateTimeField, fields.TimeField)) and
++            lhs_type is rhs_type
++        ):
++            return fields.DurationField
++    return None
++
++
+ class CombinedExpression(SQLiteNumericMixin, Expression):
+ 
+     def __init__(self, lhs, connector, rhs, output_field=None):
+@@ -442,6 +461,17 @@ class CombinedExpression(SQLiteNumericMixin, Expression):
+     def set_source_expressions(self, exprs):
+         self.lhs, self.rhs = exprs
+ 
++    def _resolve_output_field(self):
++        lhs = self.lhs._output_field_or_none
++        rhs = self.rhs._output_field_or_none
++        if lhs is not None and rhs is not None:
++            combined_type = _resolve_combined_type(
++                self.connector, lhs.__class__, rhs.__class__,
++            )
++            if combined_type is not None:
++                return combined_type()
++        return super()._resolve_output_field()
++
+     def as_sql(self, compiler, connection):
+         try:
+             lhs_type = self.lhs.output_field.get_internal_type()
+diff --git a/docs/ref/models/expressions.txt b/docs/ref/models/expressions.txt
+index 252966bb6c..2e22226479 100644
+--- a/docs/ref/models/expressions.txt
++++ b/docs/ref/models/expressions.txt
+@@ -223,6 +223,10 @@ directly support ``output_field`` you will need to wrap the expression with
+         expires=ExpressionWrapper(
+             F('active_at') + F('duration'), output_field=DateTimeField()))
+ 
++Temporal subtraction such as ``F('end') - F('start')`` doesn't require
++``ExpressionWrapper`` as its output field is inferred as
++:class:`~django.db.models.DurationField`.
++
+ When referencing relational fields such as ``ForeignKey``, ``F()`` returns the
+ primary key value rather than a model instance::
+ 
+diff --git a/docs/releases/3.2.txt b/docs/releases/3.2.txt
+index 9f1d785934..d8df6b3264 100644
+--- a/docs/releases/3.2.txt
++++ b/docs/releases/3.2.txt
+@@ -223,6 +223,10 @@ Models
+ * The new :attr:`.UniqueConstraint.opclasses` attribute allows setting
+   PostgreSQL operator classes.
+ 
++* The output field of temporal subtraction expressions (e.g. ``F('end') -
++  F('start')``) is now inferred, so :class:`~django.db.models.ExpressionWrapper`
++  is no longer required.
++
+ Requests and Responses
+ ~~~~~~~~~~~~~~~~~~~~~~
+ 
+diff --git a/tests/expressions/tests.py b/tests/expressions/tests.py
+index 72f95f0194..0eaafac89c 100644
+--- a/tests/expressions/tests.py
++++ b/tests/expressions/tests.py
+@@ -1529,6 +1529,16 @@ class FTimeDeltaTests(TestCase):
+         ).filter(difference=datetime.timedelta())
+         self.assertTrue(queryset.exists())
+ 
++    @skipUnlessDBFeature('supports_temporal_subtraction')
++    def test_date_subtraction_without_expression_wrapper(self):
++        queryset = Experiment.objects.annotate(
++            completion_duration=F('completed') - F('assigned'),
++        )
++        at_least_5_days = {
++            e.name for e in queryset.filter(completion_duration__gte=datetime.timedelta(days=5))
++        }
++        self.assertEqual(at_least_5_days, {'e3', 'e4', 'e5'})
++
+     @skipUnlessDBFeature('supports_temporal_subtraction')
+     def test_date_case_subtraction(self):
+         queryset = Experiment.objects.annotate(
+@@ -1583,6 +1593,17 @@ class FTimeDeltaTests(TestCase):
+         ).filter(difference=datetime.timedelta())
+         self.assertTrue(queryset.exists())
+ 
++    @skipUnlessDBFeature('supports_temporal_subtraction')
++    def test_time_subtraction_without_expression_wrapper(self):
++        Time.objects.create(time=datetime.time(12, 30, 15, 2345))
++        queryset = Time.objects.annotate(
++            difference=F('time') - Value(datetime.time(11, 15, 0), output_field=TimeField()),
++        )
++        self.assertEqual(
++            queryset.get().difference,
++            datetime.timedelta(hours=1, minutes=15, seconds=15, microseconds=2345)
++        )
++
+     @skipUnlessDBFeature('supports_temporal_subtraction')
+     def test_datetime_subtraction(self):
+         under_estimate = [
+@@ -1617,6 +1638,19 @@ class FTimeDeltaTests(TestCase):
+         ).filter(difference=datetime.timedelta())
+         self.assertTrue(queryset.exists())
+ 
++    @skipUnlessDBFeature('supports_temporal_subtraction')
++    def test_datetime_subtraction_without_expression_wrapper(self):
++        under_estimate = [
++            e.name for e in Experiment.objects.filter(estimated_time__gt=F('end') - F('start'))
++        ]
++        self.assertEqual(under_estimate, ['e2'])
++
++        queryset = Experiment.objects.annotate(
++            delta=F('end') - F('start') + Value(datetime.timedelta(), output_field=DurationField()),
++        )
++        for e in queryset:
++            self.assertEqual(e.delta, e.end - e.start)
++
+     @skipUnlessDBFeature('supports_temporal_subtraction')
+     def test_datetime_subtraction_microseconds(self):
+         delta = datetime.timedelta(microseconds=8999999999999999)

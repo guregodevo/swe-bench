@@ -1,0 +1,64 @@
+diff --git a/django/forms/models.py b/django/forms/models.py
+index 3fa04b821f..c2c378e3b7 100644
+--- a/django/forms/models.py
++++ b/django/forms/models.py
+@@ -1178,7 +1178,14 @@ class BaseInlineFormSet(BaseModelFormSet):
+             else:
+                 to_field = self.instance._meta.pk
+             if to_field.has_default():
+-                setattr(self.instance, to_field.attname, None)
++                if to_field is self.instance._meta.pk:
++                    setattr(self.instance, to_field.attname, None)
++                else:
++                    # A default on a non-primary key field used as the
++                    # to_field isn't regenerated on save, so don't clear it on
++                    # the parent instance. Ignore it for the inline's initial
++                    # value instead.
++                    kwargs["initial"] = None
+ 
+         form.fields[name] = InlineForeignKeyField(self.instance, **kwargs)
+ 
+@@ -1350,7 +1357,7 @@ class InlineForeignKeyField(Field):
+         self.parent_instance = parent_instance
+         self.pk_field = pk_field
+         self.to_field = to_field
+-        if self.parent_instance is not None:
++        if self.parent_instance is not None and "initial" not in kwargs:
+             if self.to_field:
+                 kwargs["initial"] = getattr(self.parent_instance, self.to_field)
+             else:
+diff --git a/tests/model_formsets/test_uuid.py b/tests/model_formsets/test_uuid.py
+index 2097bde82b..a3589307c9 100644
+--- a/tests/model_formsets/test_uuid.py
++++ b/tests/model_formsets/test_uuid.py
+@@ -91,3 +91,30 @@ class InlineFormsetTests(TestCase):
+         )
+         formset = FormSet()
+         self.assertIsNone(formset.forms[0].fields["parent"].initial)
++
++    def test_inlineformset_factory_does_not_null_alternate_key_default(self):
++        """
++        A default on a non-primary key field used as the to_field of an inline
++        isn't regenerated on save, so it must not be cleared on the parent
++        instance when adding a new object.
++        """
++        FormSet = inlineformset_factory(
++            ParentWithUUIDAlternateKey, ChildRelatedViaAK, fields="__all__"
++        )
++        parent = ParentWithUUIDAlternateKey(name="Parent")
++        uuid = parent.uuid
++        formset = FormSet(
++            {
++                "childrelatedviaak_set-TOTAL_FORMS": 1,
++                "childrelatedviaak_set-INITIAL_FORMS": 0,
++                "childrelatedviaak_set-MAX_NUM_FORMS": "",
++                "childrelatedviaak_set-0-name": "Child",
++            },
++            instance=parent,
++        )
++        self.assertTrue(formset.is_valid())
++        self.assertEqual(parent.uuid, uuid)
++        parent.save()
++        formset.save()
++        self.assertEqual(parent.uuid, uuid)
++        self.assertEqual(parent.childrelatedviaak_set.get().parent, parent)

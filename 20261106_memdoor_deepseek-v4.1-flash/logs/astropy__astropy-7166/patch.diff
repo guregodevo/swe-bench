@@ -1,0 +1,73 @@
+diff --git a/astropy/utils/misc.py b/astropy/utils/misc.py
+index de3fb01d1..519df71b6 100644
+--- a/astropy/utils/misc.py
++++ b/astropy/utils/misc.py
+@@ -518,6 +518,20 @@ class InheritDocstrings(type):
+         ...         pass
+         >>> B.wiggle.__doc__
+         u'Wiggle the thingamajig'
++
++    This also works for properties::
++
++        >>> class A(metaclass=InheritDocstrings):
++        ...     @property
++        ...     def size(self):
++        ...         "The size of the thingamajig"
++        ...         return 1
++        >>> class B(A):
++        ...     @property
++        ...     def size(self):
++        ...         return 2
++        >>> B.size.__doc__
++        u'The size of the thingamajig'
+     """
+ 
+     def __init__(cls, name, bases, dct):
+@@ -528,12 +542,13 @@ class InheritDocstrings(type):
+                 not key.startswith('_'))
+ 
+         for key, val in dct.items():
+-            if (inspect.isfunction(val) and
+-                is_public_member(key) and
+-                val.__doc__ is None):
++            if ((inspect.isfunction(val) or inspect.isdatadescriptor(val)) and
++                    is_public_member(key) and
++                    val.__doc__ is None):
+                 for base in cls.__mro__[1:]:
+                     super_method = getattr(base, key, None)
+-                    if super_method is not None:
++                    if (super_method is not None and
++                            super_method.__doc__ is not None):
+                         val.__doc__ = super_method.__doc__
+                         break
+ 
+diff --git a/astropy/utils/tests/test_misc.py b/astropy/utils/tests/test_misc.py
+index 4f632e8d1..75c5e6ffe 100644
+--- a/astropy/utils/tests/test_misc.py
++++ b/astropy/utils/tests/test_misc.py
+@@ -80,14 +80,25 @@ def test_inherit_docstrings():
+             "FOO"
+             pass
+ 
++        @property
++        def prop(self):
++            "PROPERTY"
++            return 1
++
+     class Subclass(Base):
+         def __call__(self, *args):
+             pass
+ 
++        @property
++        def prop(self):
++            return 2
++
+     if Base.__call__.__doc__ is not None:
+         # TODO: Maybe if __doc__ is None this test should be skipped instead?
+         assert Subclass.__call__.__doc__ == "FOO"
+ 
++    assert Subclass.prop.__doc__ == "PROPERTY"
++
+ 
+ def test_set_locale():
+     # First, test if the required locales are available

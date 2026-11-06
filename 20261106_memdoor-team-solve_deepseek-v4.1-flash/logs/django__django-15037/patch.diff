@@ -1,0 +1,68 @@
+diff --git a/django/core/management/commands/inspectdb.py b/django/core/management/commands/inspectdb.py
+index f9b4bfb477..2eb0d9b2fa 100644
+--- a/django/core/management/commands/inspectdb.py
++++ b/django/core/management/commands/inspectdb.py
+@@ -128,6 +128,8 @@ class Command(BaseCommand):
+                             field_type = '%s(%s' % (rel_type, rel_to)
+                         else:
+                             field_type = "%s('%s'" % (rel_type, rel_to)
++                        if relations[column_name][0] != 'id':
++                            extra_params['to_field'] = relations[column_name][0]
+                     else:
+                         # Calling `get_field_type` to get the field type string and any
+                         # additional parameters and notes.
+diff --git a/docs/releases/4.1.txt b/docs/releases/4.1.txt
+index a8223b7ef8..a459e98369 100644
+--- a/docs/releases/4.1.txt
++++ b/docs/releases/4.1.txt
+@@ -171,6 +171,9 @@ Management Commands
+ * :option:`makemigrations --no-input` now logs default answers and reasons why
+   migrations cannot be created.
+ 
++* :djadmin:`inspectdb` now adds ``to_field`` to generated foreign keys that
++  reference a non-primary-key column.
++
+ Migrations
+ ~~~~~~~~~~
+ 
+diff --git a/tests/inspectdb/models.py b/tests/inspectdb/models.py
+index 4d2c224da9..d3cf03b413 100644
+--- a/tests/inspectdb/models.py
++++ b/tests/inspectdb/models.py
+@@ -21,6 +21,14 @@ class PeopleMoreData(models.Model):
+     license = models.CharField(max_length=255)
+ 
+ 
++class UniqueField(models.Model):
++    name = models.CharField(max_length=255, unique=True)
++
++
++class ForeignKeyToField(models.Model):
++    unique_field = models.ForeignKey(UniqueField, models.CASCADE, to_field='name')
++
++
+ class DigitsInColumnName(models.Model):
+     all_digits = models.CharField(max_length=11, db_column='123')
+     leading_digit = models.CharField(max_length=11, db_column='4extra')
+diff --git a/tests/inspectdb/tests.py b/tests/inspectdb/tests.py
+index 8be1681106..9174ba223a 100644
+--- a/tests/inspectdb/tests.py
++++ b/tests/inspectdb/tests.py
+@@ -221,6 +221,17 @@ class InspectDBTestCase(TestCase):
+         self.assertNotIn('    45extra = models.%s' % char_field_type, output, msg=error_message)
+         self.assertIn('number_45extra = models.%s' % char_field_type, output)
+ 
++    @skipUnlessDBFeature('can_introspect_foreign_keys')
++    def test_foreign_key_to_field(self):
++        out = StringIO()
++        call_command('inspectdb', 'inspectdb_foreignkeytofield', stdout=out)
++        output = out.getvalue()
++        self.assertIn(
++            "unique_field = models.ForeignKey('InspectdbUniquefield', models.DO_NOTHING, "
++            "to_field='name')",
++            output,
++        )
++
+     def test_special_column_name_introspection(self):
+         """
+         Introspection of column names containing special characters,

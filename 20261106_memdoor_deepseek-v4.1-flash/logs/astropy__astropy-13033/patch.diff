@@ -1,0 +1,77 @@
+diff --git a/astropy/timeseries/core.py b/astropy/timeseries/core.py
+index c279f35f8..8ae9acb83 100644
+--- a/astropy/timeseries/core.py
++++ b/astropy/timeseries/core.py
+@@ -76,9 +76,16 @@ class BaseTimeSeries(QTable):
+ 
+             elif self.colnames[:len(required_columns)] != required_columns:
+ 
+-                raise ValueError("{} object is invalid - expected '{}' "
+-                                 "as the first column{} but found '{}'"
+-                                 .format(self.__class__.__name__, required_columns[0], plural, self.colnames[0]))
++                missing = [col for col in required_columns
++                           if col not in self.colnames]
++                if missing:
++                    raise ValueError("{} object is invalid - missing required "
++                                     "column{}: {}"
++                                     .format(self.__class__.__name__, plural, missing))
++                else:
++                    raise ValueError("{} object is invalid - expected '{}' "
++                                     "as the first column{} but found '{}'"
++                                     .format(self.__class__.__name__, required_columns[0], plural, self.colnames[0]))
+ 
+             if (self._required_columns_relax
+                     and self._required_columns == self.colnames[:len(self._required_columns)]):
+diff --git a/astropy/timeseries/tests/test_sampled.py b/astropy/timeseries/tests/test_sampled.py
+index bcc06d929..36738e780 100644
+--- a/astropy/timeseries/tests/test_sampled.py
++++ b/astropy/timeseries/tests/test_sampled.py
+@@ -377,23 +377,32 @@ def test_required_columns():
+ 
+     with pytest.raises(ValueError) as exc:
+         ts.copy().keep_columns(['a', 'b'])
+-    assert exc.value.args[0] == ("TimeSeries object is invalid - expected "
+-                                 "'time' as the first column but found 'a'")
++    assert exc.value.args[0] == ("TimeSeries object is invalid - missing "
++                                 "required column: ['time']")
+ 
+     with pytest.raises(ValueError) as exc:
+         ts.copy().remove_column('time')
+-    assert exc.value.args[0] == ("TimeSeries object is invalid - expected "
+-                                 "'time' as the first column but found 'a'")
++    assert exc.value.args[0] == ("TimeSeries object is invalid - missing "
++                                 "required column: ['time']")
+ 
+     with pytest.raises(ValueError) as exc:
+         ts.copy().remove_columns(['time', 'a'])
+-    assert exc.value.args[0] == ("TimeSeries object is invalid - expected "
+-                                 "'time' as the first column but found 'b'")
++    assert exc.value.args[0] == ("TimeSeries object is invalid - missing "
++                                 "required column: ['time']")
+ 
+     with pytest.raises(ValueError) as exc:
+         ts.copy().rename_column('time', 'banana')
+-    assert exc.value.args[0] == ("TimeSeries object is invalid - expected "
+-                                 "'time' as the first column but found 'banana'")
++    assert exc.value.args[0] == ("TimeSeries object is invalid - missing "
++                                 "required column: ['time']")
++
++    # Check that the error message is also informative when there are
++    # additional required columns.
++    ts2 = ts.copy()
++    ts2._required_columns = ['time', 'a']
++    with pytest.raises(ValueError) as exc:
++        ts2.remove_column('a')
++    assert exc.value.args[0] == ("TimeSeries object is invalid - missing "
++                                 "required columns: ['a']")
+ 
+ 
+ @pytest.mark.parametrize('cls', [BoxLeastSquares, LombScargle])
+diff --git a/docs/changes/timeseries/13033.bugfix.rst b/docs/changes/timeseries/13033.bugfix.rst
+new file mode 100644
+index 000000000..1dcdf26e0
+--- /dev/null
++++ b/docs/changes/timeseries/13033.bugfix.rst
+@@ -0,0 +1,2 @@
++Improved the error message when a required column is missing from a
++``TimeSeries`` or ``BinnedTimeSeries`` object.

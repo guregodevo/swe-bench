@@ -1,0 +1,88 @@
+diff --git a/django/db/models/fields/__init__.py b/django/db/models/fields/__init__.py
+index 28374272f4..1f54c26a3d 100755
+--- a/django/db/models/fields/__init__.py
++++ b/django/db/models/fields/__init__.py
+@@ -516,17 +516,26 @@ class Field(RegisterLookupMixin):
+     def __eq__(self, other):
+         # Needed for @total_ordering
+         if isinstance(other, Field):
+-            return self.creation_counter == other.creation_counter
++            return (
++                self.creation_counter == other.creation_counter and
++                getattr(self, 'model', None) == getattr(other, 'model', None)
++            )
+         return NotImplemented
+ 
+     def __lt__(self, other):
+         # This is needed because bisect does not take a comparison function.
+         if isinstance(other, Field):
+-            return self.creation_counter < other.creation_counter
++            return (self.creation_counter, self._model_label()) < (
++                other.creation_counter, other._model_label()
++            )
+         return NotImplemented
+ 
+     def __hash__(self):
+-        return hash(self.creation_counter)
++        return hash((self.creation_counter, getattr(self, 'model', None)))
++
++    def _model_label(self):
++        model = getattr(self, 'model', None)
++        return model._meta.label_lower if model is not None else ''
+ 
+     def __deepcopy__(self, memodict):
+         # We don't have to deepcopy very much here, since most things are not
+diff --git a/tests/model_fields/models.py b/tests/model_fields/models.py
+index a11eb0ba44..3d4c07e9dc 100755
+--- a/tests/model_fields/models.py
++++ b/tests/model_fields/models.py
+@@ -437,3 +437,18 @@ class UUIDChild(PrimaryKeyUUIDModel):
+ 
+ class UUIDGrandchild(UUIDChild):
+     pass
++
++
++class AbstractFieldModel(models.Model):
++    field = models.IntegerField()
++
++    class Meta:
++        abstract = True
++
++
++class ConcreteFieldModelA(AbstractFieldModel):
++    pass
++
++
++class ConcreteFieldModelB(AbstractFieldModel):
++    pass
+diff --git a/tests/model_fields/tests.py b/tests/model_fields/tests.py
+index b97c99d42d..8269924d70 100755
+--- a/tests/model_fields/tests.py
++++ b/tests/model_fields/tests.py
+@@ -7,8 +7,9 @@ from django.test import SimpleTestCase, TestCase
+ from django.utils.functional import lazy
+ 
+ from .models import (
+-    Bar, Choiceful, Foo, RenamedField, VerboseNameField, Whiz, WhizDelayed,
+-    WhizIter, WhizIterEmpty,
++    Bar, Choiceful, ConcreteFieldModelA, ConcreteFieldModelB, Foo,
++    RenamedField, VerboseNameField, Whiz, WhizDelayed, WhizIter,
++    WhizIterEmpty,
+ )
+ 
+ 
+@@ -90,6 +91,14 @@ class BasicFieldTests(SimpleTestCase):
+         self.assertIsNotNone(f1)
+         self.assertNotIn(f2, (None, 1, ''))
+ 
++    def test_field_equality(self):
++        field_a = ConcreteFieldModelA._meta.get_field('field')
++        field_b = ConcreteFieldModelB._meta.get_field('field')
++        self.assertNotEqual(field_a, field_b)
++        self.assertNotEqual(hash(field_a), hash(field_b))
++        self.assertLess(field_a, field_b)
++        self.assertGreater(field_b, field_a)
++
+     def test_field_instance_is_picklable(self):
+         """Field instances can be pickled."""
+         field = models.Field(max_length=100, default='a string')

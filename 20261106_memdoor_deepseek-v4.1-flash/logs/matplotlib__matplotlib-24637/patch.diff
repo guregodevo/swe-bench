@@ -1,0 +1,46 @@
+diff --git a/lib/matplotlib/offsetbox.py b/lib/matplotlib/offsetbox.py
+index efa34dd078..fd8f438523 100644
+--- a/lib/matplotlib/offsetbox.py
++++ b/lib/matplotlib/offsetbox.py
+@@ -1452,6 +1452,7 @@ or callable, default: value of *xycoords*
+             self._renderer = renderer
+         if not self.get_visible() or not self._check_xy(renderer):
+             return
++        renderer.open_group("AnnotationBbox", self.get_gid())
+         self.update_positions(renderer)
+         if self.arrow_patch is not None:
+             if self.arrow_patch.figure is None and self.figure is not None:
+@@ -1459,6 +1460,7 @@ or callable, default: value of *xycoords*
+             self.arrow_patch.draw(renderer)
+         self.patch.draw(renderer)
+         self.offsetbox.draw(renderer)
++        renderer.close_group("AnnotationBbox")
+         self.stale = False
+ 
+ 
+diff --git a/lib/matplotlib/tests/test_backend_svg.py b/lib/matplotlib/tests/test_backend_svg.py
+index 78383904c4..87ca1244cb 100644
+--- a/lib/matplotlib/tests/test_backend_svg.py
++++ b/lib/matplotlib/tests/test_backend_svg.py
+@@ -304,6 +304,21 @@ def test_savefig_tight():
+     plt.savefig(BytesIO(), format="svgz", bbox_inches="tight")
+ 
+ 
++def test_annotationbbox_gid():
++    # Test that an AnnotationBbox's gid appears in the output svg.
++    fig, ax = plt.subplots()
++    ab = mpl.offsetbox.AnnotationBbox(
++        mpl.offsetbox.OffsetImage(np.zeros((2, 2))), (0.5, 0.5))
++    ab.set_gid("my_annotationbbox")
++    ax.add_artist(ab)
++
++    with BytesIO() as fd:
++        fig.savefig(fd, format="svg")
++        buf = fd.getvalue().decode()
++
++    assert 'id="my_annotationbbox"' in buf
++
++
+ def test_url():
+     # Test that object url appears in output svg.
+ 

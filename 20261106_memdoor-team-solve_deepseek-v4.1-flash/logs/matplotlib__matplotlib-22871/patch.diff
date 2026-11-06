@@ -1,0 +1,54 @@
+diff --git a/lib/matplotlib/dates.py b/lib/matplotlib/dates.py
+index 4d8ddf3ee5..1526f92ba5 100644
+--- a/lib/matplotlib/dates.py
++++ b/lib/matplotlib/dates.py
+@@ -797,7 +797,12 @@ class ConciseDateFormatter(ticker.Formatter):
+         # 3: hours, 4: minutes, 5: seconds, 6: microseconds
+         for level in range(5, -1, -1):
+             if len(np.unique(tickdate[:, level])) > 1:
+-                if level < 2:
++                if level == 0:
++                    # The year is already shown in the tick labels.
++                    show_offset = False
++                elif level == 1 and 1 in tickdate[:, 1]:
++                    # A January tick is labelled with the year, so the offset
++                    # would be redundant.
+                     show_offset = False
+                 break
+             elif level == 0:
+diff --git a/lib/matplotlib/tests/test_dates.py b/lib/matplotlib/tests/test_dates.py
+index a78c39c560..b1b2d92614 100644
+--- a/lib/matplotlib/tests/test_dates.py
++++ b/lib/matplotlib/tests/test_dates.py
+@@ -613,6 +613,31 @@ def test_concise_formatter_show_offset(t_delta, expected):
+     assert formatter.get_offset() == expected
+ 
+ 
++@pytest.mark.parametrize('d1, t_delta, expected', [
++    # No January tick: the year must be shown in the offset.
++    (datetime.datetime(2021, 2, 14), datetime.timedelta(days=199), '2021'),
++    # January tick: the year is already shown in the tick labels.
++    (datetime.datetime(2021, 1, 1), datetime.timedelta(days=199), ''),
++    # Crossing a year boundary: a year is shown somewhere.
++    (datetime.datetime(2021, 11, 1), datetime.timedelta(days=120), '2022-Mar'),
++])
++def test_concise_formatter_show_offset_year(d1, t_delta, expected):
++    d2 = d1 + t_delta
++
++    fig, ax = plt.subplots()
++    locator = mdates.AutoDateLocator()
++    formatter = mdates.ConciseDateFormatter(locator)
++    ax.xaxis.set_major_locator(locator)
++    ax.xaxis.set_major_formatter(formatter)
++
++    ax.plot([d1, d2], [0, 0])
++    fig.canvas.draw()
++    assert formatter.get_offset() == expected
++    labels = [t.get_text() for t in ax.get_xticklabels()]
++    assert any('2021' in label or '2022' in label
++               for label in labels + [formatter.get_offset()])
++
++
+ def test_offset_changes():
+     fig, ax = plt.subplots()
+ 

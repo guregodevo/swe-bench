@@ -1,0 +1,59 @@
+diff --git a/django/core/servers/basehttp.py b/django/core/servers/basehttp.py
+index 14dab517c9..c8da3e9f1e 100644
+--- a/django/core/servers/basehttp.py
++++ b/django/core/servers/basehttp.py
+@@ -16,6 +16,7 @@ from wsgiref import simple_server
+ from django.core.exceptions import ImproperlyConfigured
+ from django.core.handlers.wsgi import LimitedStream
+ from django.core.wsgi import get_wsgi_application
++from django.db import connections
+ from django.utils.module_loading import import_string
+ 
+ __all__ = ('WSGIServer', 'WSGIRequestHandler')
+@@ -79,8 +80,22 @@ class WSGIServer(simple_server.WSGIServer):
+ 
+ class ThreadedWSGIServer(socketserver.ThreadingMixIn, WSGIServer):
+     """A threaded version of the WSGIServer"""
++
+     daemon_threads = True
+ 
++    def __init__(self, *args, connections_override=None, **kwargs):
++        self.connections_override = connections_override
++        super().__init__(*args, **kwargs)
++
++    def process_request_thread(self, request, client_address):
++        if self.connections_override:
++            # Override this thread's database connections with the ones
++            # provided by the main thread.
++            for alias, conn in self.connections_override.items():
++                connections[alias] = conn
++        super().process_request_thread(request, client_address)
++        connections.close_all()
++
+ 
+ class ServerHandler(simple_server.ServerHandler):
+     http_version = '1.1'
+diff --git a/django/test/testcases.py b/django/test/testcases.py
+index 92f566b7b0..6c8f562379 100644
+--- a/django/test/testcases.py
++++ b/django/test/testcases.py
+@@ -1492,11 +1492,6 @@ class LiveServerThread(threading.Thread):
+         Set up the live server and databases, and then loop over handling
+         HTTP requests.
+         """
+-        if self.connections_override:
+-            # Override this thread's database connections with the ones
+-            # provided by the main thread.
+-            for alias, conn in self.connections_override.items():
+-                connections[alias] = conn
+         try:
+             # Create the handler for serving static and media files
+             handler = self.static_handler(_MediaFilesHandler(WSGIHandler()))
+@@ -1518,6 +1513,7 @@ class LiveServerThread(threading.Thread):
+             (self.host, self.port),
+             QuietWSGIRequestHandler,
+             allow_reuse_address=False,
++            connections_override=self.connections_override,
+         )
+ 
+     def terminate(self):

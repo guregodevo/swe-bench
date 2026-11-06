@@ -1,0 +1,70 @@
+diff --git a/doc/whats-new.rst b/doc/whats-new.rst
+index cb0e9b65..072afc2a 100644
+--- a/doc/whats-new.rst
++++ b/doc/whats-new.rst
+@@ -62,6 +62,8 @@ Bug fixes
+   By `Michael Delgado <https://github.com/delgadom>`_.
+ - `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
+   By `Pierre Loicq <https://github.com/pierreloicq>`_.
++- Fix ``keep_attrs`` for :py:func:`where`. (:issue:`6153`, :pull:`6153`).
++  By `Jimmy Westling <https://github.com/illviljan>`_.
+ 
+ 
+ Documentation
+diff --git a/xarray/core/computation.py b/xarray/core/computation.py
+index 9fe93c88..55beed45 100644
+--- a/xarray/core/computation.py
++++ b/xarray/core/computation.py
+@@ -1727,7 +1727,7 @@ def dot(*arrays, dims=None, **kwargs):
+     return result.transpose(*all_dims, missing_dims="ignore")
+ 
+ 
+-def where(cond, x, y):
++def where(cond, x, y, keep_attrs=None):
+     """Return elements from `x` or `y` depending on `cond`.
+ 
+     Performs xarray-like broadcasting across input arguments.
+@@ -1743,6 +1743,11 @@ def where(cond, x, y):
+         values to choose from where `cond` is True
+     y : scalar, array, Variable, DataArray or Dataset
+         values to choose from where `cond` is False
++    keep_attrs : bool or str or None, default: None
++        If True, the attributes (``attrs``) will be copied from the first input
++        to the new one. If False, the new object will have no attributes. If
++        None, defaults to the option ``keep_attrs`` (set via
++        ``xr.set_options``).
+ 
+     Returns
+     -------
+@@ -1817,6 +1822,7 @@ def where(cond, x, y):
+         join="exact",
+         dataset_join="exact",
+         dask="allowed",
++        keep_attrs=keep_attrs,
+     )
+ 
+ 
+diff --git a/xarray/tests/test_computation.py b/xarray/tests/test_computation.py
+index c9a10b7c..7402ef40 100644
+--- a/xarray/tests/test_computation.py
++++ b/xarray/tests/test_computation.py
+@@ -1922,6 +1922,19 @@ def test_where() -> None:
+     assert_identical(expected, actual)
+ 
+ 
++def test_where_keep_attrs() -> None:
++    cond = xr.DataArray([True, False], dims="x", attrs={"foo": "bar"})
++    actual = xr.where(cond, 1, 0, keep_attrs=True)
++    assert actual.attrs == {"foo": "bar"}
++
++    actual = xr.where(cond, 1, 0, keep_attrs=False)
++    assert actual.attrs == {}
++
++    with xr.set_options(keep_attrs=True):
++        actual = xr.where(cond, 1, 0)
++    assert actual.attrs == {"foo": "bar"}
++
++
+ @pytest.mark.parametrize("use_dask", [True, False])
+ @pytest.mark.parametrize("use_datetime", [True, False])
+ def test_polyval(use_dask, use_datetime) -> None:

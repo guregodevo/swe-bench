@@ -1,0 +1,41 @@
+diff --git a/sphinx/domains/python.py b/sphinx/domains/python.py
+index 79d7e4f46..a4550a6da 100644
+--- a/sphinx/domains/python.py
++++ b/sphinx/domains/python.py
+@@ -1224,6 +1224,9 @@ class PythonDomain(Domain):
+             if mod.docname == docname:
+                 del self.modules[modname]
+ 
++    def process_field_xref(self, pnode: pending_xref) -> None:
++        pnode.attributes.update(self.env.ref_context)
++
+     def merge_domaindata(self, docnames: List[str], otherdata: Dict) -> None:
+         # XXX check duplicates?
+         for fullname, obj in otherdata['objects'].items():
+diff --git a/tests/test_domain_py.py b/tests/test_domain_py.py
+index 2dc97bed9..a1d9046eb 100644
+--- a/tests/test_domain_py.py
++++ b/tests/test_domain_py.py
+@@ -164,6 +164,22 @@ def test_domain_py_objects(app, status, warning):
+     assert objects['NestedParentB.child_1'][2] == 'method'
+ 
+ 
++@pytest.mark.sphinx('dummy', testroot='domain-py')
++def test_domain_py_field_xrefs_follow_currentmodule(app, status, warning):
++    text = (".. py:currentmodule:: module_a.submodule\n"
++            "\n"
++            ".. py:function:: foo()\n"
++            "\n"
++            "   :param A a: parameter\n"
++            "   :rtype: A\n")
++    doctree = restructuredtext.parse(app, text)
++    refnodes = list(doctree.traverse(pending_xref))
++
++    assert len(refnodes) == 2
++    for refnode in refnodes:
++        assert refnode['py:module'] == 'module_a.submodule'
++
++
+ @pytest.mark.sphinx('html', testroot='domain-py')
+ def test_resolve_xref_for_properties(app, status, warning):
+     app.builder.build_all()

@@ -1,0 +1,86 @@
+diff --git a/CHANGES b/CHANGES
+index 6c2761c53..b08f772c9 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -125,6 +125,7 @@ Bugs fixed
+   supporting images
+ * #7610: incorrectly renders consecutive backslashes for docutils-0.16
+ * #7646: handle errors on event handlers
++* #7758: py domain: The default value for positional only argument is not shown
+ * #4187: LaTeX: EN DASH disappears from PDF bookmarks in Japanese documents
+ * #7701: LaTeX: Anonymous indirect hyperlink target causes duplicated labels
+ * C++, fix rendering and xrefs in nested names explicitly starting
+diff --git a/sphinx/util/inspect.py b/sphinx/util/inspect.py
+index 15f0d66e2..38717e2f4 100644
+--- a/sphinx/util/inspect.py
++++ b/sphinx/util/inspect.py
+@@ -521,10 +521,17 @@ def signature_from_str(signature: str) -> inspect.Signature:
+     params = []
+ 
+     if hasattr(args, "posonlyargs"):
+-        for arg in args.posonlyargs:  # type: ignore
++        positional_args = len(args.posonlyargs) + len(args.args)
++        for i, arg in enumerate(args.posonlyargs):  # type: ignore
++            if i >= positional_args - len(args.defaults):
++                default = ast_unparse(args.defaults[i - positional_args +
++                                                     len(args.defaults)])
++            else:
++                default = Parameter.empty
++
+             annotation = ast_unparse(arg.annotation) or Parameter.empty
+             params.append(Parameter(arg.arg, Parameter.POSITIONAL_ONLY,
+-                                    annotation=annotation))
++                                    default=default, annotation=annotation))
+ 
+     for i, arg in enumerate(args.args):
+         if len(args.args) - i <= len(args.defaults):
+diff --git a/tests/test_domain_py.py b/tests/test_domain_py.py
+index 98b295b99..0187be7a8 100644
+--- a/tests/test_domain_py.py
++++ b/tests/test_domain_py.py
+@@ -372,6 +372,19 @@ def test_pyfunction_signature_full_py38(app):
+                 [desc_parameterlist, ([desc_parameter, desc_sig_name, "a"],
+                                       [desc_parameter, desc_sig_operator, "/"])])
+ 
++    # case: default value of positional only argument
++    text = ".. py:function:: hello(a, b=0, /, c=1)"
++    doctree = restructuredtext.parse(app, text)
++    assert_node(doctree[1][0][1],
++                [desc_parameterlist, ([desc_parameter, desc_sig_name, "a"],
++                                      [desc_parameter, ([desc_sig_name, "b"],
++                                                        [desc_sig_operator, "="],
++                                                        [nodes.inline, "0"])],
++                                      [desc_parameter, desc_sig_operator, "/"],
++                                      [desc_parameter, ([desc_sig_name, "c"],
++                                                        [desc_sig_operator, "="],
++                                                        [nodes.inline, "1"])])])
++
+ 
+ def test_optional_pyfunction_signature(app):
+     text = ".. py:function:: compile(source [, filename [, symbol]]) -> ast object"
+@@ -794,5 +807,3 @@ def test_modindex_common_prefix(app):
+                 IndexEntry('sphinx_intl', 0, 'index', 'module-sphinx_intl', '', '', '')])],
+         True
+     )
+-
+-
+diff --git a/tests/test_util_inspect.py b/tests/test_util_inspect.py
+index f16feb698..8e53681de 100644
+--- a/tests/test_util_inspect.py
++++ b/tests/test_util_inspect.py
+@@ -340,6 +340,15 @@ def test_signature_from_str_positionaly_only_args():
+     assert sig.parameters['a'].kind == Parameter.POSITIONAL_ONLY
+     assert sig.parameters['b'].kind == Parameter.POSITIONAL_OR_KEYWORD
+ 
++    sig = inspect.signature_from_str('(a, b=0, /, c=1)')
++    assert list(sig.parameters.keys()) == ['a', 'b', 'c']
++    assert sig.parameters['a'].kind == Parameter.POSITIONAL_ONLY
++    assert sig.parameters['a'].default == Parameter.empty
++    assert sig.parameters['b'].kind == Parameter.POSITIONAL_ONLY
++    assert sig.parameters['b'].default == '0'
++    assert sig.parameters['c'].kind == Parameter.POSITIONAL_OR_KEYWORD
++    assert sig.parameters['c'].default == '1'
++
+ 
+ def test_signature_from_str_invalid():
+     with pytest.raises(SyntaxError):

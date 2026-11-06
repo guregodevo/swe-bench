@@ -1,0 +1,53 @@
+diff --git a/django/db/models/sql/datastructures.py b/django/db/models/sql/datastructures.py
+index 1edf040e82..f4dd2eeb26 100644
+--- a/django/db/models/sql/datastructures.py
++++ b/django/db/models/sql/datastructures.py
+@@ -162,7 +162,10 @@ class Join:
+         return hash(self.identity)
+ 
+     def equals(self, other):
+-        # Ignore filtered_relation in equality check.
++        # Ignore filtered_relation in equality check unless the join being
++        # compared has one, in which case the exact join must be reused.
++        if other.filtered_relation is not None:
++            return self == other
+         return self.identity[:-1] == other.identity[:-1]
+ 
+     def demote(self):
+diff --git a/tests/filtered_relation/tests.py b/tests/filtered_relation/tests.py
+index 790a90d9e2..fd6a36b89d 100644
+--- a/tests/filtered_relation/tests.py
++++ b/tests/filtered_relation/tests.py
+@@ -224,6 +224,32 @@ class FilteredRelationTests(TestCase):
+             [self.author1],
+         )
+ 
++    def test_multiple_filtered_relations_same_relation(self):
++        qs = (
++            Author.objects.annotate(
++                book_alice=FilteredRelation(
++                    "book", condition=Q(book__title__iexact="poem by alice")
++                ),
++                book_jane=FilteredRelation(
++                    "book", condition=Q(book__title__iexact="the book by jane a")
++                ),
++            )
++            .order_by("pk")
++            .values_list("name", "book_alice__title", "book_jane__title")
++        )
++        self.assertSequenceEqual(
++            qs,
++            [
++                ("Alice", "Poem by Alice", None),
++                ("Jane", None, "The book by Jane A"),
++            ],
++        )
++        sql = str(qs.query)
++        self.assertEqual(
++            sql.count(connection.ops.quote_name("filtered_relation_book")), 2
++        )
++        self.assertIn("book_alice", sql)
++
+     def test_multiple_times(self):
+         self.assertSequenceEqual(
+             Author.objects.annotate(

@@ -1,0 +1,43 @@
+diff --git a/django/db/models/sql/query.py b/django/db/models/sql/query.py
+index 6629a1fd51..7cb26e1cd9 100644
+--- a/django/db/models/sql/query.py
++++ b/django/db/models/sql/query.py
+@@ -1055,6 +1055,11 @@ class Query(BaseExpression):
+             )
+         return clone
+ 
++    def get_group_by_cols(self, alias=None):
++        # No need to expose any cols in the group by for a query that has no
++        # outer references (or a subquery that is not used in a GROUP BY).
++        return []
++
+     def get_external_cols(self):
+         exprs = chain(self.annotations.values(), self.where.children)
+         return [
+diff --git a/tests/aggregation/tests.py b/tests/aggregation/tests.py
+index 49123396dd..73e6982a4d 100644
+--- a/tests/aggregation/tests.py
++++ b/tests/aggregation/tests.py
+@@ -6,7 +6,7 @@ from django.core.exceptions import FieldError
+ from django.db import connection
+ from django.db.models import (
+     Avg, Case, Count, DecimalField, DurationField, Exists, F, FloatField,
+-    IntegerField, Max, Min, OuterRef, Subquery, Sum, Value, When,
++    IntegerField, Max, Min, OuterRef, Q, Subquery, Sum, Value, When,
+ )
+ from django.db.models.functions import Coalesce, Greatest
+ from django.test import TestCase
+@@ -1212,6 +1212,13 @@ class AggregateTestCase(TestCase):
+             {'rating': 4.0, 'total_count': 2},
+         ])
+ 
++    def test_filter_aggregate_with_queryset_or_aggregate(self):
++        qs = Author.objects.annotate(Count('book'))
++        self.assertCountEqual(
++            qs.filter(Q(book__in=Book.objects.all()) | Q(book__count=0)).distinct(),
++            Author.objects.all(),
++        )
++
+     @skipUnlessDBFeature('supports_subqueries_in_group_by')
+     def test_aggregation_subquery_annotation_multivalued(self):
+         """

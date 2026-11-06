@@ -1,0 +1,63 @@
+diff --git a/django/db/models/sql/query.py b/django/db/models/sql/query.py
+index 35f3c5e1ea..8e55bd092d 100644
+--- a/django/db/models/sql/query.py
++++ b/django/db/models/sql/query.py
+@@ -1702,7 +1702,9 @@ class Query(BaseExpression):
+         handle.
+         """
+         filter_lhs, filter_rhs = filter_expr
+-        if isinstance(filter_rhs, F):
++        if isinstance(filter_rhs, OuterRef):
++            filter_expr = (filter_lhs, OuterRef(filter_rhs))
++        elif isinstance(filter_rhs, F):
+             filter_expr = (filter_lhs, OuterRef(filter_rhs.name))
+         # Generate the inner query.
+         query = Query(self.model)
+diff --git a/tests/queries/tests.py b/tests/queries/tests.py
+index 8339c52a02..efeafac1db 100644
+--- a/tests/queries/tests.py
++++ b/tests/queries/tests.py
+@@ -6,7 +6,7 @@ from operator import attrgetter
+ 
+ from django.core.exceptions import EmptyResultSet, FieldError
+ from django.db import DEFAULT_DB_ALIAS, connection
+-from django.db.models import Count, F, Q
++from django.db.models import Count, Exists, F, OuterRef, Q
+ from django.db.models.sql.constants import LOUTER
+ from django.db.models.sql.where import NothingNode, WhereNode
+ from django.test import SimpleTestCase, TestCase, skipUnlessDBFeature
+@@ -2068,6 +2068,34 @@ class SubqueryTests(TestCase):
+         query = DumbCategory.objects.filter(id__in=DumbCategory.objects.order_by('-id')[2:])
+         self.assertEqual(set(query.values_list('id', flat=True)), {1, 2})
+ 
++    def test_exclude_outerref(self):
++        author = Author.objects.create(
++            name='a', num=1, extra=ExtraInfo.objects.create(info='x'),
++        )
++        note = Note.objects.create(note='n', misc='m')
++        item = Item.objects.create(
++            name='i', created=datetime.datetime.now(), creator=author, note=note,
++        )
++        item.tags.add(Tag.objects.create(name='t', category_id=1))
++        qs = NamedCategory.objects.annotate(
++            foo=Exists(Item.objects.exclude(tags__category_id=OuterRef('pk'))),
++        ).filter(foo=True)
++        self.assertSequenceEqual(qs.order_by('pk').values_list('pk', flat=True), [2, 3, 4])
++
++    def test_filter_negated_q_outerref(self):
++        author = Author.objects.create(
++            name='a', num=1, extra=ExtraInfo.objects.create(info='x'),
++        )
++        note = Note.objects.create(note='n', misc='m')
++        item = Item.objects.create(
++            name='i', created=datetime.datetime.now(), creator=author, note=note,
++        )
++        item.tags.add(Tag.objects.create(name='t', category_id=1))
++        qs = NamedCategory.objects.annotate(
++            foo=Exists(Item.objects.filter(~Q(tags__category_id=OuterRef('pk')))),
++        ).filter(foo=True)
++        self.assertSequenceEqual(qs.order_by('pk').values_list('pk', flat=True), [2, 3, 4])
++
+     def test_slice_subquery_and_query(self):
+         """
+         Slice a query that has a sliced subquery

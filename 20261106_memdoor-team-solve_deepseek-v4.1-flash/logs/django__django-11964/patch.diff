@@ -1,0 +1,35 @@
+diff --git a/django/db/models/enums.py b/django/db/models/enums.py
+index bbe362a6ab..1c73ab21b2 100755
+--- a/django/db/models/enums.py
++++ b/django/db/models/enums.py
+@@ -60,7 +60,9 @@ class ChoicesMeta(enum.EnumMeta):
+ 
+ class Choices(enum.Enum, metaclass=ChoicesMeta):
+     """Class for creating enumerated choices."""
+-    pass
++
++    def __str__(self):
++        return str(self.value)
+ 
+ 
+ class IntegerChoices(int, Choices):
+diff --git a/tests/model_enums/tests.py b/tests/model_enums/tests.py
+index 6b4bd6e7fd..9c17bc21d5 100755
+--- a/tests/model_enums/tests.py
++++ b/tests/model_enums/tests.py
+@@ -57,6 +57,7 @@ class ChoicesTests(SimpleTestCase):
+         self.assertIsInstance(Suit.DIAMOND, Suit)
+         self.assertIsInstance(Suit.DIAMOND.label, Promise)
+         self.assertIsInstance(Suit.DIAMOND.value, int)
++        self.assertEqual(str(Suit.DIAMOND), '1')
+ 
+     def test_integerchoices_auto_label(self):
+         self.assertEqual(Vehicle.CAR.label, 'Carriage')
+@@ -98,6 +99,7 @@ class ChoicesTests(SimpleTestCase):
+         self.assertIsInstance(YearInSchool.FRESHMAN, YearInSchool)
+         self.assertIsInstance(YearInSchool.FRESHMAN.label, Promise)
+         self.assertIsInstance(YearInSchool.FRESHMAN.value, str)
++        self.assertEqual(str(YearInSchool.FRESHMAN), 'FR')
+ 
+     def test_textchoices_auto_label(self):
+         self.assertEqual(Gender.MALE.label, 'Male')

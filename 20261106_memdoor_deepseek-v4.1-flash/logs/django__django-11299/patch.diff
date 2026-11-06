@@ -1,0 +1,33 @@
+diff --git a/django/db/models/sql/query.py b/django/db/models/sql/query.py
+index b99f03cd88..d69c24419b 100644
+--- a/django/db/models/sql/query.py
++++ b/django/db/models/sql/query.py
+@@ -1338,7 +1338,7 @@ class Query(BaseExpression):
+             if isinstance(child, Node):
+                 child_clause, needed_inner = self._add_q(
+                     child, used_aliases, branch_negated,
+-                    current_negated, allow_joins, split_subq)
++                    current_negated, allow_joins, split_subq, simple_col)
+                 joinpromoter.add_votes(needed_inner)
+             else:
+                 child_clause, needed_inner = self.build_filter(
+diff --git a/tests/constraints/tests.py b/tests/constraints/tests.py
+index b7aeb1e7f0..d6c94813dd 100644
+--- a/tests/constraints/tests.py
++++ b/tests/constraints/tests.py
+@@ -79,6 +79,15 @@ class CheckConstraintTests(TestCase):
+         expected_name = 'price_gt_discounted_price'
+         self.assertIn(expected_name, constraints)
+ 
++    def test_check_constraint_sql(self):
++        constraint = models.CheckConstraint(
++            check=models.Q(price__isnull=False, discounted_price__isnull=False) |
++            models.Q(price__isnull=True),
++            name='price_or_discounted_price',
++        )
++        sql = constraint._get_check_sql(Product, connection.schema_editor())
++        self.assertNotIn(Product._meta.db_table, sql)
++
+ 
+ class UniqueConstraintTests(TestCase):
+     @classmethod

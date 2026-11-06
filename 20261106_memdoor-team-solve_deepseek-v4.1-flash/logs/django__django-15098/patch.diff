@@ -1,0 +1,37 @@
+diff --git a/django/urls/resolvers.py b/django/urls/resolvers.py
+index 6ea18dd22f..96cf627dd0 100644
+--- a/django/urls/resolvers.py
++++ b/django/urls/resolvers.py
+@@ -322,7 +322,7 @@ class LocalePrefixPattern:
+ 
+     def match(self, path):
+         language_prefix = self.language_prefix
+-        if path.startswith(language_prefix):
++        if path[:len(language_prefix)].lower() == language_prefix.lower():
+             return path[len(language_prefix):], (), {}
+         return None
+ 
+diff --git a/django/utils/translation/trans_real.py b/django/utils/translation/trans_real.py
+index 7dcc77b46c..106c49329d 100644
+--- a/django/utils/translation/trans_real.py
++++ b/django/utils/translation/trans_real.py
+@@ -43,7 +43,18 @@ language_code_re = _lazy_re_compile(
+     re.IGNORECASE
+ )
+ 
+-language_code_prefix_re = _lazy_re_compile(r'^/(\w+([@-]\w+)?)(/|$)')
++language_code_prefix_re = _lazy_re_compile(
++    r'^/('
++    r'[a-zA-Z]{2,8}'                                  # language
++    r'(?:-[a-zA-Z]{3})?'                              # extlang
++    r'(?:-[a-zA-Z]{4})?'                              # script
++    r'(?:-[a-zA-Z]{2}|-[0-9]{3})?'                    # region
++    r'(?:-[a-zA-Z0-9]{5,8}|-[0-9][a-zA-Z0-9]{3})*'    # variants
++    r'(?:-[0-9a-wy-zA-WY-Z](?:-[a-zA-Z0-9]{2,8})+)*'  # extensions
++    r'(?:-x(?:-[a-zA-Z0-9]{1,8})+)?'                  # private use
++    r'(?:@[a-zA-Z0-9]{1,20})?'                        # locale modifier
++    r')(/|$)'
++)
+ 
+ 
+ @receiver(setting_changed)

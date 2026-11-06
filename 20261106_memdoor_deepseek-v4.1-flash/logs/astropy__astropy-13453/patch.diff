@@ -1,0 +1,51 @@
+diff --git a/astropy/io/ascii/html.py b/astropy/io/ascii/html.py
+index 266cf229c..18d2ea8dc 100644
+--- a/astropy/io/ascii/html.py
++++ b/astropy/io/ascii/html.py
+@@ -348,6 +348,11 @@ class HTML(core.BaseReader):
+ 
+         cols = list(table.columns.values())
+ 
++        # Apply any column formats supplied via the ``formats`` argument.
++        # This mirrors what BaseData.write does for other ASCII writers.
++        self.data.cols = cols
++        self.data._set_col_formats()
++
+         self.data.header.cols = cols
+ 
+         if isinstance(self.data.fill_values, tuple):
+@@ -429,6 +434,7 @@ class HTML(core.BaseReader):
+                                 for i in range(span):
+                                     # Split up multicolumns into separate columns
+                                     new_col = Column([el[i] for el in col])
++                                    new_col.info.format = col.info.format
+ 
+                                     new_col_iter_str_vals = self.fill_values(
+                                         col, new_col.info.iter_str_vals())
+diff --git a/astropy/io/ascii/tests/test_html.py b/astropy/io/ascii/tests/test_html.py
+index 0515efa06..89e811dc8 100644
+--- a/astropy/io/ascii/tests/test_html.py
++++ b/astropy/io/ascii/tests/test_html.py
+@@ -636,6 +636,22 @@ def test_write_table_html_fill_values():
+     assert buffer_output.getvalue() == buffer_expected.getvalue()
+ 
+ 
++def test_write_table_html_formats():
++    """
++    Test that passing formats should format the column values.
++    """
++    buffer_output = StringIO()
++    t = Table([[1.234567], [2.345678]], names=('a', 'b'))
++    ascii.write(t, buffer_output, formats={'a': lambda x: f'{x:.2e}'},
++                format='html')
++
++    t_expected = Table([['1.23e+00'], [2.345678]], names=('a', 'b'))
++    buffer_expected = StringIO()
++    ascii.write(t_expected, buffer_expected, format='html')
++
++    assert buffer_output.getvalue() == buffer_expected.getvalue()
++
++
+ def test_write_table_html_fill_values_optional_columns():
+     """
+     Test that passing optional column in fill_values should only replace

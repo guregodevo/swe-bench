@@ -1,0 +1,61 @@
+diff --git a/django/core/management/commands/makemigrations.py b/django/core/management/commands/makemigrations.py
+index 2e97d9064b..89e4609486 100644
+--- a/django/core/management/commands/makemigrations.py
++++ b/django/core/management/commands/makemigrations.py
+@@ -111,6 +111,8 @@ class Command(BaseCommand):
+             raise CommandError("The migration name must be a valid Python identifier.")
+         self.include_header = options["include_header"]
+         check_changes = options["check_changes"]
++        if check_changes:
++            self.dry_run = True
+         self.scriptable = options["scriptable"]
+         self.update = options["update"]
+         # If logs and prompts are diverted to stderr, remove the ERROR style.
+diff --git a/docs/ref/django-admin.txt b/docs/ref/django-admin.txt
+index af27e0afb5..3a6043fcc0 100644
+--- a/docs/ref/django-admin.txt
++++ b/docs/ref/django-admin.txt
+@@ -823,7 +823,7 @@ Generate migration files without Django version and timestamp header.
+ .. django-admin-option:: --check
+ 
+ Makes ``makemigrations`` exit with a non-zero status when model changes without
+-migrations are detected.
++migrations are detected. No migrations are created.
+ 
+ .. django-admin-option:: --scriptable
+ 
+diff --git a/docs/releases/4.2.txt b/docs/releases/4.2.txt
+index 2520d14361..783b50b3b2 100644
+--- a/docs/releases/4.2.txt
++++ b/docs/releases/4.2.txt
+@@ -197,6 +197,8 @@ Management Commands
+ * The new :option:`makemigrations --update` option merges model changes into
+   the latest migration and optimizes the resulting operations.
+ 
++* :option:`makemigrations --check` no longer creates migration files.
++
+ Migrations
+ ~~~~~~~~~~
+ 
+diff --git a/tests/migrations/test_commands.py b/tests/migrations/test_commands.py
+index 9900c7a35d..5a87495d5a 100644
+--- a/tests/migrations/test_commands.py
++++ b/tests/migrations/test_commands.py
+@@ -2389,11 +2389,15 @@ class MakeMigrationsTests(MigrationTestBase):
+     def test_makemigrations_check(self):
+         """
+         makemigrations --check should exit with a non-zero status when
+-        there are changes to an app requiring migrations.
++        there are changes to an app requiring migrations and shouldn't create
++        any migrations.
+         """
+-        with self.temporary_migration_module():
++        with self.temporary_migration_module() as migration_dir:
+             with self.assertRaises(SystemExit):
+                 call_command("makemigrations", "--check", "migrations", verbosity=0)
++            self.assertFalse(
++                os.path.exists(os.path.join(migration_dir, "0001_initial.py"))
++            )
+ 
+         with self.temporary_migration_module(
+             module="migrations.test_migrations_no_changes"

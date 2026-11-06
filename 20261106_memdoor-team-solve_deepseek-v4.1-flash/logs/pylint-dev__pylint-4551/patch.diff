@@ -1,0 +1,188 @@
+diff --git a/ChangeLog b/ChangeLog
+index c2b1382d..0da12825 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -119,6 +119,9 @@ Closes #4555
+ 
+ * Added handling of floating point values when parsing configuration from pyproject.toml
+ 
++* ``pyreverse`` now uses Python type hints (PEP 484 and PEP 526) to display
++  attribute types in class diagrams.
++
+   Closes #4518
+ 
+ * ``invalid-length-returned``, now also works when nothing at all is returned
+diff --git a/pylint/pyreverse/diagrams.py b/pylint/pyreverse/diagrams.py
+index bf9f67af..bbf15bd2 100644
+--- a/pylint/pyreverse/diagrams.py
++++ b/pylint/pyreverse/diagrams.py
+@@ -16,7 +16,7 @@
+ import astroid
+ 
+ from pylint.checkers.utils import decorated_with_property
+-from pylint.pyreverse.utils import FilterMixIn, is_interface
++from pylint.pyreverse.utils import FilterMixIn, get_annotation_label, is_interface
+ 
+ 
+ class Figure:
+@@ -79,6 +79,7 @@ class ClassDiagram(Figure, FilterMixIn):
+     def get_attrs(self, node):
+         """return visible attributes, possibly with class name"""
+         attrs = []
++        seen = set()
+         properties = [
+             (n, m)
+             for n, m in node.items()
+@@ -91,12 +92,68 @@ class ClassDiagram(Figure, FilterMixIn):
+         ):
+             if not self.show_attr(node_name):
+                 continue
+-            names = self.class_names(associated_nodes)
+-            if names:
+-                node_name = "{} : {}".format(node_name, ", ".join(names))
++            seen.add(node_name)
++            annotation = self.get_annotation(node_name, node)
++            if annotation is not None:
++                node_name = self.get_annotation_label(node_name, node)
++            else:
++                names = self.class_names(associated_nodes)
++                if names:
++                    node_name = "{} : {}".format(node_name, ", ".join(names))
+             attrs.append(node_name)
++        # Annotated class attributes (e.g. dataclass fields) may not be
++        # present in ``locals_type`` when their value cannot be inferred.
++        for node_name in node.locals:
++            if node_name in seen or not self.show_attr(node_name):
++                continue
++            annotation = self.get_annotation(node_name, node)
++            if annotation is not None:
++                attrs.append(self.get_annotation_label(node_name, node))
+         return sorted(attrs)
+ 
++    def get_annotation_label(self, node_name, node):
++        """Return the label for an attribute, including its type annotation."""
++        annotation = self.get_annotation(node_name, node)
++        if annotation is not None:
++            return f"{node_name} : {get_annotation_label(annotation)}"
++        return node_name
++
++    @staticmethod
++    def get_annotation(node_name, node):
++        """Return the annotation node associated with an attribute, if any."""
++        # Class level annotation, e.g. ``name: str`` or ``name: str = ""``.
++        for local_node in node.locals.get(node_name, ()):
++            target = local_node
++            if isinstance(target, astroid.AssignName):
++                target = target.parent
++            if isinstance(target, astroid.AnnAssign):
++                return target.annotation
++            if isinstance(getattr(target, "parent", None), astroid.AnnAssign):
++                return target.parent.annotation
++
++        # Instance level annotation, e.g. ``self.name: str = value`` or
++        # ``self.name = name`` where ``name`` is an annotated argument.
++        for assignattr in node.instance_attrs.get(node_name, ()):
++            parent = assignattr.parent
++            if isinstance(parent, astroid.AnnAssign):
++                return parent.annotation
++            if isinstance(parent, astroid.Assign):
++                value = parent.value
++                if isinstance(value, astroid.Name):
++                    frame = assignattr.frame()
++                    arguments = getattr(frame, "args", None)
++                    for args_attr, annotations_attr in (
++                        ("args", "annotations"),
++                        ("posonlyargs", "posonlyargs_annotations"),
++                        ("kwonlyargs", "kwonlyargs_annotations"),
++                    ):
++                        args = getattr(arguments, args_attr, ())
++                        annotations = getattr(arguments, annotations_attr, ())
++                        for arg, arg_annotation in zip(args, annotations):
++                            if arg.name == value.name and arg_annotation is not None:
++                                return arg_annotation
++        return None
++
+     def get_methods(self, node):
+         """return visible methods"""
+         methods = [
+diff --git a/pylint/pyreverse/utils.py b/pylint/pyreverse/utils.py
+index a24d227e..f434d501 100644
+--- a/pylint/pyreverse/utils.py
++++ b/pylint/pyreverse/utils.py
+@@ -20,6 +20,8 @@ import os
+ import re
+ import sys
+ 
++import astroid
++
+ RCFILE = ".pyreverserc"
+ 
+ 
+@@ -93,6 +95,24 @@ def is_exception(node):
+     return node.type == "exception"
+ 
+ 
++def get_annotation_label(annotation):
++    """Return a human readable label for an astroid annotation node."""
++    if isinstance(annotation, astroid.Name):
++        return annotation.name
++    if isinstance(annotation, astroid.Attribute):
++        return annotation.attrname
++    if isinstance(annotation, astroid.Subscript):
++        return (
++            f"{get_annotation_label(annotation.value)}"
++            f"[{get_annotation_label(annotation.slice)}]"
++        )
++    if isinstance(annotation, astroid.Tuple):
++        return ", ".join(get_annotation_label(elt) for elt in annotation.elts)
++    if isinstance(annotation, astroid.Const):
++        return str(annotation.value)
++    return annotation.as_string()
++
++
+ # Helpers #####################################################################
+ 
+ _CONSTRUCTOR = 1
+diff --git a/tests/unittest_pyreverse_diadefs.py b/tests/unittest_pyreverse_diadefs.py
+index beb1f756..49d452ff 100644
+--- a/tests/unittest_pyreverse_diadefs.py
++++ b/tests/unittest_pyreverse_diadefs.py
+@@ -31,6 +31,7 @@ from pylint.pyreverse.diadefslib import (
+     DiaDefGenerator,
+     DiadefsHandler,
+ )
++from pylint.pyreverse.diagrams import ClassDiagram
+ from pylint.pyreverse.inspector import Linker
+ 
+ 
+@@ -197,3 +198,30 @@ def test_regression_dataclasses_inference(HANDLER):
+     special = "regrtest_data.dataclasses_pyreverse.InventoryItem"
+     cd = cdg.class_diagram(path, special)
+     assert cd.title == special
++
++
++def test_type_annotations_are_used_for_attributes():
++    """Attributes should be labelled with their PEP 484 / PEP 526 type hints."""
++    module = astroid.parse(
++        """
++    class C:
++        class_attr: str = None
++
++        def __init__(self, a: str = None, b: int = 1, c=None):
++            self.a = a
++            self.b: int = b
++            self.c = c
++    """
++    )
++    klass = module["C"]
++    linker = Linker(module)
++    linker.visit(module)
++    diagram = ClassDiagram("C", "ALL")
++    diagram.add_object("C", klass)
++    diagram.extract_relationships()
++    assert diagram.get_attrs(klass) == [
++        "a : str",
++        "b : int",
++        "c : NoneType",
++        "class_attr : str",
++    ]

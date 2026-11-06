@@ -1,0 +1,55 @@
+diff --git a/CHANGES.rst b/CHANGES.rst
+index 0097160cf..379c300b2 100644
+--- a/CHANGES.rst
++++ b/CHANGES.rst
+@@ -77,6 +77,9 @@ astropy.uncertainty
+ astropy.units
+ ^^^^^^^^^^^^^
+ 
++- ``Quantity`` now preserves the dtype of ``float16`` (and other floating
++  point) inputs instead of promoting them to ``float64``. [#8765]
++
+ astropy.utils
+ ^^^^^^^^^^^^^
+ 
+diff --git a/astropy/units/quantity.py b/astropy/units/quantity.py
+index ded609cbe..b7f439baa 100644
+--- a/astropy/units/quantity.py
++++ b/astropy/units/quantity.py
+@@ -296,8 +296,7 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
+                 if not copy:
+                     return value
+ 
+-                if not (np.can_cast(np.float32, value.dtype) or
+-                        value.dtype.fields):
++                if not (value.dtype.kind in 'fc' or value.dtype.fields):
+                     dtype = float
+ 
+             return np.array(value, dtype=dtype, copy=copy, order=order,
+@@ -377,7 +376,7 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
+                             "Numpy numeric type.")
+ 
+         # by default, cast any integer, boolean, etc., to float
+-        if dtype is None and (not (np.can_cast(np.float32, value.dtype)
++        if dtype is None and (not (value.dtype.kind in 'fc'
+                                    or value.dtype.fields)
+                               or value.dtype.kind == 'O'):
+             value = value.astype(float)
+diff --git a/astropy/units/tests/test_quantity.py b/astropy/units/tests/test_quantity.py
+index be18e65c5..7598bf5c8 100644
+--- a/astropy/units/tests/test_quantity.py
++++ b/astropy/units/tests/test_quantity.py
+@@ -142,6 +142,13 @@ class TestQuantityCreation:
+         a3 = np.array([1., 2.], dtype=np.float32)
+         q3 = u.Quantity(a3, u.yr)
+         assert q3.dtype == a3.dtype
++        # also for other floating point types, including float16 (gh-8765)
++        for dtype in (np.float16, np.float32, np.float64, np.longdouble,
++                      np.complex64, np.complex128):
++            q = u.Quantity(np.array([1., 2.], dtype=dtype), u.yr)
++            assert q.dtype == dtype
++            assert u.Quantity(q, copy=True).dtype == dtype
++            assert u.Quantity(dtype(1), u.yr).dtype == dtype
+         # items stored as objects by numpy should be converted to float
+         # by default
+         q4 = u.Quantity(decimal.Decimal('10.25'), u.m)

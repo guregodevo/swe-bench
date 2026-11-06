@@ -1,0 +1,112 @@
+diff --git a/django/db/models/fields/json.py b/django/db/models/fields/json.py
+index fdca700c9d..c1a4acd4fa 100644
+--- a/django/db/models/fields/json.py
++++ b/django/db/models/fields/json.py
+@@ -172,7 +172,21 @@ class ContainedBy(PostgresOperatorLookup):
+ class HasKeyLookup(PostgresOperatorLookup):
+     logical_operator = None
+ 
+-    def as_sql(self, compiler, connection, template=None):
++    def compile_json_path_final_key(self, key_transform):
++        # Compile the final key without interpreting ints as array elements.
++        if isinstance(key_transform, KeyTransform):
++            key_transform = key_transform.key_name
++        return ".%s" % json.dumps(str(key_transform))
++
++    def as_sql(
++        self,
++        compiler,
++        connection,
++        template=None,
++        compile_json_path_final_key=None,
++    ):
++        if compile_json_path_final_key is None:
++            compile_json_path_final_key = self.compile_json_path_final_key
+         # Process JSON path from the left-hand side.
+         if isinstance(self.lhs, KeyTransform):
+             lhs, lhs_params, lhs_key_transforms = self.lhs.preprocess_lhs(
+@@ -193,13 +207,10 @@ class HasKeyLookup(PostgresOperatorLookup):
+                 *_, rhs_key_transforms = key.preprocess_lhs(compiler, connection)
+             else:
+                 rhs_key_transforms = [key]
+-            rhs_params.append(
+-                "%s%s"
+-                % (
+-                    lhs_json_path,
+-                    compile_json_path(rhs_key_transforms, include_root=False),
+-                )
+-            )
++            *rhs_key_transforms, final_key = rhs_key_transforms
++            rhs_json_path = compile_json_path(rhs_key_transforms, include_root=False)
++            rhs_json_path += compile_json_path_final_key(final_key)
++            rhs_params.append(lhs_json_path + rhs_json_path)
+         # Add condition for each key.
+         if self.logical_operator:
+             sql = "(%s)" % self.logical_operator.join([sql] * len(rhs_params))
+@@ -210,9 +221,9 @@ class HasKeyLookup(PostgresOperatorLookup):
+             compiler, connection, template="JSON_CONTAINS_PATH(%s, 'one', %%s)"
+         )
+ 
+-    def as_oracle(self, compiler, connection):
++    def as_oracle(self, compiler, connection, **kwargs):
+         sql, params = self.as_sql(
+-            compiler, connection, template="JSON_EXISTS(%s, '%%s')"
++            compiler, connection, template="JSON_EXISTS(%s, '%%s')", **kwargs
+         )
+         # Add paths directly into SQL because path expressions cannot be passed
+         # as bind variables on Oracle.
+@@ -405,6 +416,9 @@ class KeyTransformIsNull(lookups.IsNull):
+             compiler,
+             connection,
+             template=template,
++            compile_json_path_final_key=lambda key: compile_json_path(
++                [key], include_root=False
++            ),
+         )
+ 
+ 
+diff --git a/tests/model_fields/test_jsonfield.py b/tests/model_fields/test_jsonfield.py
+index dfd00f4745..197fa8b5f9 100644
+--- a/tests/model_fields/test_jsonfield.py
++++ b/tests/model_fields/test_jsonfield.py
+@@ -512,6 +512,13 @@ class TestQuerying(TestCase):
+             [self.objs[3], self.objs[4]],
+         )
+ 
++    def test_has_key_number(self):
++        obj = NullableJSONModel.objects.create(value={"1111": "bar"})
++        self.assertSequenceEqual(
++            NullableJSONModel.objects.filter(value__has_key="1111"),
++            [obj],
++        )
++
+     def test_has_key_null_value(self):
+         self.assertSequenceEqual(
+             NullableJSONModel.objects.filter(value__has_key="j"),
+@@ -570,12 +577,26 @@ class TestQuerying(TestCase):
+             [self.objs[4]],
+         )
+ 
++    def test_has_keys_numeric(self):
++        obj = NullableJSONModel.objects.create(value={"1": "bar", "2": "baz"})
++        self.assertSequenceEqual(
++            NullableJSONModel.objects.filter(value__has_keys=["1", "2"]),
++            [obj],
++        )
++
+     def test_has_any_keys(self):
+         self.assertSequenceEqual(
+             NullableJSONModel.objects.filter(value__has_any_keys=["c", "l"]),
+             [self.objs[3], self.objs[4], self.objs[6]],
+         )
+ 
++    def test_has_any_keys_numeric(self):
++        obj = NullableJSONModel.objects.create(value={"1": "bar", "2": "baz"})
++        self.assertSequenceEqual(
++            NullableJSONModel.objects.filter(value__has_any_keys=["1", "3"]),
++            [obj],
++        )
++
+     @skipUnlessDBFeature("supports_json_field_contains")
+     def test_contains(self):
+         tests = [

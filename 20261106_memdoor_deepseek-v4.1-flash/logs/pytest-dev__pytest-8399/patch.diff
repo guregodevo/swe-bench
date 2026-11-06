@@ -1,0 +1,54 @@
+diff --git a/changelog/8405.bugfix.rst b/changelog/8405.bugfix.rst
+new file mode 100644
+index 000000000..3b77b63ff
+--- /dev/null
++++ b/changelog/8405.bugfix.rst
+@@ -0,0 +1,4 @@
++The auto-generated fixtures for ``unittest`` ``setUpClass``/``tearDownClass``
++and ``setup_method``/``teardown_method`` now use names starting with an
++underscore again, so they are hidden from ``pytest --fixtures`` unless
++``-v`` is given.
+diff --git a/src/_pytest/unittest.py b/src/_pytest/unittest.py
+index 719eb4e88..3f88d7a9e 100644
+--- a/src/_pytest/unittest.py
++++ b/src/_pytest/unittest.py
+@@ -144,7 +144,7 @@ def _make_xunit_fixture(
+         scope=scope,
+         autouse=True,
+         # Use a unique name to speed up lookup.
+-        name=f"unittest_{setup_name}_fixture_{obj.__qualname__}",
++        name=f"_unittest_{setup_name}_fixture_{obj.__qualname__}",
+     )
+     def fixture(self, request: FixtureRequest) -> Generator[None, None, None]:
+         if _is_skipped(self):
+diff --git a/testing/test_unittest.py b/testing/test_unittest.py
+index 69bafc26d..4ec3adf55 100644
+--- a/testing/test_unittest.py
++++ b/testing/test_unittest.py
+@@ -325,6 +325,26 @@ def test_setup_class(pytester: Pytester) -> None:
+     reprec.assertoutcome(passed=3)
+ 
+ 
++def test_unittest_fixtures_are_private(pytester: Pytester) -> None:
++    """Generated unittest fixtures should only be shown with ``-v`` (#8405)."""
++    pytester.makepyfile(
++        """
++        import unittest
++        class MyTestCase(unittest.TestCase):
++            @classmethod
++            def setUpClass(cls):
++                pass
++            def test_func(self):
++                pass
++        """
++    )
++    result = pytester.runpytest("--fixtures")
++    result.stdout.no_fnmatch_line("*unittest_setUpClass_fixture_MyTestCase*")
++
++    result = pytester.runpytest("--fixtures", "-v")
++    result.stdout.fnmatch_lines(["*_unittest_setUpClass_fixture_MyTestCase*"])
++
++
+ @pytest.mark.parametrize("type", ["Error", "Failure"])
+ def test_testcase_adderrorandfailure_defers(pytester: Pytester, type: str) -> None:
+     pytester.makepyfile(

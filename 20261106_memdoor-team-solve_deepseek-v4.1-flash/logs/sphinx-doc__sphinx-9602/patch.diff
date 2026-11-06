@@ -1,0 +1,87 @@
+diff --git a/CHANGES b/CHANGES
+index c7e781de8..57adebfe3 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -31,6 +31,8 @@ Bugs fixed
+   and ``__new__()``
+ * #9522: autodoc: PEP 585 style typehints having arguments (ex. ``list[int]``)
+   are not displayed well
++* #9577: py domain: Literal values in type annotations are no longer treated as
++  cross-references (and no longer trigger nitpicky warnings)
+ * #9481: autosummary: some warnings contain non-existing filenames
+ * #9568: autosummary: summarise overlined sectioned headings correctly
+ * #9481: c domain: some warnings contain non-existing filenames
+diff --git a/sphinx/domains/python.py b/sphinx/domains/python.py
+index 9875a9f4b..0ba993a09 100644
+--- a/sphinx/domains/python.py
++++ b/sphinx/domains/python.py
+@@ -122,8 +122,16 @@ def _parse_annotation(annotation: str, env: BuildEnvironment = None) -> List[Nod
+         elif isinstance(node, ast.Constant):  # type: ignore
+             if node.value is Ellipsis:
+                 return [addnodes.desc_sig_punctuation('', "...")]
++            elif isinstance(node.value, bool):
++                return [addnodes.desc_sig_keyword('', repr(node.value))]
++            elif isinstance(node.value, int):
++                return [addnodes.desc_sig_literal_number('', repr(node.value))]
++            elif isinstance(node.value, str):
++                return [addnodes.desc_sig_literal_string('', repr(node.value))]
+             else:
+-                return [nodes.Text(node.value)]
++                # handles None, which is further handled by type_to_xref later
++                # and fallback for other types that should be converted
++                return [nodes.Text(repr(node.value))]
+         elif isinstance(node, ast.Expr):
+             return unparse(node.value)
+         elif isinstance(node, ast.Index):
+@@ -167,7 +175,10 @@ def _parse_annotation(annotation: str, env: BuildEnvironment = None) -> List[Nod
+                 if isinstance(node, ast.Ellipsis):
+                     return [addnodes.desc_sig_punctuation('', "...")]
+                 elif isinstance(node, ast.NameConstant):
+-                    return [nodes.Text(node.value)]
++                    if isinstance(node.value, bool):
++                        return [addnodes.desc_sig_keyword('', repr(node.value))]
++                    else:
++                        return [nodes.Text(repr(node.value))]
+ 
+             raise SyntaxError  # unsupported syntax
+ 
+diff --git a/tests/test_domain_py.py b/tests/test_domain_py.py
+index 067febcf4..9a3794bb4 100644
+--- a/tests/test_domain_py.py
++++ b/tests/test_domain_py.py
+@@ -18,8 +18,9 @@ from docutils import nodes
+ from sphinx import addnodes
+ from sphinx.addnodes import (desc, desc_addname, desc_annotation, desc_content, desc_name,
+                              desc_optional, desc_parameter, desc_parameterlist, desc_returns,
+-                             desc_sig_name, desc_sig_operator, desc_sig_punctuation,
+-                             desc_signature, pending_xref)
++                             desc_sig_keyword, desc_sig_literal_number,
++                             desc_sig_literal_string, desc_sig_name, desc_sig_operator,
++                             desc_sig_punctuation, desc_signature, pending_xref)
+ from sphinx.domains import IndexEntry
+ from sphinx.domains.python import (PythonDomain, PythonModuleIndex, _parse_annotation,
+                                    _pseudo_parse_arglist, py_sig_re)
+@@ -341,6 +342,23 @@ def test_parse_annotation(app):
+     assert_node(doctree, ([pending_xref, "None"],))
+     assert_node(doctree[0], pending_xref, refdomain="py", reftype="obj", reftarget="None")
+ 
++    # Literal values should not be treated as cross-references
++    doctree = _parse_annotation("Literal[True]", app.env)
++    assert_node(doctree, ([pending_xref, "Literal"],
++                          [desc_sig_punctuation, "["],
++                          [desc_sig_keyword, "True"],
++                          [desc_sig_punctuation, "]"]))
++
++    doctree = _parse_annotation("Literal[False, 1, 'foo']", app.env)
++    assert_node(doctree, ([pending_xref, "Literal"],
++                          [desc_sig_punctuation, "["],
++                          [desc_sig_keyword, "False"],
++                          [desc_sig_punctuation, ", "],
++                          [desc_sig_literal_number, "1"],
++                          [desc_sig_punctuation, ", "],
++                          [desc_sig_literal_string, "'foo'"],
++                          [desc_sig_punctuation, "]"]))
++
+ 
+ def test_pyfunction_signature(app):
+     text = ".. py:function:: hello(name: str) -> str"

@@ -1,0 +1,130 @@
+diff --git a/doc/whats-new.rst b/doc/whats-new.rst
+index d81986cb..6fbb0ff7 100644
+--- a/doc/whats-new.rst
++++ b/doc/whats-new.rst
+@@ -170,6 +170,9 @@ Bug fixes
+   dask compute (:issue:`3237`). By `Ulrich Herter <https://github.com/ulijh>`_.
+ - Plots in 2 dimensions (pcolormesh, contour) now allow to specify levels as numpy
+   array (:issue:`3284`). By `Mathias Hauser <https://github.com/mathause>`_.
++- :py:meth:`~xarray.DataArray.quantile`, :py:meth:`~xarray.Dataset.quantile` and
++  :py:meth:`~xarray.Variable.quantile` now honor the ``keep_attrs`` argument
++  (:issue:`3201`).
+ 
+ .. _whats-new.0.12.3:
+ 
+diff --git a/xarray/core/dataset.py b/xarray/core/dataset.py
+index d6f0da42..fae086e8 100644
+--- a/xarray/core/dataset.py
++++ b/xarray/core/dataset.py
+@@ -4768,7 +4768,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
+                             # the former is often more efficient
+                             reduce_dims = None
+                         variables[name] = var.quantile(
+-                            q, dim=reduce_dims, interpolation=interpolation
++                            q,
++                            dim=reduce_dims,
++                            interpolation=interpolation,
++                            keep_attrs=keep_attrs,
+                         )
+ 
+             else:
+diff --git a/xarray/core/variable.py b/xarray/core/variable.py
+index 2e9906ce..0dbf9143 100644
+--- a/xarray/core/variable.py
++++ b/xarray/core/variable.py
+@@ -1592,7 +1592,7 @@ class Variable(
+         """
+         return self.broadcast_equals(other, equiv=duck_array_ops.array_notnull_equiv)
+ 
+-    def quantile(self, q, dim=None, interpolation="linear"):
++    def quantile(self, q, dim=None, interpolation="linear", keep_attrs=None):
+         """Compute the qth quantile of the data along the specified dimension.
+ 
+         Returns the qth quantiles(s) of the array elements.
+@@ -1615,6 +1615,10 @@ class Variable(
+                 * higher: ``j``.
+                 * nearest: ``i`` or ``j``, whichever is nearest.
+                 * midpoint: ``(i + j) / 2``.
++        keep_attrs : bool, optional
++            If True, the variable's attributes (`attrs`) will be copied from
++            the original object to the new one.  If False (default), the new
++            object will be returned without attributes.
+ 
+         Returns
+         -------
+@@ -1658,7 +1662,10 @@ class Variable(
+         qs = np.nanpercentile(
+             self.data, q * 100.0, axis=axis, interpolation=interpolation
+         )
+-        return Variable(new_dims, qs)
++        if keep_attrs is None:
++            keep_attrs = _get_keep_attrs(default=False)
++        attrs = self._attrs if keep_attrs else None
++        return Variable(new_dims, qs, attrs=attrs)
+ 
+     def rank(self, dim, pct=False):
+         """Ranks the data.
+diff --git a/xarray/tests/test_dataarray.py b/xarray/tests/test_dataarray.py
+index 8c01ef9a..db9b8959 100644
+--- a/xarray/tests/test_dataarray.py
++++ b/xarray/tests/test_dataarray.py
+@@ -2310,6 +2310,14 @@ class TestDataArray:
+                 )
+                 np.testing.assert_allclose(actual.values, expected)
+ 
++    def test_quantile_keep_attrs(self):
++        # regression test for GH3201
++        actual = self.va.quantile(0.5, dim="x", keep_attrs=True)
++        assert actual.attrs == self.attrs
++
++        actual = self.va.quantile(0.5, dim="x", keep_attrs=False)
++        assert actual.attrs == {}
++
+     def test_reduce_keep_attrs(self):
+         # Test dropped attrs
+         vm = self.va.mean()
+diff --git a/xarray/tests/test_dataset.py b/xarray/tests/test_dataset.py
+index 814fc31d..0372650c 100644
+--- a/xarray/tests/test_dataset.py
++++ b/xarray/tests/test_dataset.py
+@@ -4456,6 +4456,23 @@ class TestDataset:
+             assert "dim3" in ds_quantile.dims
+             assert all(d not in ds_quantile.dims for d in dim)
+ 
++    def test_quantile_keep_attrs(self):
++        # regression test for GH3201
++        ds = create_test_data(seed=123)
++        ds.attrs["foo"] = "bar"
++        for var in ds.data_vars.values():
++            var.attrs["foo"] = "bar"
++
++        actual = ds.quantile(0.5, dim="dim1", keep_attrs=True)
++        assert actual.attrs == ds.attrs
++        for name, var in actual.data_vars.items():
++            assert var.attrs == ds[name].attrs
++
++        actual = ds.quantile(0.5, dim="dim1", keep_attrs=False)
++        assert actual.attrs == {}
++        for var in actual.data_vars.values():
++            assert var.attrs == {}
++
+     @requires_bottleneck
+     def test_rank(self):
+         ds = create_test_data(seed=1234)
+diff --git a/xarray/tests/test_variable.py b/xarray/tests/test_variable.py
+index 43551d62..aa81b038 100644
+--- a/xarray/tests/test_variable.py
++++ b/xarray/tests/test_variable.py
+@@ -1488,6 +1488,12 @@ class TestVariable(VariableSubclassobjects):
+                 expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
+                 np.testing.assert_allclose(actual.values, expected)
+ 
++    def test_quantile_keep_attrs(self):
++        # regression test for GH3201
++        v = Variable(["x", "y"], self.d, attrs={"foo": "bar"})
++        assert v.quantile(0.5, dim="x", keep_attrs=True).attrs == {"foo": "bar"}
++        assert v.quantile(0.5, dim="x", keep_attrs=False).attrs == {}
++
+     @requires_dask
+     def test_quantile_dask_raises(self):
+         # regression for GH1524

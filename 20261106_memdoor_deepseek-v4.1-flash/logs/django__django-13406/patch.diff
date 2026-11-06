@@ -1,0 +1,38 @@
+diff --git a/django/db/models/query.py b/django/db/models/query.py
+index b48d0df9c0..85cd8311a7 100644
+--- a/django/db/models/query.py
++++ b/django/db/models/query.py
+@@ -210,6 +210,8 @@ class QuerySet:
+ 
+     @query.setter
+     def query(self, value):
++        if value.values_select:
++            self._iterable_class = ValuesIterable
+         self._query = value
+ 
+     def as_manager(cls):
+diff --git a/tests/queryset_pickle/tests.py b/tests/queryset_pickle/tests.py
+index a58e45caed..fd2a8b10f7 100644
+--- a/tests/queryset_pickle/tests.py
++++ b/tests/queryset_pickle/tests.py
+@@ -118,6 +118,20 @@ class PickleabilityTestCase(TestCase):
+             Event.objects.select_related('group').order_by('title').values_list('title', 'group__name')
+         )
+ 
++    def test_pickle_values_queryset(self):
++        """
++        A values() query keeps its iterable class when restored on a new
++        queryset, as documented for pickling queryset.query.
++        """
++        values_qs = Happening.objects.values('name').annotate(
++            total=models.Count('id'),
++        )
++        unpickled_query = pickle.loads(pickle.dumps(values_qs.query))
++        new_qs = Happening.objects.all()
++        new_qs.query = unpickled_query
++        self.assertEqual(list(new_qs), list(values_qs))
++        self.assertIsInstance(new_qs[0], dict)
++
+     def test_pickle_prefetch_related_idempotence(self):
+         g = Group.objects.create(name='foo')
+         groups = Group.objects.prefetch_related('event_set')

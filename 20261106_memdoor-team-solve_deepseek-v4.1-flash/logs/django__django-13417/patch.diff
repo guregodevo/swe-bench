@@ -1,0 +1,58 @@
+diff --git a/django/db/models/query.py b/django/db/models/query.py
+index 85cd8311a7..67ffe7f000 100644
+--- a/django/db/models/query.py
++++ b/django/db/models/query.py
+@@ -1224,7 +1224,12 @@ class QuerySet:
+             return True
+         if self.query.extra_order_by or self.query.order_by:
+             return True
+-        elif self.query.default_ordering and self.query.get_meta().ordering:
++        elif (
++            self.query.default_ordering and
++            self.query.get_meta().ordering and
++            # A default ordering doesn't affect GROUP BY queries.
++            not self.query.group_by
++        ):
+             return True
+         else:
+             return False
+diff --git a/docs/ref/models/querysets.txt b/docs/ref/models/querysets.txt
+index f575ab7fb7..56eb3719b2 100644
+--- a/docs/ref/models/querysets.txt
++++ b/docs/ref/models/querysets.txt
+@@ -153,8 +153,8 @@ Here's the formal declaration of a ``QuerySet``:
+     .. attribute:: ordered
+ 
+         ``True`` if the ``QuerySet`` is ordered — i.e. has an
+-        :meth:`order_by()` clause or a default ordering on the model.
+-        ``False`` otherwise.
++        :meth:`order_by()` clause or a default ordering on the model and isn't
++        a ``GROUP BY`` query. ``False`` otherwise.
+ 
+     .. attribute:: db
+ 
+diff --git a/tests/ordering/tests.py b/tests/ordering/tests.py
+index fe319b3859..709c10aee6 100644
+--- a/tests/ordering/tests.py
++++ b/tests/ordering/tests.py
+@@ -2,7 +2,7 @@ from datetime import datetime
+ from operator import attrgetter
+ 
+ from django.db.models import (
+-    CharField, DateTimeField, F, Max, OuterRef, Subquery, Value,
++    CharField, Count, DateTimeField, F, Max, OuterRef, Subquery, Value,
+ )
+ from django.db.models.functions import Upper
+ from django.test import TestCase
+@@ -65,6 +65,11 @@ class OrderingTests(TestCase):
+             attrgetter("headline")
+         )
+ 
++    def test_ordered_with_group_by(self):
++        qs = Article.objects.annotate(Count('pk'))
++        self.assertIs(qs.ordered, False)
++        self.assertIs(qs.order_by('headline').ordered, True)
++
+     def test_order_by_override(self):
+         """
+         Only the last order_by has any effect (since they each override any

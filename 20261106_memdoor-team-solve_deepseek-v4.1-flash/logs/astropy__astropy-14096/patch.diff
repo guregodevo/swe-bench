@@ -1,0 +1,48 @@
+diff --git a/astropy/coordinates/sky_coordinate.py b/astropy/coordinates/sky_coordinate.py
+index ab475f7d0..ec6250c79 100644
+--- a/astropy/coordinates/sky_coordinate.py
++++ b/astropy/coordinates/sky_coordinate.py
+@@ -871,6 +871,19 @@ class SkyCoord(ShapedLikeNDArray):
+         Overrides getattr to return coordinates that this can be transformed
+         to, based on the alias attr in the primary transform graph.
+         """
++        # If ``attr`` is defined as a descriptor on the class, then normal
++        # attribute lookup failed because the descriptor itself raised an
++        # AttributeError (e.g., a property whose getter accesses a missing
++        # attribute).  Re-run the descriptor so that the original, more
++        # informative error propagates instead of being replaced below by a
++        # misleading message claiming that ``attr`` does not exist.
++        for cls in type(self).__mro__:
++            if attr in cls.__dict__:
++                descriptor = cls.__dict__[attr]
++                if hasattr(descriptor, "__get__"):
++                    return descriptor.__get__(self, type(self))
++                break
++
+         if "_sky_coord_frame" in self.__dict__:
+             if self._is_name(attr):
+                 return self  # Should this be a deepcopy of self?
+diff --git a/astropy/coordinates/tests/test_sky_coord.py b/astropy/coordinates/tests/test_sky_coord.py
+index 4dcfba0d4..e41f9f03c 100644
+--- a/astropy/coordinates/tests/test_sky_coord.py
++++ b/astropy/coordinates/tests/test_sky_coord.py
+@@ -1464,6 +1464,19 @@ def test_immutable():
+     assert c1.foo == 42
+ 
+ 
++def test_subclass_property_attribute_error():
++    """Errors from properties on subclasses should not be masked by __getattr__."""
++
++    class CustomCoord(SkyCoord):
++        @property
++        def prop(self):
++            return self.random_attr
++
++    c = CustomCoord("00h42m30s", "+41d12m00s", frame="icrs")
++    with pytest.raises(AttributeError, match="random_attr"):
++        c.prop
++
++
+ @pytest.mark.skipif(not HAS_SCIPY, reason="Requires scipy")
+ def test_search_around():
+     """

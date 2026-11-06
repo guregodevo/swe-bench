@@ -1,0 +1,65 @@
+diff --git a/lib/matplotlib/axes/_axes.py b/lib/matplotlib/axes/_axes.py
+index 5369eadbde..2c3c8773dd 100644
+--- a/lib/matplotlib/axes/_axes.py
++++ b/lib/matplotlib/axes/_axes.py
+@@ -4847,8 +4847,8 @@ default: :rc:`scatter.edgecolors`
+         yscale : {'linear', 'log'}, default: 'linear'
+             Use a linear or log10 scale on the vertical axis.
+ 
+-        mincnt : int > 0, default: *None*
+-            If not *None*, only display cells with more than *mincnt*
++        mincnt : int >= 0, default: *None*
++            If not *None*, only display cells with at least *mincnt*
+             number of points in the cell.
+ 
+         marginals : bool, default: *False*
+@@ -5012,9 +5012,9 @@ default: :rc:`scatter.edgecolors`
+                 else:
+                     Cs_at_i2[i2[i]].append(C[i])
+             if mincnt is None:
+-                mincnt = 0
++                mincnt = 1
+             accum = np.array(
+-                [reduce_C_function(acc) if len(acc) > mincnt else np.nan
++                [reduce_C_function(acc) if len(acc) >= mincnt else np.nan
+                  for Cs_at_i in [Cs_at_i1, Cs_at_i2]
+                  for acc in Cs_at_i[1:]],  # [1:] drops out-of-range points.
+                 float)
+diff --git a/lib/matplotlib/tests/test_axes.py b/lib/matplotlib/tests/test_axes.py
+index 065d17f953..676dcc67be 100644
+--- a/lib/matplotlib/tests/test_axes.py
++++ b/lib/matplotlib/tests/test_axes.py
+@@ -999,6 +999,33 @@ def test_hexbin_log_clim():
+     assert h.get_clim() == (2, 100)
+ 
+ 
++def test_hexbin_mincnt_behavior_upon_C_parameter():
++    # gh-16783: mincnt should behave consistently whether or not C is passed.
++    np.random.seed(0)
++    X, Y = np.random.multivariate_normal([0, 0], [[1, 0.1], [0.1, 1]],
++                                         size=250).T
++    Z = np.ones_like(X)
++    extent = [-3., 3., -3., 3.]
++    gridsize = (7, 7)
++
++    # A mincnt of None means no threshold is applied when C is not given, but
++    # defaults to 1 (cells with at least one point) when C is given.
++    for mincnt, expected_mincnt in [(None, 1), (0, 0), (1, 1), (2, 2)]:
++        fig, ax = plt.subplots()
++        h = ax.hexbin(X, Y, extent=extent, gridsize=gridsize, mincnt=mincnt)
++        n_without_c = len(h.get_offsets())
++
++        fig, ax = plt.subplots()
++        h = ax.hexbin(X, Y, C=Z, reduce_C_function=np.sum, extent=extent,
++                      gridsize=gridsize, mincnt=mincnt)
++        n_with_c = len(h.get_offsets())
++
++        fig, ax = plt.subplots()
++        h = ax.hexbin(X, Y, extent=extent, gridsize=gridsize,
++                      mincnt=expected_mincnt)
++        assert len(h.get_offsets()) == n_with_c
++
++
+ def test_inverted_limits():
+     # Test gh:1553
+     # Calling invert_xaxis prior to plotting should not disable autoscaling

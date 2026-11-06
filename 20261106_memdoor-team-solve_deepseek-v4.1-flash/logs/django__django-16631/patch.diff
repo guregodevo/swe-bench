@@ -1,0 +1,207 @@
+diff --git a/django/contrib/auth/__init__.py b/django/contrib/auth/__init__.py
+index 155330c596..5a2793a524 100644
+--- a/django/contrib/auth/__init__.py
++++ b/django/contrib/auth/__init__.py
+@@ -199,12 +199,25 @@ def get_user(request):
+             # Verify the session
+             if hasattr(user, "get_session_auth_hash"):
+                 session_hash = request.session.get(HASH_SESSION_KEY)
+-                session_hash_verified = session_hash and constant_time_compare(
+-                    session_hash, user.get_session_auth_hash()
+-                )
++                if not session_hash:
++                    session_hash_verified = False
++                else:
++                    session_auth_hash = user.get_session_auth_hash()
++                    session_hash_verified = constant_time_compare(
++                        session_hash, session_auth_hash
++                    )
+                 if not session_hash_verified:
+-                    request.session.flush()
+-                    user = None
++                    # If the current secret does not verify the session, try
++                    # with the fallback secrets and stop when a matching one is
++                    # found.
++                    if session_hash and any(
++                        constant_time_compare(session_hash, fallback_hash)
++                        for fallback_hash in user.get_session_auth_fallback_hash()
++                    ):
++                        request.session.cycle_key()
++                    else:
++                        request.session.flush()
++                        user = None
+ 
+     return user or AnonymousUser()
+ 
+diff --git a/django/contrib/auth/base_user.py b/django/contrib/auth/base_user.py
+index 5ee30bf59c..e205ccccf2 100644
+--- a/django/contrib/auth/base_user.py
++++ b/django/contrib/auth/base_user.py
+@@ -5,6 +5,7 @@ not in INSTALLED_APPS.
+ import unicodedata
+ import warnings
+ 
++from django.conf import settings
+ from django.contrib.auth import password_validation
+ from django.contrib.auth.hashers import (
+     check_password,
+@@ -135,10 +136,18 @@ class AbstractBaseUser(models.Model):
+         """
+         Return an HMAC of the password field.
+         """
++        return self._get_session_auth_hash()
++
++    def get_session_auth_fallback_hash(self):
++        for fallback_secret in settings.SECRET_KEY_FALLBACKS:
++            yield self._get_session_auth_hash(secret=fallback_secret)
++
++    def _get_session_auth_hash(self, secret=None):
+         key_salt = "django.contrib.auth.models.AbstractBaseUser.get_session_auth_hash"
+         return salted_hmac(
+             key_salt,
+             self.password,
++            secret=secret,
+             algorithm="sha256",
+         ).hexdigest()
+ 
+diff --git a/docs/ref/contrib/auth.txt b/docs/ref/contrib/auth.txt
+index 241a0219bd..d3001de9e0 100644
+--- a/docs/ref/contrib/auth.txt
++++ b/docs/ref/contrib/auth.txt
+@@ -695,7 +695,9 @@ Utility functions
+     ``get_user()`` method to retrieve the user model instance and then verifies
+     the session by calling the user model's
+     :meth:`~django.contrib.auth.models.AbstractBaseUser.get_session_auth_hash`
+-    method.
++    method. If the hash doesn't match, it is also checked against the hashes
++    generated from :setting:`SECRET_KEY_FALLBACKS`; if one matches, the session
++    key is cycled.
+ 
+     Returns an instance of :class:`~django.contrib.auth.models.AnonymousUser`
+     if the authentication backend stored in the session is no longer in
+diff --git a/docs/ref/settings.txt b/docs/ref/settings.txt
+index 41387886c0..5c165ef59b 100644
+--- a/docs/ref/settings.txt
++++ b/docs/ref/settings.txt
+@@ -2306,6 +2306,9 @@ previous value to the beginning of ``SECRET_KEY_FALLBACKS``. Then remove the
+ old values from the end of the ``SECRET_KEY_FALLBACKS`` when you are ready to
+ expire the sessions, password reset tokens, and so on, that make use of them.
+ 
++When a session is verified with a fallback secret key, the session key is
++cycled so that the session is signed with the current ``SECRET_KEY``.
++
+ .. note::
+ 
+     Signing operations are computationally expensive. Having multiple old key
+diff --git a/docs/releases/4.2.txt b/docs/releases/4.2.txt
+index 2ef81650f0..149c97ef10 100644
+--- a/docs/releases/4.2.txt
++++ b/docs/releases/4.2.txt
+@@ -150,6 +150,10 @@ Minor features
+ * The new :class:`~django.contrib.auth.forms.BaseUserCreationForm` is now the
+   recommended base class for customizing the user creation form.
+ 
++* Session authentication now supports :setting:`SECRET_KEY_FALLBACKS` when
++  rotating the :setting:`SECRET_KEY`, so that existing sessions are not
++  invalidated.
++
+ :mod:`django.contrib.gis`
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+diff --git a/docs/topics/auth/customizing.txt b/docs/topics/auth/customizing.txt
+index 3b688c8b5c..d68f23928f 100644
+--- a/docs/topics/auth/customizing.txt
++++ b/docs/topics/auth/customizing.txt
+@@ -722,6 +722,12 @@ The following attributes and methods are available on any subclass of
+         Returns an HMAC of the password field. Used for
+         :ref:`session-invalidation-on-password-change`.
+ 
++    .. method:: models.AbstractBaseUser.get_session_auth_fallback_hash()
++
++        Yields an HMAC of the password field for each secret key in
++        :setting:`SECRET_KEY_FALLBACKS`. Used to verify existing sessions when
++        rotating the :setting:`SECRET_KEY`.
++
+ :class:`~models.AbstractUser` subclasses :class:`~models.AbstractBaseUser`:
+ 
+ .. class:: models.AbstractUser
+diff --git a/docs/topics/auth/default.txt b/docs/topics/auth/default.txt
+index c705abcb6b..d86af4ee9b 100644
+--- a/docs/topics/auth/default.txt
++++ b/docs/topics/auth/default.txt
+@@ -959,9 +959,11 @@ function.
+ 
+     Since
+     :meth:`~django.contrib.auth.models.AbstractBaseUser.get_session_auth_hash()`
+-    is based on :setting:`SECRET_KEY`, secret key values must be
+-    rotated to avoid invalidating existing sessions when updating your site to
+-    use a new secret. See :setting:`SECRET_KEY_FALLBACKS` for details.
++    is based on :setting:`SECRET_KEY`, secret key values must be rotated to
++    avoid invalidating existing sessions when updating your site to use a new
++    secret. Existing sessions are verified against the values in
++    :setting:`SECRET_KEY_FALLBACKS` and re-signed with the current
++    :setting:`SECRET_KEY`. See :setting:`SECRET_KEY_FALLBACKS` for details.
+ 
+ .. _built-in-auth-views:
+ 
+diff --git a/tests/auth_tests/test_basic.py b/tests/auth_tests/test_basic.py
+index 4b491e521e..9354fcc8f5 100644
+--- a/tests/auth_tests/test_basic.py
++++ b/tests/auth_tests/test_basic.py
+@@ -1,4 +1,10 @@
+-from django.contrib.auth import get_user, get_user_model
++from django.contrib.auth import (
++    BACKEND_SESSION_KEY,
++    HASH_SESSION_KEY,
++    SESSION_KEY,
++    get_user,
++    get_user_model,
++)
+ from django.contrib.auth.models import AnonymousUser, User
+ from django.core.exceptions import ImproperlyConfigured
+ from django.db import IntegrityError
+@@ -138,3 +144,44 @@ class TestGetUser(TestCase):
+         user = get_user(request)
+         self.assertIsInstance(user, User)
+         self.assertEqual(user.username, created_user.username)
++
++    @override_settings(SECRET_KEY="newsecret", SECRET_KEY_FALLBACKS=["oldsecret"])
++    def test_get_user_with_fallback_secret(self):
++        user = User.objects.create_user("testuser", "test@example.com", "testpw")
++        with override_settings(SECRET_KEY="oldsecret"):
++            session_hash = user.get_session_auth_hash()
++        request = HttpRequest()
++        request.session = self.client.session
++        request.session[SESSION_KEY] = user.pk
++        request.session[BACKEND_SESSION_KEY] = "django.contrib.auth.backends.ModelBackend"
++        request.session[HASH_SESSION_KEY] = session_hash
++        self.assertEqual(get_user(request), user)
++        # The session is kept and the key is cycled when a fallback secret is
++        # used.
++        self.assertEqual(request.session[HASH_SESSION_KEY], session_hash)
++
++    @override_settings(SECRET_KEY="newsecret", SECRET_KEY_FALLBACKS=["oldsecret"])
++    def test_get_user_with_invalid_fallback_secret(self):
++        user = User.objects.create_user("testuser", "test@example.com", "testpw")
++        with override_settings(SECRET_KEY="othersecret"):
++            session_hash = user.get_session_auth_hash()
++        request = HttpRequest()
++        request.session = self.client.session
++        request.session[SESSION_KEY] = user.pk
++        request.session[BACKEND_SESSION_KEY] = "django.contrib.auth.backends.ModelBackend"
++        request.session[HASH_SESSION_KEY] = session_hash
++        self.assertIsInstance(get_user(request), AnonymousUser)
++
++    def test_get_session_auth_fallback_hash(self):
++        user = User.objects.create_user("testuser", "test@example.com", "testpw")
++        with override_settings(
++            SECRET_KEY="newsecret", SECRET_KEY_FALLBACKS=["oldsecret", "oldersecret"]
++        ):
++            fallback_hashes = list(user.get_session_auth_fallback_hash())
++            self.assertEqual(len(fallback_hashes), 2)
++            self.assertNotIn(user.get_session_auth_hash(), fallback_hashes)
++            for secret, fallback_hash in zip(
++                ["oldsecret", "oldersecret"], fallback_hashes
++            ):
++                with override_settings(SECRET_KEY=secret):
++                    self.assertEqual(user.get_session_auth_hash(), fallback_hash)

@@ -1,0 +1,277 @@
+diff --git a/answer.md b/answer.md
+new file mode 100644
+index 000000000..1df7fea33
+--- /dev/null
++++ b/answer.md
+@@ -0,0 +1,82 @@
++# Does `is_even` imply `is_finite`?
++
++## Short answer
++
++Yes. In SymPy an even number is by definition an even *integer*, and every
++integer is a finite number. So `Symbol('m', even=True).is_finite` should be
++`True`, not `None`. The `None` you saw was a gap in the assumptions rules, not
++an intentional "unknown".
++
++## Why
++
++The old assumptions system (`sympy/core/assumptions.py`) describes the
++relationships between facts with `FactRules`. Before this change the relevant
++rules were:
++
++```
++'integer        ->  rational',
++'rational       ->  real',
++...
++'zero           ->  even & finite',
++```
++
++`even` implies `integer` (via `'even == integer & !odd'`), and `integer`
++implies `rational -> real -> complex`, but nothing connected `integer` to
++`finite`. The only route to `finite` was through `zero`, which is why
++`Symbol('z', zero=True).is_finite` was already `True` while
++`Symbol('m', even=True).is_finite` was `None`.
++
++The new assumptions system (`sympy/assumptions/ask.py`, `get_known_facts`) had
++the same gap: it had `Implies(Q.integer, Q.rational)` but no
++`Implies(Q.integer, Q.finite)`. Consequently `ask(Q.finite(x), Q.even(x))`
++also returned `None`.
++
++Mathematically the implication is sound: the integers are a subset of the
++reals, and the reals are finite (the infinities `oo`, `-oo`, `zoo` are not
++integers). So `integer -> finite` is a valid fact and belongs in the rule set.
++
++## The fix
++
++1. `sympy/core/assumptions.py`: added the rule
++
++   ```
++   'integer        ->  finite',
++   ```
++
++2. `sympy/assumptions/ask.py`: added the corresponding fact
++
++   ```python
++   Implies(Q.integer, Q.finite),
++   ```
++
++3. Regenerated `sympy/assumptions/ask_generated.py` with
++   `python bin/ask_update.py` (the file is generated, not hand-edited). This
++   adds `Q.finite | ~Q.integer` to the CNF and `Q.finite` to the fact sets of
++   `Q.integer`, `Q.even`, `Q.odd`, `Q.prime` and `Q.zero`.
++
++4. Updated tests:
++   - `sympy/core/tests/test_assumptions.py`: `integer`, `even` and `odd`
++     symbols now assert `is_finite is True`; `oo`/`-oo` now report
++     `is_integer`, `is_even`, `is_odd`, `is_noninteger` and `is_composite` as
++     `False` (they are infinite, hence not integers) instead of `None`.
++   - `sympy/assumptions/tests/test_query.py`: added
++     `ask(Q.finite(x), Q.integer(x))`, `Q.even(x)`, `Q.odd(x)` and
++     `Q.prime(x)` all `is True`.
++
++## Result
++
++```python
++>>> from sympy import Symbol, ask, Q
++>>> m = Symbol('m', even=True)
++>>> m.is_finite
++True
++>>> ask(Q.finite(Symbol('x')), Q.even(Symbol('x')))
++True
++```
++
++Note that `real=True` and `rational=True` symbols still report
++`is_finite is None` in this version of SymPy. That is a separate (and also
++arguably incorrect) gap: the docstring for `Q.real` already states "Every real
++number is finite", but the rule `real -> finite` is not present. The change
++here deliberately only adds `integer -> finite`, which is the fact needed for
++`even`/`odd`/`prime`, and leaves the broader real/rational question alone.
+diff --git a/sympy/assumptions/ask.py b/sympy/assumptions/ask.py
+index 2f72e111e..46d7e8f76 100644
+--- a/sympy/assumptions/ask.py
++++ b/sympy/assumptions/ask.py
+@@ -1483,6 +1483,7 @@ def get_known_facts():
+         Implies(Q.even, ~Q.odd),
+         Equivalent(Q.prime, Q.integer & Q.positive & ~Q.composite),
+         Implies(Q.integer, Q.rational),
++        Implies(Q.integer, Q.finite),
+         Implies(Q.rational, Q.algebraic),
+         Implies(Q.algebraic, Q.complex),
+         Equivalent(Q.transcendental | Q.algebraic, Q.complex),
+diff --git a/sympy/assumptions/ask_generated.py b/sympy/assumptions/ask_generated.py
+index 3d9772a1d..4950d601a 100644
+--- a/sympy/assumptions/ask_generated.py
++++ b/sympy/assumptions/ask_generated.py
+@@ -25,6 +25,7 @@ def get_known_facts_cnf():
+         Q.even | ~Q.zero,
+         Q.extended_real | ~Q.infinite,
+         Q.extended_real | ~Q.real,
++        Q.finite | ~Q.integer,
+         Q.fullrank | ~Q.invertible,
+         Q.hermitian | ~Q.real,
+         Q.integer | ~Q.even,
+@@ -98,15 +99,15 @@ def get_known_facts_dict():
+         Q.diagonal: set([Q.diagonal, Q.lower_triangular, Q.normal, Q.square,
+         Q.symmetric, Q.triangular, Q.upper_triangular]),
+         Q.even: set([Q.algebraic, Q.complex, Q.even, Q.extended_real,
+-        Q.hermitian, Q.integer, Q.rational, Q.real]),
++        Q.finite, Q.hermitian, Q.integer, Q.rational, Q.real]),
+         Q.extended_real: set([Q.extended_real]),
+         Q.finite: set([Q.finite]),
+         Q.fullrank: set([Q.fullrank]),
+         Q.hermitian: set([Q.hermitian]),
+         Q.imaginary: set([Q.antihermitian, Q.complex, Q.imaginary]),
+         Q.infinite: set([Q.extended_real, Q.infinite]),
+-        Q.integer: set([Q.algebraic, Q.complex, Q.extended_real, Q.hermitian,
+-        Q.integer, Q.rational, Q.real]),
++        Q.integer: set([Q.algebraic, Q.complex, Q.extended_real, Q.finite,
++        Q.hermitian, Q.integer, Q.rational, Q.real]),
+         Q.integer_elements: set([Q.complex_elements, Q.integer_elements,
+         Q.real_elements]),
+         Q.invertible: set([Q.fullrank, Q.invertible, Q.square]),
+@@ -123,17 +124,17 @@ def get_known_facts_dict():
+         Q.nonzero: set([Q.complex, Q.extended_real, Q.hermitian, Q.nonzero,
+         Q.real]),
+         Q.normal: set([Q.normal, Q.square]),
+-        Q.odd: set([Q.algebraic, Q.complex, Q.extended_real, Q.hermitian,
+-        Q.integer, Q.nonzero, Q.odd, Q.rational, Q.real]),
++        Q.odd: set([Q.algebraic, Q.complex, Q.extended_real, Q.finite,
++        Q.hermitian, Q.integer, Q.nonzero, Q.odd, Q.rational, Q.real]),
+         Q.orthogonal: set([Q.fullrank, Q.invertible, Q.normal, Q.orthogonal,
+         Q.positive_definite, Q.square, Q.unitary]),
+         Q.positive: set([Q.complex, Q.extended_real, Q.hermitian,
+         Q.nonnegative, Q.nonzero, Q.positive, Q.real]),
+         Q.positive_definite: set([Q.fullrank, Q.invertible,
+         Q.positive_definite, Q.square]),
+-        Q.prime: set([Q.algebraic, Q.complex, Q.extended_real, Q.hermitian,
+-        Q.integer, Q.nonnegative, Q.nonzero, Q.positive, Q.prime,
+-        Q.rational, Q.real]),
++        Q.prime: set([Q.algebraic, Q.complex, Q.extended_real, Q.finite,
++        Q.hermitian, Q.integer, Q.nonnegative, Q.nonzero, Q.positive,
++        Q.prime, Q.rational, Q.real]),
+         Q.rational: set([Q.algebraic, Q.complex, Q.extended_real, Q.hermitian,
+         Q.rational, Q.real]),
+         Q.real: set([Q.complex, Q.extended_real, Q.hermitian, Q.real]),
+@@ -148,6 +149,6 @@ def get_known_facts_dict():
+         Q.unitary]),
+         Q.upper_triangular: set([Q.triangular, Q.upper_triangular]),
+         Q.zero: set([Q.algebraic, Q.complex, Q.even, Q.extended_real,
+-        Q.hermitian, Q.integer, Q.nonnegative, Q.nonpositive,
+-        Q.rational, Q.real, Q.zero]),
++        Q.finite, Q.hermitian, Q.integer, Q.nonnegative,
++        Q.nonpositive, Q.rational, Q.real, Q.zero]),
+     }
+diff --git a/sympy/assumptions/tests/test_query.py b/sympy/assumptions/tests/test_query.py
+index 524bb32db..8b19f91ba 100644
+--- a/sympy/assumptions/tests/test_query.py
++++ b/sympy/assumptions/tests/test_query.py
+@@ -572,6 +572,11 @@ def test_bounded1():
+     assert ask(Q.finite(x), Q.finite(x)) is True
+     assert ask(Q.finite(x), Q.finite(y)) is None
+     assert ask(Q.finite(x), Q.complex(x)) is None
++    # integers (and hence even/odd/prime numbers) are finite
++    assert ask(Q.finite(x), Q.integer(x)) is True
++    assert ask(Q.finite(x), Q.even(x)) is True
++    assert ask(Q.finite(x), Q.odd(x)) is True
++    assert ask(Q.finite(x), Q.prime(x)) is True
+ 
+     assert ask(Q.finite(x + 1)) is None
+     assert ask(Q.finite(x + 1), Q.finite(x)) is True
+diff --git a/sympy/core/assumptions.py b/sympy/core/assumptions.py
+index ce4dd30f2..0444eb039 100644
+--- a/sympy/core/assumptions.py
++++ b/sympy/core/assumptions.py
+@@ -163,6 +163,7 @@
+ _assume_rules = FactRules([
+ 
+     'integer        ->  rational',
++    'integer        ->  finite',
+     'rational       ->  real',
+     'rational       ->  algebraic',
+     'algebraic      ->  complex',
+diff --git a/sympy/core/tests/test_assumptions.py b/sympy/core/tests/test_assumptions.py
+index 4db1c1c24..75047ffaf 100644
+--- a/sympy/core/tests/test_assumptions.py
++++ b/sympy/core/tests/test_assumptions.py
+@@ -98,26 +98,26 @@ def test_infinity():
+     oo = S.Infinity
+ 
+     assert oo.is_commutative is True
+-    assert oo.is_integer is None
++    assert oo.is_integer is False
+     assert oo.is_rational is None
+     assert oo.is_algebraic is None
+     assert oo.is_transcendental is None
+     assert oo.is_real is True
+     assert oo.is_complex is True
+-    assert oo.is_noninteger is None
++    assert oo.is_noninteger is True
+     assert oo.is_irrational is None
+     assert oo.is_imaginary is False
+     assert oo.is_positive is True
+     assert oo.is_negative is False
+     assert oo.is_nonpositive is False
+     assert oo.is_nonnegative is True
+-    assert oo.is_even is None
+-    assert oo.is_odd is None
++    assert oo.is_even is False
++    assert oo.is_odd is False
+     assert oo.is_finite is False
+     assert oo.is_infinite is True
+     assert oo.is_comparable is True
+     assert oo.is_prime is False
+-    assert oo.is_composite is None
++    assert oo.is_composite is False
+     assert oo.is_number is True
+ 
+ 
+@@ -125,21 +125,21 @@ def test_neg_infinity():
+     mm = S.NegativeInfinity
+ 
+     assert mm.is_commutative is True
+-    assert mm.is_integer is None
++    assert mm.is_integer is False
+     assert mm.is_rational is None
+     assert mm.is_algebraic is None
+     assert mm.is_transcendental is None
+     assert mm.is_real is True
+     assert mm.is_complex is True
+-    assert mm.is_noninteger is None
++    assert mm.is_noninteger is True
+     assert mm.is_irrational is None
+     assert mm.is_imaginary is False
+     assert mm.is_positive is False
+     assert mm.is_negative is True
+     assert mm.is_nonpositive is True
+     assert mm.is_nonnegative is False
+-    assert mm.is_even is None
+-    assert mm.is_odd is None
++    assert mm.is_even is False
++    assert mm.is_odd is False
+     assert mm.is_finite is False
+     assert mm.is_infinite is True
+     assert mm.is_comparable is True
+@@ -567,6 +567,7 @@ def test_other_symbol():
+     x = Symbol('x', integer=True)
+     assert x.is_integer is True
+     assert x.is_real is True
++    assert x.is_finite is True
+ 
+     x = Symbol('x', integer=True, nonnegative=True)
+     assert x.is_integer is True
+@@ -584,6 +585,7 @@ def test_other_symbol():
+     assert x.is_odd is True
+     assert x.is_even is False
+     assert x.is_integer is True
++    assert x.is_finite is True
+ 
+     x = Symbol('x', odd=False)
+     assert x.is_odd is False
+@@ -594,6 +596,7 @@ def test_other_symbol():
+     assert x.is_even is True
+     assert x.is_odd is False
+     assert x.is_integer is True
++    assert x.is_finite is True
+ 
+     x = Symbol('x', even=False)
+     assert x.is_even is False

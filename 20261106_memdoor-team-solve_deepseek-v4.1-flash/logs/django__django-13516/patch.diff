@@ -1,0 +1,32 @@
+diff --git a/django/core/management/base.py b/django/core/management/base.py
+index e6cbf8c64f..862930f709 100644
+--- a/django/core/management/base.py
++++ b/django/core/management/base.py
+@@ -143,6 +143,9 @@ class OutputWrapper(TextIOBase):
+     def isatty(self):
+         return hasattr(self._out, 'isatty') and self._out.isatty()
+ 
++    def flush(self):
++        self._out.flush()
++
+     def write(self, msg='', style_func=None, ending=None):
+         ending = self.ending if ending is None else ending
+         if ending and not msg.endswith(ending):
+diff --git a/tests/admin_scripts/tests.py b/tests/admin_scripts/tests.py
+index 62c6f485aa..63d21f18f7 100644
+--- a/tests/admin_scripts/tests.py
++++ b/tests/admin_scripts/tests.py
+@@ -1511,6 +1511,13 @@ class CommandTypes(AdminScriptTestCase):
+         self.assertEqual(out.getvalue(), 'Hello, world!\n')
+         self.assertEqual(err.getvalue(), 'Hello, world!\n')
+ 
++    def test_outputwrapper_flush(self):
++        out = mock.Mock()
++        command = ColorCommand(stdout=out)
++        command.stdout.write('Hello, world!')
++        command.stdout.flush()
++        out.flush.assert_called_once()
++
+     def test_force_color_execute(self):
+         out = StringIO()
+         err = StringIO()

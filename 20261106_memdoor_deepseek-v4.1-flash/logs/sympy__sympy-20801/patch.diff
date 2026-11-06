@@ -1,0 +1,34 @@
+diff --git a/sympy/core/numbers.py b/sympy/core/numbers.py
+index 79f6a7d165..366a5c2779 100644
+--- a/sympy/core/numbers.py
++++ b/sympy/core/numbers.py
+@@ -1382,14 +1382,14 @@ def __int__(self):
+ 
+     def __eq__(self, other):
+         from sympy.logic.boolalg import Boolean
++        if isinstance(other, Boolean):
++            return False
+         try:
+             other = _sympify(other)
+         except SympifyError:
+             return NotImplemented
+         if not self:
+             return not other
+-        if isinstance(other, Boolean):
+-            return False
+         if other.is_NumberSymbol:
+             if other.is_irrational:
+                 return False
+diff --git a/sympy/core/tests/test_numbers.py b/sympy/core/tests/test_numbers.py
+index 8b3e99126e..9d9392cbac 100644
+--- a/sympy/core/tests/test_numbers.py
++++ b/sympy/core/tests/test_numbers.py
+@@ -1670,6 +1670,8 @@ def test_bool_eq():
+     assert 0 == False
+     assert S(0) == False
+     assert S(0) != S.false
++    assert S(0.0) != S.false
++    assert S.false != S(0.0)
+     assert 1 == True
+     assert S.One == True
+     assert S.One != S.true

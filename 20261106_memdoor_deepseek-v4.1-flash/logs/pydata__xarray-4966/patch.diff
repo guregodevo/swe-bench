@@ -1,0 +1,73 @@
+diff --git a/doc/whats-new.rst b/doc/whats-new.rst
+index 9e59fdc5..0f47a9cf 100644
+--- a/doc/whats-new.rst
++++ b/doc/whats-new.rst
+@@ -38,6 +38,10 @@ Bug fixes
+ ~~~~~~~~~
+ - Don't allow passing ``axis`` to :py:meth:`Dataset.reduce` methods (:issue:`3510`, :pull:`4940`).
+   By `Justus Magin <https://github.com/keewis>`_.
++- Honor the ``_Unsigned="false"`` attribute by decoding unsigned integer data
++  as signed, symmetric to the existing ``_Unsigned="true"`` handling. This
++  allows opening signed byte variables from OPeNDAP with ``engine="pydap"``.
++  By `Xarray developers <https://github.com/pydata/xarray>`_.
+ 
+ Documentation
+ ~~~~~~~~~~~~~
+diff --git a/xarray/coding/variables.py b/xarray/coding/variables.py
+index b035ff82..938752c4 100644
+--- a/xarray/coding/variables.py
++++ b/xarray/coding/variables.py
+@@ -316,6 +316,14 @@ class UnsignedIntegerCoder(VariableCoder):
+                     if "_FillValue" in attrs:
+                         new_fill = unsigned_dtype.type(attrs["_FillValue"])
+                         attrs["_FillValue"] = new_fill
++            elif data.dtype.kind == "u":
++                if unsigned == "false":
++                    signed_dtype = np.dtype("i%s" % data.dtype.itemsize)
++                    transform = partial(np.asarray, dtype=signed_dtype)
++                    data = lazy_elemwise_func(data, transform, signed_dtype)
++                    if "_FillValue" in attrs:
++                        new_fill = signed_dtype.type(attrs["_FillValue"])
++                        attrs["_FillValue"] = new_fill
+             else:
+                 warnings.warn(
+                     "variable %r has _Unsigned attribute but is not "
+diff --git a/xarray/tests/test_coding.py b/xarray/tests/test_coding.py
+index e0df7782..87ee9ae9 100644
+--- a/xarray/tests/test_coding.py
++++ b/xarray/tests/test_coding.py
+@@ -22,6 +22,34 @@ def test_CFMaskCoder_decode():
+     assert_identical(expected, encoded)
+ 
+ 
++def test_UnsignedIntegerCoder_decode_signed():
++    original = xr.Variable(
++        ("x",),
++        np.array([0, 1, 127, 128, 255], dtype="u1"),
++        {"_Unsigned": "false", "_FillValue": np.uint8(255)},
++    )
++    coder = variables.UnsignedIntegerCoder()
++    decoded = coder.decode(original.copy(deep=True))
++    assert decoded.dtype == np.dtype("i1")
++    assert_equal(
++        decoded, xr.Variable(("x",), np.array([0, 1, 127, -128, -1], dtype="i1"))
++    )
++    assert decoded.attrs["_FillValue"] == -1
++    assert decoded.encoding["_Unsigned"] == "false"
++
++
++def test_UnsignedIntegerCoder_decode_unsigned():
++    original = xr.Variable(
++        ("x",), np.array([0, 1, 127, -128, -1], dtype="i1"), {"_Unsigned": "true"}
++    )
++    coder = variables.UnsignedIntegerCoder()
++    decoded = coder.decode(original.copy(deep=True))
++    assert decoded.dtype == np.dtype("u1")
++    assert_equal(
++        decoded, xr.Variable(("x",), np.array([0, 1, 127, 128, 255], dtype="u1"))
++    )
++
++
+ encoding_with_dtype = {
+     "dtype": np.dtype("float64"),
+     "_FillValue": np.float32(1e20),

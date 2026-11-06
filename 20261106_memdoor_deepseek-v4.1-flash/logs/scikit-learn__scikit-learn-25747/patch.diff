@@ -1,0 +1,100 @@
+diff --git a/doc/whats_new/v1.3.rst b/doc/whats_new/v1.3.rst
+index b297155b3..fc533c6d0 100755
+--- a/doc/whats_new/v1.3.rst
++++ b/doc/whats_new/v1.3.rst
+@@ -232,6 +232,12 @@ Changelog
+   `pandas.DataFrame`
+   :pr:`25220` by :user:`Ian Thompson <it176131>`.
+ 
++- |Fix| :func:`utils._set_output._wrap_in_pandas_container` no longer sets the
++  input index on the output when the transformer changes the number of samples,
++  e.g. for aggregating transformers. This fixes an error when using
++  :class:`pipeline.FeatureUnion` with `transform_output="pandas"`.
++  :pr:`25613` by :user:`Guillaume Lemaitre <glemaitre>`.
++
+ :mod:`sklearn.preprocessing`
+ ............................
+ 
+diff --git a/sklearn/tests/test_pipeline.py b/sklearn/tests/test_pipeline.py
+index fa7fa2ad2..c38ac83f7 100755
+--- a/sklearn/tests/test_pipeline.py
++++ b/sklearn/tests/test_pipeline.py
+@@ -1620,6 +1620,33 @@ def test_feature_union_set_output():
+     assert_array_equal(X_trans.index, X_test.index)
+ 
+ 
++def test_feature_union_set_output_aggregating_transformer():
++    """Check that FeatureUnion works with pandas output when a transformer
++    changes the number of samples.
++
++    Non-regression test for gh-25613.
++    """
++    pd = pytest.importorskip("pandas")
++
++    class AggregatingTransformer(TransformerMixin, BaseEstimator):
++        def fit(self, X, y=None):
++            return self
++
++        def transform(self, X):
++            return X.groupby(X.index % 2).sum()
++
++        def get_feature_names_out(self, input_features=None):
++            return np.asarray(["a"], dtype=object)
++
++    X = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0]}, index=[10, 11, 12, 13])
++    union = FeatureUnion([("agg", AggregatingTransformer())])
++    union.set_output(transform="pandas")
++
++    X_trans = union.fit_transform(X)
++    assert isinstance(X_trans, pd.DataFrame)
++    assert X_trans.shape == (2, 1)
++
++
+ def test_feature_union_getitem():
+     """Check FeatureUnion.__getitem__ returns expected results."""
+     scalar = StandardScaler()
+diff --git a/sklearn/utils/_set_output.py b/sklearn/utils/_set_output.py
+index 335773c6a..754393e3b 100755
+--- a/sklearn/utils/_set_output.py
++++ b/sklearn/utils/_set_output.py
+@@ -52,6 +52,11 @@ def _wrap_in_pandas_container(
+ 
+     pd = check_pandas_support("Setting output container to 'pandas'")
+ 
++    # If the transformer changes the number of samples (e.g. an aggregating
++    # transformer), the index of the input is no longer valid for the output.
++    if index is not None and len(index) != len(data_to_wrap):
++        index = None
++
+     if isinstance(data_to_wrap, pd.DataFrame):
+         if columns is not None:
+             data_to_wrap.columns = columns
+diff --git a/sklearn/utils/tests/test_set_output.py b/sklearn/utils/tests/test_set_output.py
+index ac73ca094..62b016d4d 100755
+--- a/sklearn/utils/tests/test_set_output.py
++++ b/sklearn/utils/tests/test_set_output.py
+@@ -36,6 +36,24 @@ def test__wrap_in_pandas_container_dense_update_columns_and_index():
+     assert_array_equal(new_df.index, new_index)
+ 
+ 
++def test__wrap_in_pandas_container_dense_index_length_mismatch():
++    """Check that the index is not set when the number of rows changes.
++
++    Non-regression test for gh-25613.
++    """
++    pd = pytest.importorskip("pandas")
++    X_df = pd.DataFrame({"a": [1, 2, 3, 4]}, index=[10, 11, 12, 13])
++    # The transformer aggregates the data and returns fewer rows than the input.
++    X_aggregated = X_df.groupby(X_df.index % 2).sum()
++    expected_index = X_aggregated.index
++    new_index = [10, 11, 12, 13]
++
++    new_df = _wrap_in_pandas_container(
++        X_aggregated, columns=["a"], index=new_index
++    )
++    assert_array_equal(new_df.index, expected_index)
++
++
+ def test__wrap_in_pandas_container_error_validation():
+     """Check errors in _wrap_in_pandas_container."""
+     X = np.asarray([[1, 0, 3], [0, 0, 1]])

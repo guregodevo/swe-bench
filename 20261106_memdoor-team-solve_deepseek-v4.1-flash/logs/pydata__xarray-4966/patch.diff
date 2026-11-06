@@ -1,0 +1,71 @@
+diff --git a/xarray/coding/variables.py b/xarray/coding/variables.py
+index b035ff82..fd0396fa 100644
+--- a/xarray/coding/variables.py
++++ b/xarray/coding/variables.py
+@@ -308,15 +308,21 @@ class UnsignedIntegerCoder(VariableCoder):
+         if "_Unsigned" in attrs:
+             unsigned = pop_to(attrs, encoding, "_Unsigned")
+ 
+-            if data.dtype.kind == "i":
+-                if unsigned == "true":
+-                    unsigned_dtype = np.dtype("u%s" % data.dtype.itemsize)
+-                    transform = partial(np.asarray, dtype=unsigned_dtype)
+-                    data = lazy_elemwise_func(data, transform, unsigned_dtype)
+-                    if "_FillValue" in attrs:
+-                        new_fill = unsigned_dtype.type(attrs["_FillValue"])
+-                        attrs["_FillValue"] = new_fill
+-            else:
++            if data.dtype.kind == "i" and unsigned == "true":
++                unsigned_dtype = np.dtype("u%s" % data.dtype.itemsize)
++                transform = partial(np.asarray, dtype=unsigned_dtype)
++                data = lazy_elemwise_func(data, transform, unsigned_dtype)
++                if "_FillValue" in attrs:
++                    new_fill = unsigned_dtype.type(attrs["_FillValue"])
++                    attrs["_FillValue"] = new_fill
++            elif data.dtype.kind == "u" and unsigned == "false":
++                signed_dtype = np.dtype("i%s" % data.dtype.itemsize)
++                transform = partial(np.asarray, dtype=signed_dtype)
++                data = lazy_elemwise_func(data, transform, signed_dtype)
++                if "_FillValue" in attrs:
++                    new_fill = signed_dtype.type(attrs["_FillValue"])
++                    attrs["_FillValue"] = new_fill
++            elif data.dtype.kind not in "iu":
+                 warnings.warn(
+                     "variable %r has _Unsigned attribute but is not "
+                     "of integer type. Ignoring attribute." % name,
+diff --git a/xarray/tests/test_coding.py b/xarray/tests/test_coding.py
+index e0df7782..e745a894 100644
+--- a/xarray/tests/test_coding.py
++++ b/xarray/tests/test_coding.py
+@@ -94,6 +94,31 @@ def test_coder_roundtrip():
+     assert_identical(original, roundtripped)
+ 
+ 
++def test_UnsignedIntegerCoder_decode_unsigned_to_signed():
++    # The _Unsigned="false" convention is used by OPeNDAP (and netCDF-c) to
++    # indicate that data of an unsigned type should be interpreted as signed.
++    original = xr.Variable(
++        ("x",), np.array([0, 1, 127, 128, 255], dtype="u1"), {"_Unsigned": "false"}
++    )
++    expected = xr.Variable(("x",), np.array([0, 1, 127, -128, -1], dtype="i1"))
++    coder = variables.UnsignedIntegerCoder()
++    decoded = coder.decode(original)
++    assert_identical(expected, decoded)
++    assert decoded.encoding["_Unsigned"] == "false"
++
++
++def test_UnsignedIntegerCoder_decode_unsigned_to_signed_fill_value():
++    original = xr.Variable(
++        ("x",),
++        np.array([0, 1, 255], dtype="u1"),
++        {"_Unsigned": "false", "_FillValue": np.uint8(255)},
++    )
++    coder = variables.UnsignedIntegerCoder()
++    decoded = coder.decode(original)
++    assert decoded.dtype == np.dtype("i1")
++    assert decoded.attrs["_FillValue"] == np.int8(-1)
++
++
+ @pytest.mark.parametrize("dtype", "u1 u2 i1 i2 f2 f4".split())
+ def test_scaling_converts_to_float32(dtype):
+     original = xr.Variable(

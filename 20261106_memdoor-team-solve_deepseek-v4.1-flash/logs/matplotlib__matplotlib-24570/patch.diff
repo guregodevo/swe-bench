@@ -1,0 +1,75 @@
+diff --git a/lib/matplotlib/offsetbox.py b/lib/matplotlib/offsetbox.py
+index 3a506543ac..059a6c8ae3 100644
+--- a/lib/matplotlib/offsetbox.py
++++ b/lib/matplotlib/offsetbox.py
+@@ -166,10 +166,10 @@ def _get_aligned_offsets(hd_list, height, align="baseline"):
+         descent = max(d for h, d in hd_list)
+         height = height_descent + descent
+         offsets = [0. for h, d in hd_list]
+-    elif align in ["left", "top"]:
++    elif align in ["left", "bottom"]:
+         descent = 0.
+         offsets = [d for h, d in hd_list]
+-    elif align in ["right", "bottom"]:
++    elif align in ["right", "top"]:
+         descent = 0.
+         offsets = [height - h + d for h, d in hd_list]
+     elif align == "center":
+diff --git a/lib/matplotlib/tests/test_offsetbox.py b/lib/matplotlib/tests/test_offsetbox.py
+index 02756ff559..a445c653dd 100644
+--- a/lib/matplotlib/tests/test_offsetbox.py
++++ b/lib/matplotlib/tests/test_offsetbox.py
+@@ -12,8 +12,9 @@ import matplotlib.lines as mlines
+ from matplotlib.backend_bases import MouseButton, MouseEvent
+ 
+ from matplotlib.offsetbox import (
+-    AnchoredOffsetbox, AnnotationBbox, AnchoredText, DrawingArea, OffsetBox,
+-    OffsetImage, TextArea, _get_packed_offsets)
++    AnchoredOffsetbox, AnnotationBbox, AnchoredText, DrawingArea, HPacker,
++    OffsetBox, OffsetImage, TextArea, _get_aligned_offsets,
++    _get_packed_offsets)
+ 
+ 
+ @image_comparison(['offsetbox_clipping'], remove_text=True)
+@@ -187,6 +188,41 @@ def test_get_packed_offsets_equal_total_none_sep_none():
+         _get_packed_offsets([1, 1, 1], total=None, sep=None, mode='equal')
+ 
+ 
++@pytest.mark.parametrize('align, expected_offsets', [
++    ('baseline', [0, 0]),
++    ('bottom', [2, 1]),
++    ('left', [2, 1]),
++    ('top', [2, 6]),
++    ('right', [2, 6]),
++    ('center', [2, 3.5]),
++])
++def test_get_aligned_offsets(align, expected_offsets):
++    # The boxes have heights 10 and 5, and descents 2 and 1.
++    height, descent, offsets = _get_aligned_offsets(
++        [(10, 2), (5, 1)], None, align)
++    assert height == 10
++    assert descent == (2 if align == "baseline" else 0)
++    assert_allclose(offsets, expected_offsets)
++
++
++@pytest.mark.parametrize('align, anchored', [
++    ('top', 'y1'),
++    ('bottom', 'y0'),
++])
++def test_hpacker_align(align, anchored):
++    fig, ax = plt.subplots()
++    child1 = DrawingArea(10, 20)
++    child2 = DrawingArea(10, 30)
++    packer = HPacker(children=[child1, child2], pad=0, sep=0, align=align)
++    ax.add_artist(packer)
++    fig.canvas.draw()
++    renderer = fig.canvas.get_renderer()
++    bbox1 = child1.get_window_extent(renderer)
++    bbox2 = child2.get_window_extent(renderer)
++    assert getattr(bbox1, anchored) == pytest.approx(
++        getattr(bbox2, anchored))
++
++
+ @pytest.mark.parametrize('child_type', ['draw', 'image', 'text'])
+ @pytest.mark.parametrize('boxcoords',
+                          ['axes fraction', 'axes pixels', 'axes points',

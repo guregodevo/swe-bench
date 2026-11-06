@@ -1,0 +1,45 @@
+diff --git a/sphinx/util/docfields.py b/sphinx/util/docfields.py
+index 3a3367ebe..6d48e910c 100644
+--- a/sphinx/util/docfields.py
++++ b/sphinx/util/docfields.py
+@@ -298,7 +298,7 @@ class DocFieldTransformer:
+             # also support syntax like ``:param type name:``
+             if typedesc.is_typed:
+                 try:
+-                    argtype, argname = fieldarg.split(None, 1)
++                    argtype, argname = fieldarg.rsplit(None, 1)
+                 except ValueError:
+                     pass
+                 else:
+diff --git a/tests/test_domain_py.py b/tests/test_domain_py.py
+index 569390c40..8229d4d22 100644
+--- a/tests/test_domain_py.py
++++ b/tests/test_domain_py.py
+@@ -1008,6 +1008,27 @@ def test_info_field_list_var(app):
+                 refdomain="py", reftype="class", reftarget="int", **{"py:class": "Class"})
+ 
+ 
++def test_info_field_list_with_complex_type(app):
++    text = (".. py:class:: Class\n"
++            "\n"
++            "   :param dict(str, str) opc_meta: blah blah\n")
++    doctree = restructuredtext.parse(app, text)
++
++    # :param dict(str, str) opc_meta:
++    assert_node(doctree[1][1][0][0][1][0],
++                ([addnodes.literal_strong, "opc_meta"],
++                 " (",
++                 [pending_xref, addnodes.literal_emphasis, "dict"],
++                 [addnodes.literal_emphasis, "("],
++                 [pending_xref, addnodes.literal_emphasis, "str"],
++                 [addnodes.literal_emphasis, ", "],
++                 [pending_xref, addnodes.literal_emphasis, "str"],
++                 [addnodes.literal_emphasis, ")"],
++                 ")",
++                 " -- ",
++                 "blah blah"))
++
++
+ @pytest.mark.sphinx(freshenv=True)
+ def test_module_index(app):
+     text = (".. py:module:: docutils\n"

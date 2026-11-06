@@ -1,0 +1,41 @@
+diff --git a/django/views/debug.py b/django/views/debug.py
+index 7a89f7bd15..36332d4004 100644
+--- a/django/views/debug.py
++++ b/django/views/debug.py
+@@ -397,9 +397,13 @@ class ExceptionReporter:
+     def get_traceback_frames(self):
+         def explicit_or_implicit_cause(exc_value):
+             explicit = getattr(exc_value, '__cause__', None)
+-            suppress_context = getattr(exc_value, '__suppress_context__', None)
+-            implicit = getattr(exc_value, '__context__', None)
+-            return explicit or (None if suppress_context else implicit)
++            if explicit is not None:
++                return explicit
++            # `raise ... from None` sets __suppress_context__, so the
++            # implicit context must not be displayed (PEP 415).
++            if getattr(exc_value, '__suppress_context__', False):
++                return None
++            return getattr(exc_value, '__context__', None)
+ 
+         # Get the exception and all its causes
+         exceptions = []
+diff --git a/tests/view_tests/tests/test_debug.py b/tests/view_tests/tests/test_debug.py
+index 3cbeb2e03a..ff9ed74b71 100644
+--- a/tests/view_tests/tests/test_debug.py
++++ b/tests/view_tests/tests/test_debug.py
+@@ -466,6 +466,15 @@ class ExceptionReporterTests(SimpleTestCase):
+         self.assertIn('<h2>Request information</h2>', html)
+         self.assertIn('<p>Request data not supplied</p>', html)
+         self.assertNotIn('During handling of the above exception', html)
++        self.assertNotIn('was the direct cause of the following exception', html)
++        self.assertNotIn('<h1>RuntimeError</h1>', html)
++
++        text = reporter.get_traceback_text()
++        self.assertNotIn('During handling of the above exception', text)
++        self.assertNotIn('was the direct cause of the following exception', text)
++
++        for frame in reporter.get_traceback_frames():
++            self.assertIsNone(frame['exc_cause'])
+ 
+     def test_reporting_of_nested_exceptions(self):
+         request = self.rf.get('/test_view/')

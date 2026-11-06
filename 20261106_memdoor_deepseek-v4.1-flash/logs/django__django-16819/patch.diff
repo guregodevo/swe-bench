@@ -1,0 +1,289 @@
+diff --git a/django/db/migrations/operations/models.py b/django/db/migrations/operations/models.py
+index 967a91fdc8..19829d365e 100644
+--- a/django/db/migrations/operations/models.py
++++ b/django/db/migrations/operations/models.py
+@@ -215,6 +215,44 @@ class CreateModel(ModelOperation):
+                     managers=self.managers,
+                 ),
+             ]
++        elif (
++            isinstance(operation, IndexOperation)
++            and self.name_lower == operation.model_name_lower
++        ):
++            if isinstance(operation, AddIndex):
++                return [
++                    CreateModel(
++                        self.name,
++                        fields=self.fields,
++                        options={
++                            **self.options,
++                            "indexes": [
++                                *self.options.get("indexes", []),
++                                operation.index,
++                            ],
++                        },
++                        bases=self.bases,
++                        managers=self.managers,
++                    ),
++                ]
++            elif isinstance(operation, RemoveIndex):
++                options_indexes = [
++                    index
++                    for index in self.options.get("indexes", [])
++                    if index.name != operation.name
++                ]
++                return [
++                    CreateModel(
++                        self.name,
++                        fields=self.fields,
++                        options={
++                            **self.options,
++                            "indexes": options_indexes,
++                        },
++                        bases=self.bases,
++                        managers=self.managers,
++                    ),
++                ]
+         elif (
+             isinstance(operation, FieldOperation)
+             and self.name_lower == operation.model_name_lower
+@@ -857,6 +895,15 @@ class AddIndex(IndexOperation):
+             self.model_name,
+         )
+ 
++    def reduce(self, operation, app_label):
++        if (
++            isinstance(operation, RemoveIndex)
++            and self.model_name_lower == operation.model_name_lower
++            and self.index.name == operation.name
++        ):
++            return []
++        return super().reduce(operation, app_label)
++
+     @property
+     def migration_name_fragment(self):
+         return "%s_%s" % (self.model_name_lower, self.index.name.lower())
+diff --git a/docs/releases/5.0.txt b/docs/releases/5.0.txt
+index dafdc10d62..5a1d86b0af 100644
+--- a/docs/releases/5.0.txt
++++ b/docs/releases/5.0.txt
+@@ -271,7 +271,9 @@ Management Commands
+ Migrations
+ ~~~~~~~~~~
+ 
+-* ...
++* The migration optimizer now reduces
++  :class:`~django.db.migrations.operations.AddIndex` and
++  :class:`~django.db.migrations.operations.RemoveIndex` operations.
+ 
+ Models
+ ~~~~~~
+diff --git a/tests/migrations/test_autodetector.py b/tests/migrations/test_autodetector.py
+index 44923a3c2e..056693518b 100644
+--- a/tests/migrations/test_autodetector.py
++++ b/tests/migrations/test_autodetector.py
+@@ -2266,10 +2266,21 @@ class AutodetectorTests(BaseAutodetectorTests):
+             changes,
+             "eggs",
+             0,
+-            ["CreateModel", "CreateModel", "AddIndex", "AlterUniqueTogether"],
++            ["CreateModel", "CreateModel"],
+         )
+         self.assertNotIn("unique_together", changes["eggs"][0].operations[0].options)
+-        self.assertNotIn("unique_together", changes["eggs"][0].operations[1].options)
++        self.assertEqual(
++            changes["eggs"][0].operations[1].options["indexes"],
++            [
++                models.Index(
++                    fields=["parent", "knight"], name="rabbit_circular_fk_index"
++                )
++            ],
++        )
++        self.assertEqual(
++            changes["eggs"][0].operations[1].options["unique_together"],
++            {("parent", "knight")},
++        )
+         self.assertMigrationDependencies(changes, "eggs", 0, [])
+ 
+     def test_alter_db_table_add(self):
+@@ -2579,19 +2590,24 @@ class AutodetectorTests(BaseAutodetectorTests):
+             },
+         )
+         changes = self.get_changes([], [author])
+-        added_index = models.Index(
+-            fields=["name"], name="create_model_with_indexes_idx"
+-        )
+         # Right number of migrations?
+         self.assertEqual(len(changes["otherapp"]), 1)
+         # Right number of actions?
+         migration = changes["otherapp"][0]
+-        self.assertEqual(len(migration.operations), 2)
++        self.assertEqual(len(migration.operations), 1)
+         # Right actions order?
+-        self.assertOperationTypes(changes, "otherapp", 0, ["CreateModel", "AddIndex"])
+-        self.assertOperationAttributes(changes, "otherapp", 0, 0, name="Author")
++        self.assertOperationTypes(changes, "otherapp", 0, ["CreateModel"])
+         self.assertOperationAttributes(
+-            changes, "otherapp", 0, 1, model_name="author", index=added_index
++            changes,
++            "otherapp",
++            0,
++            0,
++            name="Author",
++            options={
++                "indexes": [
++                    models.Index(fields=["name"], name="create_model_with_indexes_idx")
++                ]
++            },
+         )
+ 
+     def test_add_indexes(self):
+@@ -4046,15 +4062,21 @@ class AutodetectorTests(BaseAutodetectorTests):
+     def test_add_model_order_with_respect_to_index_constraint(self):
+         tests = [
+             (
+-                "AddIndex",
++                ["CreateModel"],
+                 {
+                     "indexes": [
+                         models.Index(fields=["_order"], name="book_order_idx"),
+                     ]
+                 },
++                {
++                    "order_with_respect_to": "book",
++                    "indexes": [
++                        models.Index(fields=["_order"], name="book_order_idx"),
++                    ],
++                },
+             ),
+             (
+-                "AddConstraint",
++                ["CreateModel", "AddConstraint"],
+                 {
+                     "constraints": [
+                         models.CheckConstraint(
+@@ -4063,10 +4085,11 @@ class AutodetectorTests(BaseAutodetectorTests):
+                         ),
+                     ]
+                 },
++                {"order_with_respect_to": "book"},
+             ),
+         ]
+-        for operation, extra_option in tests:
+-            with self.subTest(operation=operation):
++        for operation_types, extra_option, expected_options in tests:
++            with self.subTest(operation=operation_types[-1]):
+                 after = ModelState(
+                     "testapp",
+                     "Author",
+@@ -4086,10 +4109,7 @@ class AutodetectorTests(BaseAutodetectorTests):
+                     changes,
+                     "testapp",
+                     0,
+-                    [
+-                        "CreateModel",
+-                        operation,
+-                    ],
++                    operation_types,
+                 )
+                 self.assertOperationAttributes(
+                     changes,
+@@ -4097,7 +4117,7 @@ class AutodetectorTests(BaseAutodetectorTests):
+                     0,
+                     0,
+                     name="Author",
+-                    options={"order_with_respect_to": "book"},
++                    options=expected_options,
+                 )
+ 
+     def test_set_alter_order_with_respect_to_index_constraint_unique_together(self):
+diff --git a/tests/migrations/test_optimizer.py b/tests/migrations/test_optimizer.py
+index 8cd4c67fbd..eba504ba82 100644
+--- a/tests/migrations/test_optimizer.py
++++ b/tests/migrations/test_optimizer.py
+@@ -1121,6 +1121,85 @@ class OptimizerTests(SimpleTestCase):
+             ],
+         )
+ 
++    def test_create_model_add_index(self):
++        self.assertOptimizesTo(
++            [
++                migrations.CreateModel(
++                    "Foo", [("name", models.CharField(max_length=255))]
++                ),
++                migrations.AddIndex(
++                    "Foo", models.Index(fields=["name"], name="foo_name_idx")
++                ),
++            ],
++            [
++                migrations.CreateModel(
++                    "Foo",
++                    [("name", models.CharField(max_length=255))],
++                    options={
++                        "indexes": [models.Index(fields=["name"], name="foo_name_idx")]
++                    },
++                ),
++            ],
++        )
++
++    def test_create_model_remove_index(self):
++        self.assertOptimizesTo(
++            [
++                migrations.CreateModel(
++                    "Foo",
++                    [("name", models.CharField(max_length=255))],
++                    options={
++                        "indexes": [models.Index(fields=["name"], name="foo_name_idx")]
++                    },
++                ),
++                migrations.RemoveIndex("Foo", "foo_name_idx"),
++            ],
++            [
++                migrations.CreateModel(
++                    "Foo",
++                    [("name", models.CharField(max_length=255))],
++                    options={"indexes": []},
++                ),
++            ],
++        )
++
++    def test_add_index_remove_index(self):
++        self.assertOptimizesTo(
++            [
++                migrations.AddIndex(
++                    "Foo", models.Index(fields=["name"], name="foo_name_idx")
++                ),
++                migrations.RemoveIndex("Foo", "foo_name_idx"),
++            ],
++            [],
++        )
++
++    def test_add_index_remove_other_index(self):
++        self.assertDoesNotOptimize(
++            [
++                migrations.AddIndex(
++                    "Foo", models.Index(fields=["name"], name="foo_name_idx")
++                ),
++                migrations.RemoveIndex("Foo", "foo_other_idx"),
++            ],
++        )
++
++    def test_add_remove_index_other_model(self):
++        self.assertOptimizesTo(
++            [
++                migrations.AddIndex(
++                    "Foo", models.Index(fields=["name"], name="foo_name_idx")
++                ),
++                migrations.RemoveIndex("Bar", "foo_name_idx"),
++            ],
++            [
++                migrations.AddIndex(
++                    "Foo", models.Index(fields=["name"], name="foo_name_idx")
++                ),
++                migrations.RemoveIndex("Bar", "foo_name_idx"),
++            ],
++        )
++
+     def test_rename_index(self):
+         self.assertOptimizesTo(
+             [

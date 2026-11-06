@@ -1,0 +1,99 @@
+diff --git a/CHANGES b/CHANGES
+index 9ef4dd273..0a6f91b8f 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -26,6 +26,8 @@ Features added
+ Bugs fixed
+ ----------
+ 
++* i18n: Message catalogs in :confval:`locale_dirs` now take precedence over
++  the built-in translations of Sphinx
+ * #8085: i18n: Add support for having single text domain
+ * #8143: autodoc: AttributeError is raised when False value is passed to
+   autodoc_default_options
+diff --git a/doc/usage/configuration.rst b/doc/usage/configuration.rst
+index 3fc3a5306..e8c611e66 100644
+--- a/doc/usage/configuration.rst
++++ b/doc/usage/configuration.rst
+@@ -749,6 +749,11 @@ documentation on :ref:`intl` for details.
+    .. versionchanged:: 1.5
+       Use ``locales`` directory as a default value
+ 
++   .. versionchanged:: 3.3
++      Message catalogs in this directory take precedence over the translations
++      bundled with Sphinx.  This allows overriding individual built-in
++      translations.
++
+ .. confval:: gettext_compact
+ 
+    .. versionadded:: 1.1
+diff --git a/sphinx/application.py b/sphinx/application.py
+index 385b74d8a..1695bf7e3 100644
+--- a/sphinx/application.py
++++ b/sphinx/application.py
+@@ -293,7 +293,10 @@ class Sphinx:
+                 if catalog.domain == 'sphinx' and catalog.is_outdated():
+                     catalog.write_mo(self.config.language)
+ 
+-            locale_dirs = [None, path.join(package_dir, 'locale')] + list(repo.locale_dirs)
++            # user-supplied locale dirs must take precedence over the built-in
++            # translations and the system locale
++            locale_dirs = (list(repo.locale_dirs) +
++                           [None, path.join(package_dir, 'locale')])
+             self.translator, has_translation = locale.init(locale_dirs, self.config.language)
+             if has_translation or self.config.language == 'en':
+                 # "en" never needs to be translated
+diff --git a/tests/test_intl.py b/tests/test_intl.py
+index 1d1282baa..e7f289f3b 100644
+--- a/tests/test_intl.py
++++ b/tests/test_intl.py
+@@ -1289,3 +1289,49 @@ def test_image_glob_intl_using_figure_language_filename(app):
+ 
+ def getwarning(warnings):
+     return strip_escseq(warnings.getvalue().replace(os.sep, '/'))
++
++
++def test_locale_override_with_user_catalog(tempdir, make_app):
++    (tempdir / 'conf.py').write_text(
++        'project = "locale override"\n'
++        'language = "da"\n'
++        'locale_dirs = ["."]\n'
++        'numfig = True\n'
++    )
++    (tempdir / 'index.rst').write_text(
++        'Title\n'
++        '=====\n'
++        '\n'
++        '.. figure:: https://example.com/image.png\n'
++        '\n'
++        '   caption\n'
++        '\n'
++        '.. code-block:: python\n'
++        '   :caption: some code\n'
++        '\n'
++        '   print(1)\n'
++    )
++    catalog_dir = tempdir / 'da' / 'LC_MESSAGES'
++    catalog_dir.makedirs()
++    (catalog_dir / 'sphinx.po').write_text(
++        'msgid ""\n'
++        'msgstr ""\n'
++        '"Content-Type: text/plain; charset=UTF-8\\n"\n'
++        '\n'
++        'msgid "Fig. %s"\n'
++        'msgstr "Foobar %s"\n'
++        '\n'
++        'msgid "Listing %s"\n'
++        'msgstr "Whatever %s"\n'
++    )
++
++    app = make_app('html', srcdir=tempdir)
++    app.build()
++
++    # translations from the user catalog must take precedence over the
++    # translations bundled with Sphinx
++    result = (app.outdir / 'index.html').read_text()
++    assert 'Foobar 1' in result
++    assert 'Whatever 1' in result
++    assert 'Figur 1' not in result
++    assert 'Viser 1' not in result

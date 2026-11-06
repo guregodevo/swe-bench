@@ -1,0 +1,75 @@
+diff --git a/django/core/servers/basehttp.py b/django/core/servers/basehttp.py
+index fef5532e58..76740828f4 100644
+--- a/django/core/servers/basehttp.py
++++ b/django/core/servers/basehttp.py
+@@ -147,6 +147,24 @@ class ServerHandler(simple_server.ServerHandler):
+         self.get_stdin().read()
+         super().close()
+ 
++    def finish_response(self):
++        if self.environ["REQUEST_METHOD"] == "HEAD":
++            try:
++                if not self.result_is_file() or not self.sendfile():
++                    for data in self.result:
++                        pass
++                self.finish_content()
++            except:
++                # Call close() on the iterable returned by the WSGI application
++                # in case of an exception.
++                if hasattr(self.result, "close"):
++                    self.result.close()
++                raise
++            else:
++                self.close()
++        else:
++            super().finish_response()
++
+ 
+ class WSGIRequestHandler(simple_server.WSGIRequestHandler):
+     protocol_version = "HTTP/1.1"
+diff --git a/tests/builtin_server/tests.py b/tests/builtin_server/tests.py
+index f654fdd92c..c0fdb6c5ed 100644
+--- a/tests/builtin_server/tests.py
++++ b/tests/builtin_server/tests.py
+@@ -4,7 +4,10 @@ from io import BytesIO
+ from unittest import TestCase, mock
+ from wsgiref import simple_server
+ 
+-from django.core.servers.basehttp import get_internal_wsgi_application
++from django.core.servers.basehttp import (
++    ServerHandler as DjangoServerHandler,
++    get_internal_wsgi_application,
++)
+ from django.core.signals import request_finished
+ from django.test import RequestFactory, override_settings
+ 
+@@ -45,6 +48,8 @@ class ServerHandler(simple_server.ServerHandler):
+ 
+ 
+ class DummyHandler:
++    server = None
++
+     def log_request(self, *args, **kwargs):
+         pass
+ 
+@@ -168,3 +173,20 @@ class ServerHandlerChunksProperly(TestCase):
+         handler = WriteChunkCounterHandler(None, BytesIO(), BytesIO(), env)
+         handler.run(send_big_data_app)
+         self.assertEqual(handler.write_chunk_counter, 2)
++
++
++class ServerHandlerHeadTests(TestCase):
++    def test_head_request_does_not_write_body(self):
++        env = RequestFactory().head("/").environ
++        handler = DjangoServerHandler(BytesIO(), BytesIO(), BytesIO(), env)
++        handler.request_handler = DummyHandler()
++        handler.run(wsgi_app)
++        output = handler.stdout.getvalue()
++        self.assertNotIn(b"Hello World!", output)
++
++    def test_get_request_writes_body(self):
++        env = RequestFactory().get("/").environ
++        handler = DjangoServerHandler(BytesIO(), BytesIO(), BytesIO(), env)
++        handler.request_handler = DummyHandler()
++        handler.run(wsgi_app)
++        self.assertIn(b"Hello World!", handler.stdout.getvalue())

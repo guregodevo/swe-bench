@@ -1,0 +1,44 @@
+diff --git a/django/db/models/enums.py b/django/db/models/enums.py
+index f48143ddaf..82db96c20d 100644
+--- a/django/db/models/enums.py
++++ b/django/db/models/enums.py
+@@ -57,6 +57,10 @@ class ChoicesMeta(enum.EnumMeta):
+     def values(cls):
+         return [value for value, _ in cls.choices]
+ 
++    @property
++    def do_not_call_in_templates(cls):
++        return True
++
+ 
+ class Choices(enum.Enum, metaclass=ChoicesMeta):
+     """Class for creating enumerated choices."""
+diff --git a/tests/model_enums/tests.py b/tests/model_enums/tests.py
+index b9356479de..00911f6b27 100644
+--- a/tests/model_enums/tests.py
++++ b/tests/model_enums/tests.py
+@@ -5,6 +5,7 @@ import uuid
+ 
+ from django.db import models
+ from django.test import SimpleTestCase
++from django.template import Context, Engine
+ from django.utils.functional import Promise
+ from django.utils.translation import gettext_lazy as _
+ 
+@@ -41,6 +42,16 @@ class Gender(models.TextChoices):
+ 
+ 
+ class ChoicesTests(SimpleTestCase):
++    def test_choices_in_templates(self):
++        engine = Engine()
++        template = engine.from_string(
++            '{% if suit == Suit.DIAMOND %}Diamond{% endif %}'
++        )
++        self.assertEqual(
++            template.render(Context({'suit': Suit.DIAMOND, 'Suit': Suit})),
++            'Diamond',
++        )
++
+     def test_integerchoices(self):
+         self.assertEqual(Suit.choices, [(1, 'Diamond'), (2, 'Spade'), (3, 'Heart'), (4, 'Club')])
+         self.assertEqual(Suit.labels, ['Diamond', 'Spade', 'Heart', 'Club'])

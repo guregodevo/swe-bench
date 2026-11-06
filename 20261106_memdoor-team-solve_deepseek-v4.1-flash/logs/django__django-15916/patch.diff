@@ -1,0 +1,102 @@
+diff --git a/django/forms/models.py b/django/forms/models.py
+index 192d9fad94..df83b9aca3 100644
+--- a/django/forms/models.py
++++ b/django/forms/models.py
+@@ -263,7 +263,12 @@ class ModelFormMetaclass(DeclarativeFieldsMetaclass):
+                 base_formfield_callback = b.Meta.formfield_callback
+                 break
+ 
+-        formfield_callback = attrs.pop("formfield_callback", base_formfield_callback)
++        # A formfield_callback declared in the inner Meta class should take
++        # precedence over one inherited from a base form.
++        formfield_callback = attrs.pop(
++            "formfield_callback",
++            getattr(attrs.get("Meta"), "formfield_callback", base_formfield_callback),
++        )
+ 
+         new_class = super().__new__(mcs, name, bases, attrs)
+ 
+@@ -630,13 +635,13 @@ def modelform_factory(
+     # creating needs to inherit from the parent's inner meta.
+     bases = (form.Meta,) if hasattr(form, "Meta") else ()
+     Meta = type("Meta", bases, attrs)
+-    if formfield_callback:
++    if formfield_callback is not None:
+         Meta.formfield_callback = staticmethod(formfield_callback)
+     # Give this new form class a reasonable name.
+     class_name = model.__name__ + "Form"
+ 
+     # Class attributes for the new form class.
+-    form_class_attrs = {"Meta": Meta, "formfield_callback": formfield_callback}
++    form_class_attrs = {"Meta": Meta}
+ 
+     if getattr(Meta, "fields", None) is None and getattr(Meta, "exclude", None) is None:
+         raise ImproperlyConfigured(
+diff --git a/docs/releases/4.2.txt b/docs/releases/4.2.txt
+index 92ccb8e6dd..d1f7d56c78 100644
+--- a/docs/releases/4.2.txt
++++ b/docs/releases/4.2.txt
+@@ -151,7 +151,9 @@ File Uploads
+ Forms
+ ~~~~~
+ 
+-* ...
++* ``ModelForm`` subclasses can now define ``formfield_callback`` in their
++  ``Meta`` class, and :func:`~django.forms.models.modelform_factory` respects
++  it when generating a form from an existing form class.
+ 
+ Generic Views
+ ~~~~~~~~~~~~~
+diff --git a/tests/model_forms/tests.py b/tests/model_forms/tests.py
+index d2ce3348c5..949689c49a 100644
+--- a/tests/model_forms/tests.py
++++ b/tests/model_forms/tests.py
+@@ -3465,6 +3465,48 @@ class FormFieldCallbackTests(SimpleTestCase):
+             callback_args, [(id_field, {}), (name_field, {"widget": widget})]
+         )
+ 
++    def test_custom_callback_in_meta(self):
++        """A formfield_callback defined in Meta is used by modelform_factory."""
++        callback_args = []
++
++        def callback(db_field, **kwargs):
++            callback_args.append((db_field, kwargs))
++            return db_field.formfield(**kwargs)
++
++        class BaseForm(forms.ModelForm):
++            class Meta:
++                model = Person
++                fields = "__all__"
++                formfield_callback = callback
++
++        del callback_args[:]
++        Form = modelform_factory(Person, form=BaseForm)
++        id_field, name_field = Person._meta.fields
++        self.assertEqual(callback_args, [(id_field, {}), (name_field, {})])
++        self.assertEqual(Form.base_fields["name"].required, True)
++
++    def test_custom_callback_in_meta_overrides_inherited_callback(self):
++        def inherited_callback(db_field, **kwargs):
++            return db_field.formfield(**kwargs)
++
++        def callback(db_field, **kwargs):
++            formfield = db_field.formfield(**kwargs)
++            if formfield is not None:
++                formfield.required = True
++            return formfield
++
++        class BaseForm(forms.ModelForm):
++            class Meta:
++                model = Person
++                fields = "__all__"
++                formfield_callback = inherited_callback
++
++        class ChildForm(BaseForm):
++            class Meta(BaseForm.Meta):
++                formfield_callback = callback
++
++        self.assertTrue(ChildForm.base_fields["name"].required)
++
+     def test_bad_callback(self):
+         # A bad callback provided by user still gives an error
+         with self.assertRaises(TypeError):

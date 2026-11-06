@@ -1,0 +1,163 @@
+diff --git a/django/db/backends/mysql/operations.py b/django/db/backends/mysql/operations.py
+index 76ca815765..7bbcedbc89 100644
+--- a/django/db/backends/mysql/operations.py
++++ b/django/db/backends/mysql/operations.py
+@@ -451,8 +451,8 @@ class DatabaseOperations(BaseDatabaseOperations):
+ 
+             fields = ", ".join(
+                 [
+-                    field_sql % {"field": field}
+-                    for field in map(self.quote_name, update_fields)
++                    field_sql % {"field": self.quote_name(field.column)}
++                    for field in update_fields
+                 ]
+             )
+             return conflict_suffix_sql % {"fields": fields}
+diff --git a/django/db/backends/postgresql/operations.py b/django/db/backends/postgresql/operations.py
+index 62273fc43c..adaebfe04d 100644
+--- a/django/db/backends/postgresql/operations.py
++++ b/django/db/backends/postgresql/operations.py
+@@ -354,11 +354,12 @@ class DatabaseOperations(BaseDatabaseOperations):
+             return "ON CONFLICT DO NOTHING"
+         if on_conflict == OnConflict.UPDATE:
+             return "ON CONFLICT(%s) DO UPDATE SET %s" % (
+-                ", ".join(map(self.quote_name, unique_fields)),
++                ", ".join(self.quote_name(field.column) for field in unique_fields),
+                 ", ".join(
+                     [
+-                        f"{field} = EXCLUDED.{field}"
+-                        for field in map(self.quote_name, update_fields)
++                        f"{self.quote_name(field.column)} = "
++                        f"EXCLUDED.{self.quote_name(field.column)}"
++                        for field in update_fields
+                     ]
+                 ),
+             )
+diff --git a/django/db/backends/sqlite3/operations.py b/django/db/backends/sqlite3/operations.py
+index bb84d52071..82c6ca6265 100644
+--- a/django/db/backends/sqlite3/operations.py
++++ b/django/db/backends/sqlite3/operations.py
+@@ -418,11 +418,12 @@ class DatabaseOperations(BaseDatabaseOperations):
+             and self.connection.features.supports_update_conflicts_with_target
+         ):
+             return "ON CONFLICT(%s) DO UPDATE SET %s" % (
+-                ", ".join(map(self.quote_name, unique_fields)),
++                ", ".join(self.quote_name(field.column) for field in unique_fields),
+                 ", ".join(
+                     [
+-                        f"{field} = EXCLUDED.{field}"
+-                        for field in map(self.quote_name, update_fields)
++                        f"{self.quote_name(field.column)} = "
++                        f"EXCLUDED.{self.quote_name(field.column)}"
++                        for field in update_fields
+                     ]
+                 ),
+             )
+diff --git a/django/db/models/query.py b/django/db/models/query.py
+index be8580f2c4..8ff85443cb 100644
+--- a/django/db/models/query.py
++++ b/django/db/models/query.py
+@@ -698,7 +698,7 @@ class QuerySet(AltersData):
+                 raise NotSupportedError(
+                     "This database backend does not support ignoring conflicts."
+                 )
+-            return OnConflict.IGNORE
++            return OnConflict.IGNORE, update_fields, unique_fields
+         elif update_conflicts:
+             if not db_features.supports_update_conflicts:
+                 raise NotSupportedError(
+@@ -740,8 +740,8 @@ class QuerySet(AltersData):
+                         "bulk_create() can only be used with concrete fields "
+                         "in unique_fields."
+                     )
+-            return OnConflict.UPDATE
+-        return None
++            return OnConflict.UPDATE, update_fields, unique_fields
++        return None, update_fields, unique_fields
+ 
+     def bulk_create(
+         self,
+@@ -788,7 +788,7 @@ class QuerySet(AltersData):
+             unique_fields = [
+                 opts.pk.name if name == "pk" else name for name in unique_fields
+             ]
+-        on_conflict = self._check_bulk_create_options(
++        on_conflict, update_fields, unique_fields = self._check_bulk_create_options(
+             ignore_conflicts,
+             update_conflicts,
+             update_fields,
+diff --git a/tests/bulk_create/models.py b/tests/bulk_create/models.py
+index 27abc416bd..7ff6c1d36b 100644
+--- a/tests/bulk_create/models.py
++++ b/tests/bulk_create/models.py
+@@ -75,6 +75,12 @@ class UpsertConflict(models.Model):
+     name = models.CharField(max_length=15)
+ 
+ 
++class MixedCaseFieldModel(models.Model):
++    number = models.IntegerField(unique=True, db_column="Number")
++    rank = models.IntegerField(db_column="Rank")
++    name = models.CharField(max_length=15, db_column="Name")
++
++
+ class NoFields(models.Model):
+     pass
+ 
+diff --git a/tests/bulk_create/tests.py b/tests/bulk_create/tests.py
+index 6c490d1235..62237d91e1 100644
+--- a/tests/bulk_create/tests.py
++++ b/tests/bulk_create/tests.py
+@@ -17,10 +17,12 @@ from django.test import (
+     skipIfDBFeature,
+     skipUnlessDBFeature,
+ )
++from django.test.utils import CaptureQueriesContext
+ 
+ from .models import (
+     BigAutoFieldModel,
+     Country,
++    MixedCaseFieldModel,
+     NoFields,
+     NullableFields,
+     Pizzeria,
+@@ -628,6 +630,40 @@ class BulkCreateTests(TestCase):
+             ],
+         )
+ 
++    @skipUnlessDBFeature(
++        "supports_update_conflicts", "supports_update_conflicts_with_target"
++    )
++    def test_update_conflicts_unique_fields_db_column(self):
++        MixedCaseFieldModel.objects.bulk_create(
++            [
++                MixedCaseFieldModel(number=1, rank=1, name="a"),
++                MixedCaseFieldModel(number=2, rank=2, name="b"),
++            ]
++        )
++        self.assertEqual(MixedCaseFieldModel.objects.count(), 2)
++
++        with CaptureQueriesContext(connection) as ctx:
++            MixedCaseFieldModel.objects.bulk_create(
++                [
++                    MixedCaseFieldModel(number=1, rank=3, name="c"),
++                    MixedCaseFieldModel(number=2, rank=4, name="d"),
++                ],
++                update_conflicts=True,
++                update_fields=["rank", "name"],
++                unique_fields=["number"],
++            )
++        self.assertIn('"Number"', ctx.captured_queries[0]["sql"])
++        self.assertIn('"Rank"', ctx.captured_queries[0]["sql"])
++        self.assertIn('"Name"', ctx.captured_queries[0]["sql"])
++        self.assertEqual(MixedCaseFieldModel.objects.count(), 2)
++        self.assertCountEqual(
++            MixedCaseFieldModel.objects.values("number", "rank", "name"),
++            [
++                {"number": 1, "rank": 3, "name": "c"},
++                {"number": 2, "rank": 4, "name": "d"},
++            ],
++        )
++
+     @skipUnlessDBFeature(
+         "supports_update_conflicts", "supports_update_conflicts_with_target"
+     )

@@ -1,0 +1,54 @@
+diff --git a/lib/matplotlib/colors.py b/lib/matplotlib/colors.py
+index 2d3072da04..364a9f94fb 100755
+--- a/lib/matplotlib/colors.py
++++ b/lib/matplotlib/colors.py
+@@ -725,6 +725,12 @@ class Colormap:
+                 # Avoid converting large positive values to negative integers.
+                 np.clip(xa, -1, self.N, out=xa)
+                 xa = xa.astype(int)
++        elif xa.dtype.kind in "iu":
++            # The out-of-range indices (_i_under, _i_over, _i_bad) may not fit
++            # in the input integer dtype (e.g. uint8), so cast to a type that
++            # can hold them before assigning; otherwise NumPy >= 1.24 warns
++            # about out-of-bound integer conversions.
++            xa = xa.astype(int)
+         # Set the over-range indices before the under-range;
+         # otherwise the under-range values get converted to over-range.
+         xa[xa > self.N - 1] = self._i_over
+diff --git a/lib/matplotlib/tests/test_colors.py b/lib/matplotlib/tests/test_colors.py
+index ff893e71ac..18fbf6bf5c 100755
+--- a/lib/matplotlib/tests/test_colors.py
++++ b/lib/matplotlib/tests/test_colors.py
+@@ -1,6 +1,7 @@
+ import copy
+ import itertools
+ import unittest.mock
++import warnings
+ 
+ from io import BytesIO
+ import numpy as np
+@@ -212,6 +213,24 @@ def test_colormap_endian():
+         assert_array_equal(cmap(anative), cmap(aforeign))
+ 
+ 
++@pytest.mark.parametrize("dtype", [np.uint8, np.int8, np.uint16, np.int16,
++                                    np.uint32, np.int32, np.uint64, np.int64])
++def test_colormap_uint(dtype):
++    # Test that passing integer arrays (including unsigned types whose range
++    # cannot hold the under/over/bad indices) does not trigger NumPy's
++    # out-of-bound integer conversion warnings (gh-24664).
++    cmap = mpl.colormaps["viridis"]
++    values = np.array([0, 1, 2], dtype=dtype)
++    with warnings.catch_warnings():
++        warnings.simplefilter("error", DeprecationWarning)
++        result = cmap(values)
++    assert_array_equal(result, cmap(values.astype(int)))
++    # Also test an empty integer array (gh-24664).
++    with warnings.catch_warnings():
++        warnings.simplefilter("error", DeprecationWarning)
++        assert cmap(np.empty((0,), dtype=dtype)).shape == (0, 4)
++
++
+ def test_colormap_invalid():
+     """
+     GitHub issue #9892: Handling of nan's were getting mapped to under

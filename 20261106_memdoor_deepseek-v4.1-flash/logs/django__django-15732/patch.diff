@@ -1,0 +1,84 @@
+diff --git a/django/db/backends/base/schema.py b/django/db/backends/base/schema.py
+index f2ca8c8df9..48e6fb4d9f 100644
+--- a/django/db/backends/base/schema.py
++++ b/django/db/backends/base/schema.py
+@@ -528,7 +528,10 @@ class BaseDatabaseSchemaEditor:
+         # Deleted uniques
+         for fields in olds.difference(news):
+             self._delete_composed_index(
+-                model, fields, {"unique": True}, self.sql_delete_unique
++                model,
++                fields,
++                {"unique": True, "primary_key": False},
++                self.sql_delete_unique,
+             )
+         # Created uniques
+         for field_names in news.difference(olds):
+@@ -548,7 +551,7 @@ class BaseDatabaseSchemaEditor:
+             self._delete_composed_index(
+                 model,
+                 fields,
+-                {"index": True, "unique": False},
++                {"index": True, "unique": False, "primary_key": False},
+                 self.sql_delete_index,
+             )
+         # Created indexes
+diff --git a/tests/schema/models.py b/tests/schema/models.py
+index 55f7d2c13c..ff4700c015 100644
+--- a/tests/schema/models.py
++++ b/tests/schema/models.py
+@@ -227,6 +227,14 @@ class UniqueTest(models.Model):
+         unique_together = ["year", "slug"]
+ 
+ 
++class UniqueTogetherOnPrimaryKey(models.Model):
++    id = models.AutoField(primary_key=True)
++
++    class Meta:
++        apps = new_apps
++        unique_together = [["id"]]
++
++
+ class Node(models.Model):
+     node_id = models.AutoField(primary_key=True)
+     parent = models.ForeignKey("self", models.CASCADE, null=True, blank=True)
+diff --git a/tests/schema/tests.py b/tests/schema/tests.py
+index fe717f8841..b32e2f60e7 100644
+--- a/tests/schema/tests.py
++++ b/tests/schema/tests.py
+@@ -84,6 +84,7 @@ from .models import (
+     TagUniqueRename,
+     Thing,
+     UniqueTest,
++    UniqueTogetherOnPrimaryKey,
+     new_apps,
+ )
+ 
+@@ -119,6 +120,7 @@ class SchemaTests(TransactionTestCase):
+         TagUniqueRename,
+         Thing,
+         UniqueTest,
++        UniqueTogetherOnPrimaryKey,
+     ]
+ 
+     # Utility functions
+@@ -2548,6 +2550,19 @@ class SchemaTests(TransactionTestCase):
+         with connection.schema_editor() as editor:
+             editor.alter_unique_together(Book, [["author", "title"]], [])
+ 
++    def test_unique_together_on_primary_key(self):
++        """
++        unique_together on a primary key field can be removed.
++        """
++        with connection.schema_editor() as editor:
++            editor.create_model(UniqueTogetherOnPrimaryKey)
++        with connection.schema_editor() as editor:
++            editor.alter_unique_together(
++                UniqueTogetherOnPrimaryKey,
++                UniqueTogetherOnPrimaryKey._meta.unique_together,
++                [],
++            )
++
+     def test_unique_together_with_fk_with_existing_index(self):
+         """
+         Tests removing and adding unique_together constraints that include

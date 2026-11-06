@@ -1,0 +1,31 @@
+diff --git a/sympy/physics/quantum/tensorproduct.py b/sympy/physics/quantum/tensorproduct.py
+index 9dd10d219..04c1db795 100644
+--- a/sympy/physics/quantum/tensorproduct.py
++++ b/sympy/physics/quantum/tensorproduct.py
+@@ -238,6 +238,9 @@ def _label_wrap(label, nlabels):
+     def doit(self, **hints):
+         return TensorProduct(*[item.doit(**hints) for item in self.args])
+ 
++    def _eval_power(self, exp):
++        return TensorProduct(*[arg**exp for arg in self.args])
++
+     def _eval_expand_tensorproduct(self, **hints):
+         """Distribute TensorProducts across addition."""
+         args = self.args
+diff --git a/sympy/physics/quantum/tests/test_tensorproduct.py b/sympy/physics/quantum/tests/test_tensorproduct.py
+index 9f65844c8..0579d0966 100644
+--- a/sympy/physics/quantum/tests/test_tensorproduct.py
++++ b/sympy/physics/quantum/tests/test_tensorproduct.py
+@@ -49,6 +49,12 @@ def test_tensor_product_simp():
+     assert tensor_product_simp(TP(A, B)*TP(B, C)) == TP(A*B, B*C)
+ 
+ 
++def test_tensor_product_power():
++    assert TP(A, B)**2 == TP(A**2, B**2)
++    assert (TP(1, 1)*TP(1, 1)).expand(tensorproduct=True) == TP(1, 1)
++    assert tensor_product_simp(TP(1, 1)*TP(1, 1)) == TP(1, 1)
++
++
+ def test_issue_5923():
+     # most of the issue regarding sympification of args has been handled
+     # and is tested internally by the use of args_cnc through the quantum

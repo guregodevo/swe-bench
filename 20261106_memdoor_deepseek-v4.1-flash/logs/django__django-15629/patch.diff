@@ -1,0 +1,187 @@
+diff --git a/django/db/backends/base/schema.py b/django/db/backends/base/schema.py
+index 696bfd7742..4cd5a71120 100644
+--- a/django/db/backends/base/schema.py
++++ b/django/db/backends/base/schema.py
+@@ -829,7 +829,10 @@ class BaseDatabaseSchemaEditor:
+                 (old_field.primary_key and new_field.primary_key)
+                 or (old_field.unique and new_field.unique)
+             )
+-            and old_type != new_type
++            and (
++                old_type != new_type
++                or old_db_params.get("collation") != new_db_params.get("collation")
++            )
+         )
+         if drop_foreign_keys:
+             # '_meta.related_field' also contains M2M reverse fields, these
+@@ -1038,9 +1041,23 @@ class BaseDatabaseSchemaEditor:
+         for old_rel, new_rel in rels_to_update:
+             rel_db_params = new_rel.field.db_parameters(connection=self.connection)
+             rel_type = rel_db_params["type"]
+-            fragment, other_actions = self._alter_column_type_sql(
+-                new_rel.related_model, old_rel.field, new_rel.field, rel_type
++            rel_collation = rel_db_params.get("collation")
++            old_rel_db_params = old_rel.field.db_parameters(
++                connection=self.connection
+             )
++            old_rel_collation = old_rel_db_params.get("collation")
++            if old_rel_collation != rel_collation:
++                fragment = self._alter_column_collation_sql(
++                    new_rel.related_model,
++                    new_rel.field,
++                    rel_type,
++                    rel_collation,
++                )
++                other_actions = []
++            else:
++                fragment, other_actions = self._alter_column_type_sql(
++                    new_rel.related_model, old_rel.field, new_rel.field, rel_type
++                )
+             self.execute(
+                 self.sql_alter_column
+                 % {
+diff --git a/django/db/backends/mysql/schema.py b/django/db/backends/mysql/schema.py
+index 562b209eef..59f3007d26 100644
+--- a/django/db/backends/mysql/schema.py
++++ b/django/db/backends/mysql/schema.py
+@@ -169,6 +169,12 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
+         new_type = self._set_field_new_type_null_status(old_field, new_type)
+         return super()._alter_column_type_sql(model, old_field, new_field, new_type)
+ 
++    def _alter_column_collation_sql(self, model, new_field, new_type, new_collation):
++        new_type = self._set_field_new_type_null_status(new_field, new_type)
++        return super()._alter_column_collation_sql(
++            model, new_field, new_type, new_collation
++        )
++
+     def _rename_field_sql(self, table, old_field, new_field, new_type):
+         new_type = self._set_field_new_type_null_status(old_field, new_type)
+         return super()._rename_field_sql(table, old_field, new_field, new_type)
+diff --git a/django/db/backends/sqlite3/schema.py b/django/db/backends/sqlite3/schema.py
+index 21e1b35fce..69612639c9 100644
+--- a/django/db/backends/sqlite3/schema.py
++++ b/django/db/backends/sqlite3/schema.py
+@@ -455,7 +455,10 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
+         # Alter by remaking table
+         self._remake_table(model, alter_field=(old_field, new_field))
+         # Rebuild tables with FKs pointing to this field.
+-        if new_field.unique and old_type != new_type:
++        if new_field.unique and (
++            old_type != new_type
++            or old_db_params.get("collation") != new_db_params.get("collation")
++        ):
+             related_models = set()
+             opts = new_field.model._meta
+             for remote_field in opts.related_objects:
+diff --git a/django/db/models/fields/related.py b/django/db/models/fields/related.py
+index fad5560486..7fb2630424 100644
+--- a/django/db/models/fields/related.py
++++ b/django/db/models/fields/related.py
+@@ -1180,7 +1180,10 @@ class ForeignKey(ForeignObject):
+         return self.target_field.rel_db_type(connection=connection)
+ 
+     def db_parameters(self, connection):
+-        return {"type": self.db_type(connection), "check": self.db_check(connection)}
++        return {
++            **super().db_parameters(connection),
++            "collation": self.target_field.db_parameters(connection).get("collation"),
++        }
+ 
+     def convert_empty_strings(self, value, expression, connection):
+         if (not value) and isinstance(value, str):
+diff --git a/tests/schema/models.py b/tests/schema/models.py
+index 55f7d2c13c..88a8472c46 100644
+--- a/tests/schema/models.py
++++ b/tests/schema/models.py
+@@ -218,6 +218,13 @@ class Thing(models.Model):
+         return self.when
+ 
+ 
++class ThingWithForeignKey(models.Model):
++    thing = models.ForeignKey(Thing, models.CASCADE)
++
++    class Meta:
++        apps = new_apps
++
++
+ class UniqueTest(models.Model):
+     year = models.IntegerField()
+     slug = models.SlugField(unique=False)
+diff --git a/tests/schema/tests.py b/tests/schema/tests.py
+index 2d12796cbd..d5f1fc15d8 100644
+--- a/tests/schema/tests.py
++++ b/tests/schema/tests.py
+@@ -52,6 +52,7 @@ from django.db.models import (
+ from django.db.models.fields.json import KeyTextTransform
+ from django.db.models.functions import Abs, Cast, Collate, Lower, Random, Upper
+ from django.db.models.indexes import IndexExpression
++from django.db.migrations.state import ModelState, ProjectState
+ from django.db.transaction import TransactionManagementError, atomic
+ from django.test import TransactionTestCase, skipIfDBFeature, skipUnlessDBFeature
+ from django.test.utils import CaptureQueriesContext, isolate_apps, register_lookup
+@@ -83,6 +84,7 @@ from .models import (
+     TagM2MTest,
+     TagUniqueRename,
+     Thing,
++    ThingWithForeignKey,
+     UniqueTest,
+     new_apps,
+ )
+@@ -118,6 +120,7 @@ class SchemaTests(TransactionTestCase):
+         TagM2MTest,
+         TagUniqueRename,
+         Thing,
++        ThingWithForeignKey,
+         UniqueTest,
+     ]
+ 
+@@ -4633,6 +4636,49 @@ class SchemaTests(TransactionTestCase):
+         self.assertEqual(self.get_primary_key(Thing._meta.db_table), "when")
+         self.assertIsNone(self.get_column_collation(Thing._meta.db_table, "when"))
+ 
++    @skipUnlessDBFeature("supports_collation_on_charfield")
++    def test_alter_primary_key_db_collation_foreign_key(self):
++        collation = connection.features.test_collations.get("non_default")
++        if not collation:
++            self.skipTest("Language collations are not supported.")
++
++        old_state = ProjectState(
++            {
++                ("schema", "thing"): ModelState.from_model(Thing),
++                (
++                    "schema",
++                    "thingwithforeignkey",
++                ): ModelState.from_model(ThingWithForeignKey),
++            }
++        )
++        new_state = old_state.clone()
++        new_state.alter_field(
++            "schema",
++            "thing",
++            "when",
++            CharField(max_length=1, db_collation=collation, primary_key=True),
++            True,
++        )
++        from_model = old_state.apps.get_model("schema", "thing")
++        to_model = new_state.apps.get_model("schema", "thing")
++        related_model = old_state.apps.get_model("schema", "thingwithforeignkey")
++        with connection.schema_editor() as editor:
++            editor.create_model(from_model)
++            editor.create_model(related_model)
++
++        old_field = from_model._meta.get_field("when")
++        new_field = to_model._meta.get_field("when")
++        with connection.schema_editor() as editor:
++            editor.alter_field(from_model, old_field, new_field, strict=True)
++        self.assertEqual(
++            self.get_column_collation(from_model._meta.db_table, "when"),
++            collation,
++        )
++        self.assertEqual(
++            self.get_column_collation(related_model._meta.db_table, "thing_id"),
++            collation,
++        )
++
+     @skipUnlessDBFeature(
+         "supports_collation_on_charfield", "supports_collation_on_textfield"
+     )

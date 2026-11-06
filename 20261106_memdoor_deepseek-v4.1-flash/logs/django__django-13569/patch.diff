@@ -1,0 +1,51 @@
+diff --git a/django/db/models/functions/math.py b/django/db/models/functions/math.py
+index 304e112225..bc5f009655 100644
+--- a/django/db/models/functions/math.py
++++ b/django/db/models/functions/math.py
+@@ -145,6 +145,9 @@ class Random(NumericOutputFieldMixin, Func):
+     function = 'RANDOM'
+     arity = 0
+ 
++    def get_group_by_cols(self, alias=None):
++        return []
++
+     def as_mysql(self, compiler, connection, **extra_context):
+         return super().as_sql(compiler, connection, function='RAND', **extra_context)
+ 
+diff --git a/tests/aggregation/tests.py b/tests/aggregation/tests.py
+index f8aeceb2d0..428fd6350b 100644
+--- a/tests/aggregation/tests.py
++++ b/tests/aggregation/tests.py
+@@ -112,6 +112,19 @@ class AggregateTestCase(TestCase):
+         with self.assertRaisesMessage(FieldError, msg):
+             Author.objects.values('age').order_by(Avg('book__rating'))
+ 
++    def test_order_by_random_with_aggregation(self):
++        publishers = Publisher.objects.annotate(
++            num_books=Count('book'),
++        ).order_by('?').values('id', 'num_books')
++        self.assertEqual(
++            {p['id']: p['num_books'] for p in publishers},
++            dict(
++                Publisher.objects.annotate(
++                    num_books=Count('book'),
++                ).values_list('id', 'num_books'),
++            ),
++        )
++
+     def test_single_aggregate(self):
+         vals = Author.objects.aggregate(Avg("age"))
+         self.assertEqual(vals, {"age__avg": Approximate(37.4, places=1)})
+diff --git a/tests/db_functions/math/test_random.py b/tests/db_functions/math/test_random.py
+index 6bcf49baf9..d25b20cba8 100644
+--- a/tests/db_functions/math/test_random.py
++++ b/tests/db_functions/math/test_random.py
+@@ -11,3 +11,8 @@ class RandomTests(TestCase):
+         self.assertIsInstance(obj.random, float)
+         self.assertGreaterEqual(obj.random, 0)
+         self.assertLess(obj.random, 1)
++
++    def test_random_ordering_with_aggregation(self):
++        FloatModel.objects.create()
++        obj = FloatModel.objects.annotate(random=Random()).order_by('?').first()
++        self.assertIsInstance(obj.random, float)

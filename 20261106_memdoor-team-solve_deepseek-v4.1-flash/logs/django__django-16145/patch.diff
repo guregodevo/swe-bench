@@ -1,0 +1,32 @@
+diff --git a/django/core/management/commands/runserver.py b/django/core/management/commands/runserver.py
+index 3c39f57e4d..d7dc91848e 100644
+--- a/django/core/management/commands/runserver.py
++++ b/django/core/management/commands/runserver.py
+@@ -105,6 +105,10 @@ class Command(BaseCommand):
+                     self._raw_ipv6 = True
+                 elif self.use_ipv6 and not _fqdn:
+                     raise CommandError('"%s" is not a valid IPv6 address.' % self.addr)
++                elif self.addr == "0":
++                    # Use 0.0.0.0 as a shortcut for all available IPv4
++                    # interfaces, consistent with the documented behavior.
++                    self.addr = "0.0.0.0"
+         if not self.addr:
+             self.addr = self.default_addr_ipv6 if self.use_ipv6 else self.default_addr
+             self._raw_ipv6 = self.use_ipv6
+diff --git a/tests/admin_scripts/tests.py b/tests/admin_scripts/tests.py
+index 9d2ca839d5..7d7395b6b2 100644
+--- a/tests/admin_scripts/tests.py
++++ b/tests/admin_scripts/tests.py
+@@ -1587,6 +1587,12 @@ class ManageRunserver(SimpleTestCase):
+         call_command(self.cmd, addrport="7000")
+         self.assertServerSettings("127.0.0.1", "7000")
+ 
++        call_command(self.cmd, addrport="0:8000")
++        self.assertServerSettings("0.0.0.0", "8000")
++
++        call_command(self.cmd, addrport="0.0.0.0:8000")
++        self.assertServerSettings("0.0.0.0", "8000")
++
+     @unittest.skipUnless(socket.has_ipv6, "platform doesn't support IPv6")
+     def test_runner_addrport_ipv6(self):
+         call_command(self.cmd, addrport="", use_ipv6=True)

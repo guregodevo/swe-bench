@@ -1,0 +1,58 @@
+diff --git a/django/db/migrations/serializer.py b/django/db/migrations/serializer.py
+index 7d226955d5..ead81c398a 100755
+--- a/django/db/migrations/serializer.py
++++ b/django/db/migrations/serializer.py
+@@ -269,7 +269,7 @@ class TypeSerializer(BaseSerializer):
+             if module == builtins.__name__:
+                 return self.value.__name__, set()
+             else:
+-                return "%s.%s" % (module, self.value.__name__), {"import %s" % module}
++                return "%s.%s" % (module, self.value.__qualname__), {"import %s" % module}
+ 
+ 
+ class UUIDSerializer(BaseSerializer):
+diff --git a/tests/migrations/test_writer.py b/tests/migrations/test_writer.py
+index ca924f35ec..a8d5a38910 100755
+--- a/tests/migrations/test_writer.py
++++ b/tests/migrations/test_writer.py
+@@ -41,6 +41,16 @@ class TestModel1:
+     thing = models.FileField(upload_to=upload_to)
+ 
+ 
++class DeconstructibleInstances:
++    def deconstruct(self):
++        return ('DeconstructibleInstances', [], {})
++
++
++class Nested:
++    class Inner:
++        pass
++
++
+ class TextEnum(enum.Enum):
+     A = 'a-value'
+     B = 'value-b'
+@@ -593,6 +603,12 @@ class WriterTests(SimpleTestCase):
+     def test_serialize_type_none(self):
+         self.assertSerializedEqual(type(None))
+ 
++    def test_serialize_nested_class(self):
++        self.assertSerializedResultEqual(
++            Nested.Inner,
++            ("migrations.test_writer.Nested.Inner", {'import migrations.test_writer'}),
++        )
++
+     def test_simple_migration(self):
+         """
+         Tests serializing a simple migration.
+@@ -726,10 +742,6 @@ class WriterTests(SimpleTestCase):
+         # Yes, it doesn't make sense to use a class as a default for a
+         # CharField. It does make sense for custom fields though, for example
+         # an enumfield that takes the enum class as an argument.
+-        class DeconstructibleInstances:
+-            def deconstruct(self):
+-                return ('DeconstructibleInstances', [], {})
+-
+         string = MigrationWriter.serialize(models.CharField(default=DeconstructibleInstances))[0]
+         self.assertEqual(string, "models.CharField(default=migrations.test_writer.DeconstructibleInstances)")
+ 

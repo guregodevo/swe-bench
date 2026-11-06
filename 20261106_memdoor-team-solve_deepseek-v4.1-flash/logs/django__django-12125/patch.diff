@@ -1,0 +1,89 @@
+diff --git a/django/db/migrations/serializer.py b/django/db/migrations/serializer.py
+index 7d226955d5..207c65f3e0 100755
+--- a/django/db/migrations/serializer.py
++++ b/django/db/migrations/serializer.py
+@@ -4,6 +4,7 @@ import datetime
+ import decimal
+ import enum
+ import functools
++import importlib
+ import math
+ import re
+ import types
+@@ -90,13 +91,26 @@ class DeconstructableSerializer(BaseSerializer):
+ 
+     @staticmethod
+     def _serialize_path(path):
+-        module, name = path.rsplit(".", 1)
++        # Find the module part of the path. The rest of the path may contain
++        # nested classes (e.g. "app.models.Outer.Inner"), so try progressively
++        # longer module prefixes.
++        parts = path.split(".")
++        for i in range(len(parts) - 1, 0, -1):
++            module = ".".join(parts[:i])
++            try:
++                importlib.import_module(module)
++            except ImportError:
++                continue
++            name = ".".join(parts[i:])
++            break
++        else:
++            module, name = path.rsplit(".", 1)
+         if module == "django.db.models":
+             imports = {"from django.db import models"}
+             name = "models.%s" % name
+         else:
+             imports = {"import %s" % module}
+-            name = path
++            name = "%s.%s" % (module, name)
+         return name, imports
+ 
+     def serialize(self):
+@@ -269,7 +283,10 @@ class TypeSerializer(BaseSerializer):
+             if module == builtins.__name__:
+                 return self.value.__name__, set()
+             else:
+-                return "%s.%s" % (module, self.value.__name__), {"import %s" % module}
++                name = self.value.__qualname__
++                if '<' in name:  # Qualname can include <locals>.
++                    name = self.value.__name__
++                return "%s.%s" % (module, name), {"import %s" % module}
+ 
+ 
+ class UUIDSerializer(BaseSerializer):
+diff --git a/tests/migrations/test_writer.py b/tests/migrations/test_writer.py
+index ca924f35ec..c42347ab89 100755
+--- a/tests/migrations/test_writer.py
++++ b/tests/migrations/test_writer.py
+@@ -61,6 +61,14 @@ class IntEnum(enum.IntEnum):
+     B = 2
+ 
+ 
++class Outer:
++    class Inner:
++        pass
++
++    class InnerField(models.CharField):
++        pass
++
++
+ class OperationWriterTests(SimpleTestCase):
+ 
+     def test_empty_signature(self):
+@@ -733,6 +741,16 @@ class WriterTests(SimpleTestCase):
+         string = MigrationWriter.serialize(models.CharField(default=DeconstructibleInstances))[0]
+         self.assertEqual(string, "models.CharField(default=migrations.test_writer.DeconstructibleInstances)")
+ 
++    def test_serialize_nested_class(self):
++        string, imports = MigrationWriter.serialize(Outer.Inner)
++        self.assertEqual(string, 'migrations.test_writer.Outer.Inner')
++        self.assertEqual(imports, {'import migrations.test_writer'})
++
++    def test_serialize_nested_field(self):
++        string, imports = MigrationWriter.serialize(Outer.InnerField(max_length=20))
++        self.assertEqual(string, 'migrations.test_writer.Outer.InnerField(max_length=20)')
++        self.assertEqual(imports, {'import migrations.test_writer'})
++
+     def test_register_serializer(self):
+         class ComplexSerializer(BaseSerializer):
+             def serialize(self):

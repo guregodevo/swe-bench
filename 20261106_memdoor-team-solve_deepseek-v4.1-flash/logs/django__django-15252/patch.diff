@@ -1,0 +1,166 @@
+diff --git a/django/db/migrations/recorder.py b/django/db/migrations/recorder.py
+index 1a37c6b7d0..5eeac9a44f 100755
+--- a/django/db/migrations/recorder.py
++++ b/django/db/migrations/recorder.py
+@@ -1,5 +1,5 @@
+ from django.apps.registry import Apps
+-from django.db import DatabaseError, models
++from django.db import DatabaseError, models, router
+ from django.utils.functional import classproperty
+ from django.utils.timezone import now
+ 
+@@ -50,6 +50,9 @@ class MigrationRecorder:
+     def migration_qs(self):
+         return self.Migration.objects.using(self.connection.alias)
+ 
++    def _migration_recording_allowed(self):
++        return router.allow_migrate_model(self.connection.alias, self.Migration)
++
+     def has_table(self):
+         """Return True if the django_migrations table exists."""
+         with self.connection.cursor() as cursor:
+@@ -58,6 +61,8 @@ class MigrationRecorder:
+ 
+     def ensure_schema(self):
+         """Ensure the table exists and has the correct schema."""
++        if not self._migration_recording_allowed():
++            return
+         # If the table's there, that's fine - we've never changed its schema
+         # in the codebase.
+         if self.has_table():
+@@ -74,6 +79,8 @@ class MigrationRecorder:
+         Return a dict mapping (app_name, migration_name) to Migration instances
+         for all applied migrations.
+         """
++        if not self._migration_recording_allowed():
++            return {}
+         if self.has_table():
+             return {(migration.app, migration.name): migration for migration in self.migration_qs}
+         else:
+@@ -83,11 +90,15 @@ class MigrationRecorder:
+ 
+     def record_applied(self, app, name):
+         """Record that a migration was applied."""
++        if not self._migration_recording_allowed():
++            return
+         self.ensure_schema()
+         self.migration_qs.create(app=app, name=name)
+ 
+     def record_unapplied(self, app, name):
+         """Record that a migration was unapplied."""
++        if not self._migration_recording_allowed():
++            return
+         self.ensure_schema()
+         self.migration_qs.filter(app=app, name=name).delete()
+ 
+diff --git a/tests/migrations/routers.py b/tests/migrations/routers.py
+index bc036382a7..9d3bf5e214 100755
+--- a/tests/migrations/routers.py
++++ b/tests/migrations/routers.py
+@@ -3,12 +3,20 @@ class DefaultOtherRouter:
+         return db in {'default', 'other'}
+ 
+ 
++class AllowOnlyDefaultMigrationRecorderRouter:
++    def allow_migrate(self, db, app_label, model_name=None, **hints):
++        return db == 'default'
++
++
+ class TestRouter:
+     def allow_migrate(self, db, app_label, model_name=None, **hints):
+         """
+         The Tribble model should be the only one to appear in the 'other' db.
+         """
+-        if model_name == 'tribble':
++        if app_label == 'migrations' and model_name == 'migration':
++            # Allow the migration recorder on every database.
++            return True
++        elif model_name == 'tribble':
+             return db == 'other'
+         elif db != 'default':
+             return False
+diff --git a/tests/migrations/test_recorder.py b/tests/migrations/test_recorder.py
+new file mode 100644
+index 0000000000..2a73f9d2bc
+--- /dev/null
++++ b/tests/migrations/test_recorder.py
+@@ -0,0 +1,79 @@
++from django.db import connections
++from django.db.migrations.recorder import MigrationRecorder
++from django.test import TransactionTestCase, override_settings
++
++
++class MigrationRecorderRouterTests(TransactionTestCase):
++    databases = {'default', 'other'}
++    available_apps = ['migrations']
++
++    def setUp(self):
++        self.recorder = MigrationRecorder(connections['other'])
++        self.had_table = self.recorder.has_table()
++        self.saved_rows = (
++            list(self.recorder.migration_qs.values_list('app', 'name'))
++            if self.had_table else []
++        )
++        self._drop_table()
++
++    def tearDown(self):
++        self._drop_table()
++        if self.had_table:
++            with connections['other'].schema_editor() as editor:
++                editor.create_model(self.recorder.Migration)
++            self.recorder.migration_qs.bulk_create([
++                self.recorder.Migration(app=app, name=name)
++                for app, name in self.saved_rows
++            ])
++
++    def _drop_table(self):
++        if self.recorder.has_table():
++            with connections['other'].schema_editor() as editor:
++                editor.delete_model(self.recorder.Migration)
++
++    def test_disallowed_alias_does_not_create_or_record(self):
++        with override_settings(
++            DATABASE_ROUTERS=['migrations.routers.AllowOnlyDefaultMigrationRecorderRouter'],
++        ):
++            self.recorder.ensure_schema()
++            self.assertFalse(self.recorder.has_table())
++
++            self.recorder.record_applied('migrations', '0001_initial')
++            self.recorder.record_unapplied('migrations', '0001_initial')
++
++            self.assertFalse(self.recorder.has_table())
++            self.assertEqual(self.recorder.applied_migrations(), {})
++
++    def test_disallowed_alias_ignores_existing_table(self):
++        with connections['other'].schema_editor() as editor:
++            editor.create_model(self.recorder.Migration)
++        self.recorder.migration_qs.create(app='migrations', name='0001_initial')
++
++        with override_settings(
++            DATABASE_ROUTERS=['migrations.routers.AllowOnlyDefaultMigrationRecorderRouter'],
++        ):
++            self.assertEqual(self.recorder.applied_migrations(), {})
++
++            self.recorder.record_applied('migrations', '0002_second')
++            self.recorder.record_unapplied('migrations', '0001_initial')
++
++        self.assertEqual(self.recorder.migration_qs.count(), 1)
++        self.assertTrue(
++            self.recorder.migration_qs.filter(
++                app='migrations', name='0001_initial',
++            ).exists()
++        )
++
++    def test_allowed_alias_still_records(self):
++        recorder = MigrationRecorder(connections['default'])
++        app_label = 'recorder_test_app'
++        name = '0001_initial'
++
++        recorder.record_unapplied(app_label, name)
++        self.addCleanup(recorder.record_unapplied, app_label, name)
++
++        recorder.record_applied(app_label, name)
++        self.assertIn((app_label, name), recorder.applied_migrations())
++
++        recorder.record_unapplied(app_label, name)
++        self.assertNotIn((app_label, name), recorder.applied_migrations())

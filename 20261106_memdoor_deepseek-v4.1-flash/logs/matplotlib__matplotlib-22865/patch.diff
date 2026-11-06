@@ -1,0 +1,48 @@
+diff --git a/lib/matplotlib/colorbar.py b/lib/matplotlib/colorbar.py
+index c59b0ac815..297d26be1b 100644
+--- a/lib/matplotlib/colorbar.py
++++ b/lib/matplotlib/colorbar.py
+@@ -651,8 +651,17 @@ class Colorbar:
+             if not self.drawedges:
+                 if len(self._y) >= self.n_rasterize:
+                     self.solids.set_rasterized(True)
+-        self.dividers.set_segments(
+-            np.dstack([X, Y])[1:-1] if self.drawedges else [])
++        if self.drawedges:
++            segments = np.dstack([X, Y])[1:-1]
++            if self._extend_lower():
++                segments = np.concatenate(
++                    [np.dstack([X, Y])[:1], segments])
++            if self._extend_upper():
++                segments = np.concatenate(
++                    [segments, np.dstack([X, Y])[-1:]])
++        else:
++            segments = []
++        self.dividers.set_segments(segments)
+ 
+     def _add_solids_patches(self, X, Y, C, mappable):
+         hatches = mappable.hatches * len(C)  # Have enough hatches.
+diff --git a/lib/matplotlib/tests/test_colorbar.py b/lib/matplotlib/tests/test_colorbar.py
+index ae3ab92c0d..1d054bb961 100644
+--- a/lib/matplotlib/tests/test_colorbar.py
++++ b/lib/matplotlib/tests/test_colorbar.py
+@@ -302,6 +302,19 @@ def test_colorbarbase():
+     Colorbar(ax, cmap=plt.cm.bone)
+ 
+ 
++@pytest.mark.parametrize("extend, extend_patches", [
++    ("neither", 0), ("min", 1), ("max", 1), ("both", 2)])
++def test_colorbar_drawedges_extend(extend, extend_patches):
++    # Check that the dividers at the extremities are drawn when the
++    # colorbar is extended (see #22736).
++    fig, ax = plt.subplots()
++    im = ax.pcolormesh(np.arange(10).reshape(2, 5))
++    cbar = fig.colorbar(im, extend=extend, drawedges=True,
++                        boundaries=np.arange(10))
++    segments = cbar.dividers.get_segments()
++    assert len(segments) == 8 + extend_patches
++
++
+ @image_comparison(['colorbar_closed_patch.png'], remove_text=True)
+ def test_colorbar_closed_patch():
+     # Remove this line when this test image is regenerated.

@@ -1,0 +1,86 @@
+diff --git a/doc/whatsnew/2/2.15/index.rst b/doc/whatsnew/2/2.15/index.rst
+index e8ce1879..5844abee 100755
+--- a/doc/whatsnew/2/2.15/index.rst
++++ b/doc/whatsnew/2/2.15/index.rst
+@@ -73,6 +73,10 @@ False negatives fixed
+ Other bug fixes
+ ===============
+ 
++* Fix ``ignore-paths`` not being respected for directories when running with
++  ``--recursive=y``. Patterns ending with a path separator now also match the
++  directory itself.
++
+ 
+ Other Changes
+ =============
+diff --git a/pylint/lint/pylinter.py b/pylint/lint/pylinter.py
+index e2bbf061..f8eee751 100755
+--- a/pylint/lint/pylinter.py
++++ b/pylint/lint/pylinter.py
+@@ -602,6 +602,13 @@ class PyLinter(
+                         self.config.ignore,
+                         self.config.ignore_patterns,
+                         self.config.ignore_paths,
++                    ) or _is_ignored_file(
++                        # Add a trailing separator so that patterns such as
++                        # ``^src/gen/.*$`` also match the directory itself.
++                        root + os.sep,
++                        self.config.ignore,
++                        self.config.ignore_patterns,
++                        self.config.ignore_paths,
+                     ):
+                         skip_subtrees.append(root)
+                         continue
+@@ -614,6 +621,12 @@ class PyLinter(
+                             os.path.join(root, file)
+                             for file in files
+                             if file.endswith(".py")
++                            and not _is_ignored_file(
++                                os.path.join(root, file),
++                                self.config.ignore,
++                                self.config.ignore_patterns,
++                                self.config.ignore_paths,
++                            )
+                         )
+             else:
+                 yield something
+diff --git a/tests/lint/unittest_lint.py b/tests/lint/unittest_lint.py
+index 3dbde39c..4eacaa79 100755
+--- a/tests/lint/unittest_lint.py
++++ b/tests/lint/unittest_lint.py
+@@ -912,6 +912,35 @@ def test_recursive_ignore(ignore_parameter, ignore_parameter_value) -> None:
+     assert module in linted_file_paths
+ 
+ 
++def test_recursive_ignore_paths_matching_directory() -> None:
++    """A pattern matching a directory (with a trailing separator) is respected.
++
++    Regression test for https://github.com/PyCQA/pylint/issues/6822: a pattern
++    such as ``^src/gen/.*$`` should also ignore the ``src/gen`` directory
++    itself, including its ``__init__.py``.
++    """
++    run = Run(
++        [
++            "--recursive",
++            "y",
++            "--ignore-paths",
++            ".*directory/package/.*",
++            join(REGRTEST_DATA_DIR, "directory"),
++        ],
++        exit=False,
++    )
++
++    linted_files = run.linter._iterate_file_descrs(
++        tuple(run.linter._discover_files([join(REGRTEST_DATA_DIR, "directory")]))
++    )
++    linted_file_paths = [file_item.filepath for file_item in linted_files]
++
++    ignored_package = os.path.abspath(join(REGRTEST_DATA_DIR, "directory", "package"))
++    assert not any(
++        path.startswith(ignored_package + os.sep) for path in linted_file_paths
++    )
++
++
+ def test_import_sibling_module_from_namespace(initialized_linter: PyLinter) -> None:
+     """If the parent directory above `namespace` is on sys.path, ensure that
+     modules under `namespace` can import each other without raising `import-error`."""

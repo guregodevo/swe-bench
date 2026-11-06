@@ -1,0 +1,861 @@
+diff --git a/django/db/models/aggregates.py b/django/db/models/aggregates.py
+index 8c4eae7906..d3fba8dc64 100644
+--- a/django/db/models/aggregates.py
++++ b/django/db/models/aggregates.py
+@@ -8,12 +8,14 @@ from django.db.models.functions.comparison import Coalesce
+ from django.db.models.functions.mixins import (
+     FixDurationInputMixin, NumericOutputFieldMixin,
+ )
++from django.utils.deconstruct import deconstructible
+ 
+ __all__ = [
+     'Aggregate', 'Avg', 'Count', 'Max', 'Min', 'StdDev', 'Sum', 'Variance',
+ ]
+ 
+ 
++@deconstructible(path='django.db.models.Aggregate')
+ class Aggregate(Func):
+     template = '%(function)s(%(distinct)s%(expressions)s)'
+     contains_aggregate = True
+@@ -106,12 +108,14 @@ class Aggregate(Func):
+         return options
+ 
+ 
++@deconstructible(path='django.db.models.Avg')
+ class Avg(FixDurationInputMixin, NumericOutputFieldMixin, Aggregate):
+     function = 'AVG'
+     name = 'Avg'
+     allow_distinct = True
+ 
+ 
++@deconstructible(path='django.db.models.Count')
+ class Count(Aggregate):
+     function = 'COUNT'
+     name = 'Count'
+@@ -127,16 +131,19 @@ class Count(Aggregate):
+         super().__init__(expression, filter=filter, **extra)
+ 
+ 
++@deconstructible(path='django.db.models.Max')
+ class Max(Aggregate):
+     function = 'MAX'
+     name = 'Max'
+ 
+ 
++@deconstructible(path='django.db.models.Min')
+ class Min(Aggregate):
+     function = 'MIN'
+     name = 'Min'
+ 
+ 
++@deconstructible(path='django.db.models.StdDev')
+ class StdDev(NumericOutputFieldMixin, Aggregate):
+     name = 'StdDev'
+ 
+@@ -148,12 +155,14 @@ class StdDev(NumericOutputFieldMixin, Aggregate):
+         return {**super()._get_repr_options(), 'sample': self.function == 'STDDEV_SAMP'}
+ 
+ 
++@deconstructible(path='django.db.models.Sum')
+ class Sum(FixDurationInputMixin, Aggregate):
+     function = 'SUM'
+     name = 'Sum'
+     allow_distinct = True
+ 
+ 
++@deconstructible(path='django.db.models.Variance')
+ class Variance(NumericOutputFieldMixin, Aggregate):
+     name = 'Variance'
+ 
+diff --git a/django/db/models/expressions.py b/django/db/models/expressions.py
+index 8642e1f151..539b98d65c 100644
+--- a/django/db/models/expressions.py
++++ b/django/db/models/expressions.py
+@@ -390,7 +390,7 @@ class BaseExpression:
+         return sql, params
+ 
+ 
+-@deconstructible
++@deconstructible(path='django.db.models.Expression')
+ class Expression(BaseExpression, Combinable):
+     """An expression that can be combined with other expressions."""
+ 
+@@ -639,6 +639,7 @@ class ResolvedOuterRef(F):
+         return []
+ 
+ 
++@deconstructible(path='django.db.models.OuterRef')
+ class OuterRef(F):
+     contains_aggregate = False
+ 
+@@ -651,6 +652,7 @@ class OuterRef(F):
+         return self
+ 
+ 
++@deconstructible(path='django.db.models.Func')
+ class Func(SQLiteNumericMixin, Expression):
+     """An SQL function call."""
+     function = None
+@@ -731,6 +733,7 @@ class Func(SQLiteNumericMixin, Expression):
+         return copy
+ 
+ 
++@deconstructible(path='django.db.models.Value')
+ class Value(SQLiteNumericMixin, Expression):
+     """Represent a wrapped value as a node within an expression."""
+     # Provide a default value for `for_save` in order to allow unresolved
+@@ -912,6 +915,7 @@ class Ref(Expression):
+         return [self]
+ 
+ 
++@deconstructible(path='django.db.models.ExpressionList')
+ class ExpressionList(Func):
+     """
+     An expression containing multiple expressions. Can be used to provide a
+@@ -953,6 +957,7 @@ class OrderByList(Func):
+         return super().as_sql(*args, **kwargs)
+ 
+ 
++@deconstructible(path='django.db.models.ExpressionWrapper')
+ class ExpressionWrapper(SQLiteNumericMixin, Expression):
+     """
+     An expression that can wrap another expression so that it can provide
+@@ -985,6 +990,7 @@ class ExpressionWrapper(SQLiteNumericMixin, Expression):
+         return "{}({})".format(self.__class__.__name__, self.expression)
+ 
+ 
++@deconstructible(path='django.db.models.When')
+ class When(Expression):
+     template = 'WHEN %(condition)s THEN %(result)s'
+     # This isn't a complete conditional expression, must be used in Case().
+@@ -1052,6 +1058,7 @@ class When(Expression):
+         return cols
+ 
+ 
++@deconstructible(path='django.db.models.Case')
+ class Case(SQLiteNumericMixin, Expression):
+     """
+     An SQL searched CASE expression:
+@@ -1225,6 +1232,7 @@ class Exists(Subquery):
+         return sql, params
+ 
+ 
++@deconstructible(path='django.db.models.OrderBy')
+ class OrderBy(Expression):
+     template = '%(expression)s %(ordering)s'
+     conditional = False
+@@ -1307,6 +1315,7 @@ class OrderBy(Expression):
+         self.descending = True
+ 
+ 
++@deconstructible(path='django.db.models.Window')
+ class Window(SQLiteNumericMixin, Expression):
+     template = '%(expression)s OVER (%(window)s)'
+     # Although the main expression may either be an aggregate or an
+@@ -1412,6 +1421,7 @@ class Window(SQLiteNumericMixin, Expression):
+         return []
+ 
+ 
++@deconstructible(path='django.db.models.WindowFrame')
+ class WindowFrame(Expression):
+     """
+     Model the frame clause in window expressions. There are two types of frame
+@@ -1471,6 +1481,7 @@ class WindowFrame(Expression):
+         raise NotImplementedError('Subclasses must implement window_frame_start_end().')
+ 
+ 
++@deconstructible(path='django.db.models.RowRange')
+ class RowRange(WindowFrame):
+     frame_type = 'ROWS'
+ 
+@@ -1478,6 +1489,7 @@ class RowRange(WindowFrame):
+         return connection.ops.window_frame_rows_start_end(start, end)
+ 
+ 
++@deconstructible(path='django.db.models.ValueRange')
+ class ValueRange(WindowFrame):
+     frame_type = 'RANGE'
+ 
+diff --git a/django/db/models/functions/comparison.py b/django/db/models/functions/comparison.py
+index e5882de9c2..823c17bdd6 100644
+--- a/django/db/models/functions/comparison.py
++++ b/django/db/models/functions/comparison.py
+@@ -2,9 +2,11 @@
+ from django.db import NotSupportedError
+ from django.db.models.expressions import Func, Value
+ from django.db.models.fields.json import JSONField
++from django.utils.deconstruct import deconstructible
+ from django.utils.regex_helper import _lazy_re_compile
+ 
+ 
++@deconstructible(path='django.db.models.functions.Cast')
+ class Cast(Func):
+     """Coerce an expression to a new field type."""
+     function = 'CAST'
+@@ -56,6 +58,7 @@ class Cast(Func):
+         return self.as_sql(compiler, connection, **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Coalesce')
+ class Coalesce(Func):
+     """Return, from left to right, the first non-null expression."""
+     function = 'COALESCE'
+@@ -85,6 +88,7 @@ class Coalesce(Func):
+         return self.as_sql(compiler, connection, **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Collate')
+ class Collate(Func):
+     function = 'COLLATE'
+     template = '%(expressions)s %(function)s %(collation)s'
+@@ -102,6 +106,7 @@ class Collate(Func):
+         return super().as_sql(compiler, connection, **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Greatest')
+ class Greatest(Func):
+     """
+     Return the maximum expression.
+@@ -122,6 +127,7 @@ class Greatest(Func):
+         return super().as_sqlite(compiler, connection, function='MAX', **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.JSONObject')
+ class JSONObject(Func):
+     function = 'JSON_OBJECT'
+     output_field = JSONField()
+@@ -162,6 +168,7 @@ class JSONObject(Func):
+         )
+ 
+ 
++@deconstructible(path='django.db.models.functions.Least')
+ class Least(Func):
+     """
+     Return the minimum expression.
+@@ -182,6 +189,7 @@ class Least(Func):
+         return super().as_sqlite(compiler, connection, function='MIN', **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.NullIf')
+ class NullIf(Func):
+     function = 'NULLIF'
+     arity = 2
+diff --git a/django/db/models/functions/datetime.py b/django/db/models/functions/datetime.py
+index 07f884f78d..06990f769f 100644
+--- a/django/db/models/functions/datetime.py
++++ b/django/db/models/functions/datetime.py
+@@ -9,6 +9,7 @@ from django.db.models.lookups import (
+     Transform, YearExact, YearGt, YearGte, YearLt, YearLte,
+ )
+ from django.utils import timezone
++from django.utils.deconstruct import deconstructible
+ 
+ 
+ class TimezoneMixin:
+@@ -28,6 +29,7 @@ class TimezoneMixin:
+         return tzname
+ 
+ 
++@deconstructible(path='django.db.models.functions.Extract')
+ class Extract(TimezoneMixin, Transform):
+     lookup_name = None
+     output_field = IntegerField()
+@@ -88,23 +90,28 @@ class Extract(TimezoneMixin, Transform):
+         return copy
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractYear')
+ class ExtractYear(Extract):
+     lookup_name = 'year'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractIsoYear')
+ class ExtractIsoYear(Extract):
+     """Return the ISO-8601 week-numbering year."""
+     lookup_name = 'iso_year'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractMonth')
+ class ExtractMonth(Extract):
+     lookup_name = 'month'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractDay')
+ class ExtractDay(Extract):
+     lookup_name = 'day'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractWeek')
+ class ExtractWeek(Extract):
+     """
+     Return 1-52 or 53, based on ISO-8601, i.e., Monday is the first of the
+@@ -113,6 +120,7 @@ class ExtractWeek(Extract):
+     lookup_name = 'week'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractWeekDay')
+ class ExtractWeekDay(Extract):
+     """
+     Return Sunday=1 through Saturday=7.
+@@ -122,23 +130,28 @@ class ExtractWeekDay(Extract):
+     lookup_name = 'week_day'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractIsoWeekDay')
+ class ExtractIsoWeekDay(Extract):
+     """Return Monday=1 through Sunday=7, based on ISO-8601."""
+     lookup_name = 'iso_week_day'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractQuarter')
+ class ExtractQuarter(Extract):
+     lookup_name = 'quarter'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractHour')
+ class ExtractHour(Extract):
+     lookup_name = 'hour'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractMinute')
+ class ExtractMinute(Extract):
+     lookup_name = 'minute'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ExtractSecond')
+ class ExtractSecond(Extract):
+     lookup_name = 'second'
+ 
+@@ -173,6 +186,7 @@ ExtractIsoYear.register_lookup(YearLt)
+ ExtractIsoYear.register_lookup(YearLte)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Now')
+ class Now(Func):
+     template = 'CURRENT_TIMESTAMP'
+     output_field = DateTimeField()
+@@ -264,6 +278,7 @@ class TruncBase(TimezoneMixin, Transform):
+         return value
+ 
+ 
++@deconstructible(path='django.db.models.functions.Trunc')
+ class Trunc(TruncBase):
+ 
+     # RemovedInDjango50Warning: when the deprecation ends, remove is_dst
+@@ -276,27 +291,33 @@ class Trunc(TruncBase):
+         )
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncYear')
+ class TruncYear(TruncBase):
+     kind = 'year'
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncQuarter')
+ class TruncQuarter(TruncBase):
+     kind = 'quarter'
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncMonth')
+ class TruncMonth(TruncBase):
+     kind = 'month'
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncWeek')
+ class TruncWeek(TruncBase):
+     """Truncate to midnight on the Monday of the week."""
+     kind = 'week'
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncDay')
+ class TruncDay(TruncBase):
+     kind = 'day'
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncDate')
+ class TruncDate(TruncBase):
+     kind = 'date'
+     lookup_name = 'date'
+@@ -310,6 +331,7 @@ class TruncDate(TruncBase):
+         return sql, lhs_params
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncTime')
+ class TruncTime(TruncBase):
+     kind = 'time'
+     lookup_name = 'time'
+@@ -323,14 +345,17 @@ class TruncTime(TruncBase):
+         return sql, lhs_params
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncHour')
+ class TruncHour(TruncBase):
+     kind = 'hour'
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncMinute')
+ class TruncMinute(TruncBase):
+     kind = 'minute'
+ 
+ 
++@deconstructible(path='django.db.models.functions.TruncSecond')
+ class TruncSecond(TruncBase):
+     kind = 'second'
+ 
+diff --git a/django/db/models/functions/math.py b/django/db/models/functions/math.py
+index f939885263..39e6c87036 100644
+--- a/django/db/models/functions/math.py
++++ b/django/db/models/functions/math.py
+@@ -7,28 +7,34 @@ from django.db.models.functions.mixins import (
+     FixDecimalInputMixin, NumericOutputFieldMixin,
+ )
+ from django.db.models.lookups import Transform
++from django.utils.deconstruct import deconstructible
+ 
+ 
++@deconstructible(path='django.db.models.functions.Abs')
+ class Abs(Transform):
+     function = 'ABS'
+     lookup_name = 'abs'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ACos')
+ class ACos(NumericOutputFieldMixin, Transform):
+     function = 'ACOS'
+     lookup_name = 'acos'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ASin')
+ class ASin(NumericOutputFieldMixin, Transform):
+     function = 'ASIN'
+     lookup_name = 'asin'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ATan')
+ class ATan(NumericOutputFieldMixin, Transform):
+     function = 'ATAN'
+     lookup_name = 'atan'
+ 
+ 
++@deconstructible(path='django.db.models.functions.ATan2')
+ class ATan2(NumericOutputFieldMixin, Func):
+     function = 'ATAN2'
+     arity = 2
+@@ -49,6 +55,7 @@ class ATan2(NumericOutputFieldMixin, Func):
+         return clone.as_sql(compiler, connection, **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Ceil')
+ class Ceil(Transform):
+     function = 'CEILING'
+     lookup_name = 'ceil'
+@@ -57,11 +64,13 @@ class Ceil(Transform):
+         return super().as_sql(compiler, connection, function='CEIL', **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Cos')
+ class Cos(NumericOutputFieldMixin, Transform):
+     function = 'COS'
+     lookup_name = 'cos'
+ 
+ 
++@deconstructible(path='django.db.models.functions.Cot')
+ class Cot(NumericOutputFieldMixin, Transform):
+     function = 'COT'
+     lookup_name = 'cot'
+@@ -70,6 +79,7 @@ class Cot(NumericOutputFieldMixin, Transform):
+         return super().as_sql(compiler, connection, template='(1 / TAN(%(expressions)s))', **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Degrees')
+ class Degrees(NumericOutputFieldMixin, Transform):
+     function = 'DEGREES'
+     lookup_name = 'degrees'
+@@ -82,21 +92,25 @@ class Degrees(NumericOutputFieldMixin, Transform):
+         )
+ 
+ 
++@deconstructible(path='django.db.models.functions.Exp')
+ class Exp(NumericOutputFieldMixin, Transform):
+     function = 'EXP'
+     lookup_name = 'exp'
+ 
+ 
++@deconstructible(path='django.db.models.functions.Floor')
+ class Floor(Transform):
+     function = 'FLOOR'
+     lookup_name = 'floor'
+ 
+ 
++@deconstructible(path='django.db.models.functions.Ln')
+ class Ln(NumericOutputFieldMixin, Transform):
+     function = 'LN'
+     lookup_name = 'ln'
+ 
+ 
++@deconstructible(path='django.db.models.functions.Log')
+ class Log(FixDecimalInputMixin, NumericOutputFieldMixin, Func):
+     function = 'LOG'
+     arity = 2
+@@ -111,11 +125,13 @@ class Log(FixDecimalInputMixin, NumericOutputFieldMixin, Func):
+         return clone.as_sql(compiler, connection, **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Mod')
+ class Mod(FixDecimalInputMixin, NumericOutputFieldMixin, Func):
+     function = 'MOD'
+     arity = 2
+ 
+ 
++@deconstructible(path='django.db.models.functions.Pi')
+ class Pi(NumericOutputFieldMixin, Func):
+     function = 'PI'
+     arity = 0
+@@ -124,11 +140,13 @@ class Pi(NumericOutputFieldMixin, Func):
+         return super().as_sql(compiler, connection, template=str(math.pi), **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Power')
+ class Power(NumericOutputFieldMixin, Func):
+     function = 'POWER'
+     arity = 2
+ 
+ 
++@deconstructible(path='django.db.models.functions.Radians')
+ class Radians(NumericOutputFieldMixin, Transform):
+     function = 'RADIANS'
+     lookup_name = 'radians'
+@@ -141,6 +159,7 @@ class Radians(NumericOutputFieldMixin, Transform):
+         )
+ 
+ 
++@deconstructible(path='django.db.models.functions.Random')
+ class Random(NumericOutputFieldMixin, Func):
+     function = 'RANDOM'
+     arity = 0
+@@ -158,6 +177,7 @@ class Random(NumericOutputFieldMixin, Func):
+         return []
+ 
+ 
++@deconstructible(path='django.db.models.functions.Round')
+ class Round(FixDecimalInputMixin, Transform):
+     function = 'ROUND'
+     lookup_name = 'round'
+@@ -177,21 +197,25 @@ class Round(FixDecimalInputMixin, Transform):
+         return source.output_field
+ 
+ 
++@deconstructible(path='django.db.models.functions.Sign')
+ class Sign(Transform):
+     function = 'SIGN'
+     lookup_name = 'sign'
+ 
+ 
++@deconstructible(path='django.db.models.functions.Sin')
+ class Sin(NumericOutputFieldMixin, Transform):
+     function = 'SIN'
+     lookup_name = 'sin'
+ 
+ 
++@deconstructible(path='django.db.models.functions.Sqrt')
+ class Sqrt(NumericOutputFieldMixin, Transform):
+     function = 'SQRT'
+     lookup_name = 'sqrt'
+ 
+ 
++@deconstructible(path='django.db.models.functions.Tan')
+ class Tan(NumericOutputFieldMixin, Transform):
+     function = 'TAN'
+     lookup_name = 'tan'
+diff --git a/django/db/models/functions/text.py b/django/db/models/functions/text.py
+index 4c52222ba1..d6c0a5f7f9 100644
+--- a/django/db/models/functions/text.py
++++ b/django/db/models/functions/text.py
+@@ -3,6 +3,7 @@ from django.db.models.expressions import Func, Value
+ from django.db.models.fields import CharField, IntegerField
+ from django.db.models.functions import Coalesce
+ from django.db.models.lookups import Transform
++from django.utils.deconstruct import deconstructible
+ 
+ 
+ class MySQLSHA2Mixin:
+@@ -39,6 +40,7 @@ class PostgreSQLSHAMixin:
+         )
+ 
+ 
++@deconstructible(path='django.db.models.functions.Chr')
+ class Chr(Transform):
+     function = 'CHR'
+     lookup_name = 'chr'
+@@ -92,6 +94,7 @@ class ConcatPair(Func):
+         return c
+ 
+ 
++@deconstructible(path='django.db.models.functions.Concat')
+ class Concat(Func):
+     """
+     Concatenate text fields together. Backends that result in an entire
+@@ -116,6 +119,7 @@ class Concat(Func):
+         return ConcatPair(expressions[0], self._paired(expressions[1:]))
+ 
+ 
++@deconstructible(path='django.db.models.functions.Left')
+ class Left(Func):
+     function = 'LEFT'
+     arity = 2
+@@ -141,6 +145,7 @@ class Left(Func):
+         return self.get_substr().as_sqlite(compiler, connection, **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Length')
+ class Length(Transform):
+     """Return the number of characters in the expression."""
+     function = 'LENGTH'
+@@ -151,11 +156,13 @@ class Length(Transform):
+         return super().as_sql(compiler, connection, function='CHAR_LENGTH', **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Lower')
+ class Lower(Transform):
+     function = 'LOWER'
+     lookup_name = 'lower'
+ 
+ 
++@deconstructible(path='django.db.models.functions.LPad')
+ class LPad(Func):
+     function = 'LPAD'
+     output_field = CharField()
+@@ -166,16 +173,19 @@ class LPad(Func):
+         super().__init__(expression, length, fill_text, **extra)
+ 
+ 
++@deconstructible(path='django.db.models.functions.LTrim')
+ class LTrim(Transform):
+     function = 'LTRIM'
+     lookup_name = 'ltrim'
+ 
+ 
++@deconstructible(path='django.db.models.functions.MD5')
+ class MD5(OracleHashMixin, Transform):
+     function = 'MD5'
+     lookup_name = 'md5'
+ 
+ 
++@deconstructible(path='django.db.models.functions.Ord')
+ class Ord(Transform):
+     function = 'ASCII'
+     lookup_name = 'ord'
+@@ -188,6 +198,7 @@ class Ord(Transform):
+         return super().as_sql(compiler, connection, function='UNICODE', **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Repeat')
+ class Repeat(Func):
+     function = 'REPEAT'
+     output_field = CharField()
+@@ -204,6 +215,7 @@ class Repeat(Func):
+         return rpad.as_sql(compiler, connection, **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Replace')
+ class Replace(Func):
+     function = 'REPLACE'
+ 
+@@ -211,6 +223,7 @@ class Replace(Func):
+         super().__init__(expression, text, replacement, **extra)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Reverse')
+ class Reverse(Transform):
+     function = 'REVERSE'
+     lookup_name = 'reverse'
+@@ -230,6 +243,7 @@ class Reverse(Transform):
+         )
+ 
+ 
++@deconstructible(path='django.db.models.functions.Right')
+ class Right(Left):
+     function = 'RIGHT'
+ 
+@@ -237,20 +251,24 @@ class Right(Left):
+         return Substr(self.source_expressions[0], self.source_expressions[1] * Value(-1))
+ 
+ 
++@deconstructible(path='django.db.models.functions.RPad')
+ class RPad(LPad):
+     function = 'RPAD'
+ 
+ 
++@deconstructible(path='django.db.models.functions.RTrim')
+ class RTrim(Transform):
+     function = 'RTRIM'
+     lookup_name = 'rtrim'
+ 
+ 
++@deconstructible(path='django.db.models.functions.SHA1')
+ class SHA1(OracleHashMixin, PostgreSQLSHAMixin, Transform):
+     function = 'SHA1'
+     lookup_name = 'sha1'
+ 
+ 
++@deconstructible(path='django.db.models.functions.SHA224')
+ class SHA224(MySQLSHA2Mixin, PostgreSQLSHAMixin, Transform):
+     function = 'SHA224'
+     lookup_name = 'sha224'
+@@ -259,21 +277,25 @@ class SHA224(MySQLSHA2Mixin, PostgreSQLSHAMixin, Transform):
+         raise NotSupportedError('SHA224 is not supported on Oracle.')
+ 
+ 
++@deconstructible(path='django.db.models.functions.SHA256')
+ class SHA256(MySQLSHA2Mixin, OracleHashMixin, PostgreSQLSHAMixin, Transform):
+     function = 'SHA256'
+     lookup_name = 'sha256'
+ 
+ 
++@deconstructible(path='django.db.models.functions.SHA384')
+ class SHA384(MySQLSHA2Mixin, OracleHashMixin, PostgreSQLSHAMixin, Transform):
+     function = 'SHA384'
+     lookup_name = 'sha384'
+ 
+ 
++@deconstructible(path='django.db.models.functions.SHA512')
+ class SHA512(MySQLSHA2Mixin, OracleHashMixin, PostgreSQLSHAMixin, Transform):
+     function = 'SHA512'
+     lookup_name = 'sha512'
+ 
+ 
++@deconstructible(path='django.db.models.functions.StrIndex')
+ class StrIndex(Func):
+     """
+     Return a positive integer corresponding to the 1-indexed position of the
+@@ -288,6 +310,7 @@ class StrIndex(Func):
+         return super().as_sql(compiler, connection, function='STRPOS', **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Substr')
+ class Substr(Func):
+     function = 'SUBSTRING'
+     output_field = CharField()
+@@ -313,11 +336,13 @@ class Substr(Func):
+         return super().as_sql(compiler, connection, function='SUBSTR', **extra_context)
+ 
+ 
++@deconstructible(path='django.db.models.functions.Trim')
+ class Trim(Transform):
+     function = 'TRIM'
+     lookup_name = 'trim'
+ 
+ 
++@deconstructible(path='django.db.models.functions.Upper')
+ class Upper(Transform):
+     function = 'UPPER'
+     lookup_name = 'upper'
+diff --git a/django/db/models/functions/window.py b/django/db/models/functions/window.py
+index 84b2b24ffa..9b91668635 100644
+--- a/django/db/models/functions/window.py
++++ b/django/db/models/functions/window.py
+@@ -1,5 +1,6 @@
+ from django.db.models.expressions import Func
+ from django.db.models.fields import FloatField, IntegerField
++from django.utils.deconstruct import deconstructible
+ 
+ __all__ = [
+     'CumeDist', 'DenseRank', 'FirstValue', 'Lag', 'LastValue', 'Lead',
+@@ -7,18 +8,21 @@ __all__ = [
+ ]
+ 
+ 
++@deconstructible(path='django.db.models.functions.CumeDist')
+ class CumeDist(Func):
+     function = 'CUME_DIST'
+     output_field = FloatField()
+     window_compatible = True
+ 
+ 
++@deconstructible(path='django.db.models.functions.DenseRank')
+ class DenseRank(Func):
+     function = 'DENSE_RANK'
+     output_field = IntegerField()
+     window_compatible = True
+ 
+ 
++@deconstructible(path='django.db.models.functions.FirstValue')
+ class FirstValue(Func):
+     arity = 1
+     function = 'FIRST_VALUE'
+@@ -49,20 +53,24 @@ class LagLeadFunction(Func):
+         return sources[0].output_field
+ 
+ 
++@deconstructible(path='django.db.models.functions.Lag')
+ class Lag(LagLeadFunction):
+     function = 'LAG'
+ 
+ 
++@deconstructible(path='django.db.models.functions.LastValue')
+ class LastValue(Func):
+     arity = 1
+     function = 'LAST_VALUE'
+     window_compatible = True
+ 
+ 
++@deconstructible(path='django.db.models.functions.Lead')
+ class Lead(LagLeadFunction):
+     function = 'LEAD'
+ 
+ 
++@deconstructible(path='django.db.models.functions.NthValue')
+ class NthValue(Func):
+     function = 'NTH_VALUE'
+     window_compatible = True
+@@ -79,6 +87,7 @@ class NthValue(Func):
+         return sources[0].output_field
+ 
+ 
++@deconstructible(path='django.db.models.functions.Ntile')
+ class Ntile(Func):
+     function = 'NTILE'
+     output_field = IntegerField()
+@@ -90,18 +99,21 @@ class Ntile(Func):
+         super().__init__(num_buckets, **extra)
+ 
+ 
++@deconstructible(path='django.db.models.functions.PercentRank')
+ class PercentRank(Func):
+     function = 'PERCENT_RANK'
+     output_field = FloatField()
+     window_compatible = True
+ 
+ 
++@deconstructible(path='django.db.models.functions.Rank')
+ class Rank(Func):
+     function = 'RANK'
+     output_field = IntegerField()
+     window_compatible = True
+ 
+ 
++@deconstructible(path='django.db.models.functions.RowNumber')
+ class RowNumber(Func):
+     function = 'ROW_NUMBER'
+     output_field = IntegerField()
+diff --git a/tests/expressions/tests.py b/tests/expressions/tests.py
+index 9fd31d550c..06c9ad597a 100644
+--- a/tests/expressions/tests.py
++++ b/tests/expressions/tests.py
+@@ -1763,14 +1763,14 @@ class ValueTests(TestCase):
+     def test_deconstruct(self):
+         value = Value('name')
+         path, args, kwargs = value.deconstruct()
+-        self.assertEqual(path, 'django.db.models.expressions.Value')
++        self.assertEqual(path, 'django.db.models.Value')
+         self.assertEqual(args, (value.value,))
+         self.assertEqual(kwargs, {})
+ 
+     def test_deconstruct_output_field(self):
+         value = Value('name', output_field=CharField())
+         path, args, kwargs = value.deconstruct()
+-        self.assertEqual(path, 'django.db.models.expressions.Value')
++        self.assertEqual(path, 'django.db.models.Value')
+         self.assertEqual(args, (value.value,))
+         self.assertEqual(len(kwargs), 1)
+         self.assertEqual(kwargs['output_field'].deconstruct(), CharField().deconstruct())

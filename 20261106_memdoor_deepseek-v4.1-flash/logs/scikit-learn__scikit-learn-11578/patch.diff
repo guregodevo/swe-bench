@@ -1,0 +1,73 @@
+diff --git a/sklearn/linear_model/logistic.py b/sklearn/linear_model/logistic.py
+index e4ea696ce..121228666 100644
+--- a/sklearn/linear_model/logistic.py
++++ b/sklearn/linear_model/logistic.py
+@@ -922,7 +922,24 @@ def _log_reg_scoring_path(X, y, train, test, pos_class=None, Cs=10,
+         check_input=False, max_squared_sum=max_squared_sum,
+         sample_weight=sample_weight)
+ 
+-    log_reg = LogisticRegression(fit_intercept=fit_intercept)
++    # The classifier used for scoring has to be created with the same
++    # options as the model that was fitted above. In particular,
++    # ``multi_class`` determines how ``predict_proba`` turns the decision
++    # function into probabilities, which matters for probabilistic scorers
++    # such as ``neg_log_loss``.
++    log_reg = LogisticRegression(
++        fit_intercept=fit_intercept,
++        multi_class=multi_class,
++        penalty=penalty,
++        dual=dual,
++        tol=tol,
++        C=1.0,
++        class_weight=class_weight,
++        random_state=random_state,
++        solver=solver,
++        max_iter=max_iter,
++        verbose=verbose,
++        intercept_scaling=intercept_scaling)
+ 
+     # The score method of Logistic Regression has a classes_ attribute.
+     if multi_class == 'ovr':
+diff --git a/sklearn/linear_model/tests/test_logistic.py b/sklearn/linear_model/tests/test_logistic.py
+index 56be87f71..e8d5339f8 100644
+--- a/sklearn/linear_model/tests/test_logistic.py
++++ b/sklearn/linear_model/tests/test_logistic.py
+@@ -27,6 +27,7 @@ from sklearn.exceptions import ChangedBehaviorWarning
+ from sklearn.linear_model.logistic import (
+     LogisticRegression,
+     logistic_regression_path, LogisticRegressionCV,
++    _log_reg_scoring_path,
+     _logistic_loss_and_grad, _logistic_grad_hess,
+     _multinomial_grad_hess, _logistic_loss,
+ )
+@@ -137,6 +138,30 @@ def test_logistic_cv_score_does_not_warn_by_default():
+     assert len(record) == 0
+ 
+ 
++def test_log_reg_scoring_path_multinomial_neg_log_loss():
++    # Non-regression test for #8720: the estimator used to compute the
++    # scores must honour ``multi_class`` so that probabilistic scorers use
++    # the same probabilities as ``predict_proba``.
++    X, y = iris.data, iris.target
++    train = np.arange(0, 150, 2)
++    test = np.arange(1, 150, 2)
++
++    coefs, _, scores, _ = _log_reg_scoring_path(
++        X, y, train, test, fit_intercept=True, scoring='neg_log_loss',
++        multi_class='multinomial')
++
++    log_reg = LogisticRegression(fit_intercept=True,
++                                 multi_class='multinomial')
++    log_reg.classes_ = np.unique(y[train])
++    log_reg.coef_ = coefs[0][:, :-1]
++    log_reg.intercept_ = coefs[0][:, -1]
++
++    proba = log_reg.predict_proba(X[test])
++    expected_score = np.log(proba)[np.arange(test.size), y[test]].mean()
++
++    assert_almost_equal(scores[0], expected_score)
++
++
+ def test_lr_liblinear_warning():
+     n_samples, n_features = iris.data.shape
+     target = iris.target_names[iris.target]

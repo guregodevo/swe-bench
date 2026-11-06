@@ -1,0 +1,62 @@
+diff --git a/astropy/wcs/wcsapi/wrappers/sliced_wcs.py b/astropy/wcs/wcsapi/wrappers/sliced_wcs.py
+index d7605b078..02882e3b0 100644
+--- a/astropy/wcs/wcsapi/wrappers/sliced_wcs.py
++++ b/astropy/wcs/wcsapi/wrappers/sliced_wcs.py
+@@ -242,6 +242,16 @@ class SlicedLowLevelWCS(BaseWCSWrapper):
+ 
+         return world_arrays
+ 
++    @lazyproperty
++    def _dropped_world_values(self):
++        # The world coordinates of the dimensions which have been sliced out
++        # are fixed by the slice, so we can compute them once from the
++        # underlying WCS at the position of the slice.
++        world_arrays = self._pixel_to_world_values_all(*[0] * self.pixel_n_dim)
++        if self._wcs.world_n_dim == 1:
++            world_arrays = [world_arrays]
++        return world_arrays
++
+     def world_to_pixel_values(self, *world_arrays):
+         world_arrays = tuple(map(np.asanyarray, world_arrays))
+         world_arrays_new = []
+@@ -251,7 +261,7 @@ class SlicedLowLevelWCS(BaseWCSWrapper):
+                 iworld_curr += 1
+                 world_arrays_new.append(world_arrays[iworld_curr])
+             else:
+-                world_arrays_new.append(1.)
++                world_arrays_new.append(self._dropped_world_values[iworld])
+ 
+         world_arrays_new = np.broadcast_arrays(*world_arrays_new)
+         pixel_arrays = list(self._wcs.world_to_pixel_values(*world_arrays_new))
+diff --git a/astropy/wcs/wcsapi/wrappers/tests/test_sliced_wcs.py b/astropy/wcs/wcsapi/wrappers/tests/test_sliced_wcs.py
+index a35411496..5f3fa3fad 100644
+--- a/astropy/wcs/wcsapi/wrappers/tests/test_sliced_wcs.py
++++ b/astropy/wcs/wcsapi/wrappers/tests/test_sliced_wcs.py
+@@ -899,3 +899,27 @@ def test_pixel_to_world_values_different_int_types():
+     for int_coord, np64_coord in zip(int_sliced.pixel_to_world_values(*pixel_arrays),
+                                      np64_sliced.pixel_to_world_values(*pixel_arrays)):
+         assert all(int_coord == np64_coord)
++
++
++def test_world_to_pixel_values_spectral_coupled():
++    # Regression test for a bug where the world coordinate of a sliced out
++    # dimension was replaced by 1 instead of the value at the slice, which
++    # gave incorrect results when the dropped dimension was coupled to the
++    # remaining ones.
++    header = {
++        'WCSAXES': 3,
++        'CRPIX1': 50.5,
++        'CRPIX2': 13.,
++        'CRPIX3': 1.,
++        'PC1_1': 0., 'PC1_2': -1., 'PC1_3': 0.,
++        'PC2_1': 1., 'PC2_2': 0., 'PC2_3': -1.,
++        'CDELT1': 5, 'CDELT2': 5, 'CDELT3': 0.055,
++        'CUNIT1': 'arcsec', 'CUNIT2': 'arcsec', 'CUNIT3': 'Angstrom',
++        'CTYPE1': 'HPLN-TAN', 'CTYPE2': 'HPLT-TAN', 'CTYPE3': 'WAVE',
++        'CRVAL1': 0., 'CRVAL2': 0., 'CRVAL3': 1.05,
++    }
++    wcs = WCS(header=header)
++
++    sliced = SlicedLowLevelWCS(wcs, 0)
++
++    assert_allclose(sliced.world_to_pixel_values(0, 0), (49.5, 12.))

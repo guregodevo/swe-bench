@@ -1,0 +1,176 @@
+diff --git a/django/db/backends/mysql/operations.py b/django/db/backends/mysql/operations.py
+index 76ca815765..7bbcedbc89 100644
+--- a/django/db/backends/mysql/operations.py
++++ b/django/db/backends/mysql/operations.py
+@@ -451,8 +451,8 @@ class DatabaseOperations(BaseDatabaseOperations):
+ 
+             fields = ", ".join(
+                 [
+-                    field_sql % {"field": field}
+-                    for field in map(self.quote_name, update_fields)
++                    field_sql % {"field": self.quote_name(field.column)}
++                    for field in update_fields
+                 ]
+             )
+             return conflict_suffix_sql % {"fields": fields}
+diff --git a/django/db/backends/postgresql/operations.py b/django/db/backends/postgresql/operations.py
+index 62273fc43c..da79b3e89a 100644
+--- a/django/db/backends/postgresql/operations.py
++++ b/django/db/backends/postgresql/operations.py
+@@ -354,11 +354,17 @@ class DatabaseOperations(BaseDatabaseOperations):
+             return "ON CONFLICT DO NOTHING"
+         if on_conflict == OnConflict.UPDATE:
+             return "ON CONFLICT(%s) DO UPDATE SET %s" % (
+-                ", ".join(map(self.quote_name, unique_fields)),
++                ", ".join(
++                    self.quote_name(field.column) for field in unique_fields
++                ),
+                 ", ".join(
+                     [
+-                        f"{field} = EXCLUDED.{field}"
+-                        for field in map(self.quote_name, update_fields)
++                        "%s = EXCLUDED.%s"
++                        % (
++                            self.quote_name(field.column),
++                            self.quote_name(field.column),
++                        )
++                        for field in update_fields
+                     ]
+                 ),
+             )
+diff --git a/django/db/backends/sqlite3/operations.py b/django/db/backends/sqlite3/operations.py
+index bb84d52071..a74b734a7f 100644
+--- a/django/db/backends/sqlite3/operations.py
++++ b/django/db/backends/sqlite3/operations.py
+@@ -418,11 +418,17 @@ class DatabaseOperations(BaseDatabaseOperations):
+             and self.connection.features.supports_update_conflicts_with_target
+         ):
+             return "ON CONFLICT(%s) DO UPDATE SET %s" % (
+-                ", ".join(map(self.quote_name, unique_fields)),
++                ", ".join(
++                    self.quote_name(field.column) for field in unique_fields
++                ),
+                 ", ".join(
+                     [
+-                        f"{field} = EXCLUDED.{field}"
+-                        for field in map(self.quote_name, update_fields)
++                        "%s = EXCLUDED.%s"
++                        % (
++                            self.quote_name(field.column),
++                            self.quote_name(field.column),
++                        )
++                        for field in update_fields
+                     ]
+                 ),
+             )
+diff --git a/django/db/models/query.py b/django/db/models/query.py
+index be8580f2c4..9975f02a37 100644
+--- a/django/db/models/query.py
++++ b/django/db/models/query.py
+@@ -698,7 +698,7 @@ class QuerySet(AltersData):
+                 raise NotSupportedError(
+                     "This database backend does not support ignoring conflicts."
+                 )
+-            return OnConflict.IGNORE
++            return OnConflict.IGNORE, None, None
+         elif update_conflicts:
+             if not db_features.supports_update_conflicts:
+                 raise NotSupportedError(
+@@ -740,8 +740,8 @@ class QuerySet(AltersData):
+                         "bulk_create() can only be used with concrete fields "
+                         "in unique_fields."
+                     )
+-            return OnConflict.UPDATE
+-        return None
++            return OnConflict.UPDATE, update_fields, unique_fields
++        return None, None, None
+ 
+     def bulk_create(
+         self,
+@@ -788,7 +788,7 @@ class QuerySet(AltersData):
+             unique_fields = [
+                 opts.pk.name if name == "pk" else name for name in unique_fields
+             ]
+-        on_conflict = self._check_bulk_create_options(
++        on_conflict, update_fields, unique_fields = self._check_bulk_create_options(
+             ignore_conflicts,
+             update_conflicts,
+             update_fields,
+diff --git a/docs/releases/4.2.txt b/docs/releases/4.2.txt
+index e7d2882edb..3645400826 100644
+--- a/docs/releases/4.2.txt
++++ b/docs/releases/4.2.txt
+@@ -219,6 +219,9 @@ Migrations
+ Models
+ ~~~~~~
+ 
++* :meth:`.QuerySet.bulk_create` now uses the fields' ``db_column`` values in
++  the ``ON CONFLICT`` clause when ``update_conflicts`` is used.
++
+ * ``QuerySet`` now extensively supports filtering against
+   :ref:`window-functions` with the exception of disjunctive filter lookups
+   against window functions when performing aggregation.
+diff --git a/tests/bulk_create/models.py b/tests/bulk_create/models.py
+index 27abc416bd..8dbfe6da91 100644
+--- a/tests/bulk_create/models.py
++++ b/tests/bulk_create/models.py
+@@ -75,6 +75,12 @@ class UpsertConflict(models.Model):
+     name = models.CharField(max_length=15)
+ 
+ 
++class UpsertConflictWithDbColumn(models.Model):
++    number = models.IntegerField(unique=True, db_column="Number")
++    rank = models.IntegerField(db_column="Rank")
++    name = models.CharField(max_length=15, db_column="Name")
++
++
+ class NoFields(models.Model):
+     pass
+ 
+diff --git a/tests/bulk_create/tests.py b/tests/bulk_create/tests.py
+index 6c490d1235..cb7c509bde 100644
+--- a/tests/bulk_create/tests.py
++++ b/tests/bulk_create/tests.py
+@@ -34,6 +34,7 @@ from .models import (
+     State,
+     TwoFields,
+     UpsertConflict,
++    UpsertConflictWithDbColumn,
+ )
+ 
+ 
+@@ -772,3 +773,34 @@ class BulkCreateTests(TestCase):
+     @skipIfDBFeature("supports_update_conflicts_with_target")
+     def test_update_conflicts_no_unique_fields(self):
+         self._test_update_conflicts([])
++
++    @skipUnlessDBFeature(
++        "supports_update_conflicts", "supports_update_conflicts_with_target"
++    )
++    def test_update_conflicts_unique_fields_db_column(self):
++        UpsertConflictWithDbColumn.objects.bulk_create(
++            [
++                UpsertConflictWithDbColumn(number=1, rank=1, name="John"),
++                UpsertConflictWithDbColumn(number=2, rank=2, name="Mary"),
++            ]
++        )
++        self.assertEqual(UpsertConflictWithDbColumn.objects.count(), 2)
++
++        conflicting_objects = [
++            UpsertConflictWithDbColumn(number=1, rank=4, name="Steve"),
++            UpsertConflictWithDbColumn(number=2, rank=2, name="Olivia"),
++        ]
++        UpsertConflictWithDbColumn.objects.bulk_create(
++            conflicting_objects,
++            update_conflicts=True,
++            update_fields=["name", "rank"],
++            unique_fields=["number"],
++        )
++        self.assertEqual(UpsertConflictWithDbColumn.objects.count(), 2)
++        self.assertCountEqual(
++            UpsertConflictWithDbColumn.objects.values("number", "rank", "name"),
++            [
++                {"number": 1, "rank": 4, "name": "Steve"},
++                {"number": 2, "rank": 2, "name": "Olivia"},
++            ],
++        )

@@ -1,0 +1,50 @@
+diff --git a/changelog/7943.bugfix.rst b/changelog/7943.bugfix.rst
+new file mode 100644
+index 000000000..f72fe1da1
+--- /dev/null
++++ b/changelog/7943.bugfix.rst
+@@ -0,0 +1 @@
++Fixed collection of symlinked directories, which was broken since pytest 6.1.0.
+diff --git a/src/_pytest/pathlib.py b/src/_pytest/pathlib.py
+index f0bdb1481..b96cba069 100644
+--- a/src/_pytest/pathlib.py
++++ b/src/_pytest/pathlib.py
+@@ -558,7 +558,7 @@ def visit(
+     entries = sorted(os.scandir(path), key=lambda entry: entry.name)
+     yield from entries
+     for entry in entries:
+-        if entry.is_dir(follow_symlinks=False) and recurse(entry):
++        if entry.is_dir() and recurse(entry):
+             yield from visit(entry.path, recurse)
+ 
+ 
+diff --git a/testing/test_collection.py b/testing/test_collection.py
+index 841aa358b..9b469d2d8 100644
+--- a/testing/test_collection.py
++++ b/testing/test_collection.py
+@@ -1256,6 +1256,25 @@ def test_collect_sub_with_symlinks(use_pkg, testdir):
+     )
+ 
+ 
++@pytest.mark.parametrize("use_pkg", (True, False))
++def test_collect_symlinked_dir(use_pkg, testdir):
++    """Collection follows symlinks to directories (#7943)."""
++    real = testdir.mkdir("real")
++    if use_pkg:
++        real.ensure("__init__.py")
++    real.join("test_file.py").write("def test_file(): pass")
++
++    symlink_or_skip(real, testdir.tmpdir.join("symlink"))
++
++    result = testdir.runpytest("-v", str(testdir.tmpdir.join("symlink")))
++    result.stdout.fnmatch_lines(
++        [
++            "symlink/test_file.py::test_file PASSED*",
++            "*1 passed in*",
++        ]
++    )
++
++
+ def test_collector_respects_tbstyle(testdir):
+     p1 = testdir.makepyfile("assert 0")
+     result = testdir.runpytest(p1, "--tb=native")

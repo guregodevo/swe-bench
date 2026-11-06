@@ -1,0 +1,45 @@
+diff --git a/pylint/checkers/similar.py b/pylint/checkers/similar.py
+index c65b1c89..e9b75f19 100644
+--- a/pylint/checkers/similar.py
++++ b/pylint/checkers/similar.py
+@@ -394,6 +394,10 @@ class Similar:
+ 
+     def _compute_sims(self) -> List[Tuple[int, Set[LinesChunkLimits_T]]]:
+         """compute similarities in appended files"""
++        if self.min_lines <= 0:
++            # A minimum of zero (or less) lines means the check is disabled.
++            return []
++
+         no_duplicates: Dict[int, List[Set[LinesChunkLimits_T]]] = defaultdict(list)
+ 
+         for commonality in self._iter_sims():
+@@ -739,7 +743,8 @@ class SimilarChecker(BaseChecker, Similar, MapReduceMixin):
+                 "default": DEFAULT_MIN_SIMILARITY_LINE,
+                 "type": "int",
+                 "metavar": "<int>",
+-                "help": "Minimum lines number of a similarity.",
++                "help": "Minimum lines number of a similarity. "
++                "If set to 0, disable the duplicate code check.",
+             },
+         ),
+         (
+diff --git a/tests/checkers/unittest_similar.py b/tests/checkers/unittest_similar.py
+index 4ddf2029..59618f58 100644
+--- a/tests/checkers/unittest_similar.py
++++ b/tests/checkers/unittest_similar.py
+@@ -339,6 +339,15 @@ TOTAL lines=62 duplicates=5 percent=8.06
+     )
+ 
+ 
++def test_min_similarity_lines_zero_disables_check() -> None:
++    output = StringIO()
++    with redirect_stdout(output), pytest.raises(SystemExit) as ex:
++        similar.Run(["--duplicates=0", SIMILAR1, SIMILAR2])
++    assert ex.value.code == 0
++    assert "similar lines in" not in output.getvalue()
++    assert "duplicates=0" in output.getvalue()
++
++
+ def test_lines_without_meaningful_content_do_not_trigger_similarity() -> None:
+     output = StringIO()
+     with redirect_stdout(output), pytest.raises(SystemExit) as ex:

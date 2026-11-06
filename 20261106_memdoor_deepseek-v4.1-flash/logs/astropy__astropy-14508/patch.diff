@@ -1,0 +1,25 @@
+diff --git a/astropy/io/fits/card.py b/astropy/io/fits/card.py
+index 118bfced8..8f169ac42 100644
+--- a/astropy/io/fits/card.py
++++ b/astropy/io/fits/card.py
+@@ -1299,7 +1299,19 @@ def _format_value(value):
+ 
+ def _format_float(value):
+     """Format a floating number to make sure it gets the decimal point."""
+-    value_str = f"{value:.16G}"
++    # Use the shortest representation provided by Python if it fits within
++    # the 20 characters available for a value in a FITS card.  This avoids
++    # unnecessarily expanding values (e.g. 0.009125 becoming
++    # 0.009124999999999999), which can otherwise cause comments to be
++    # truncated.
++    value_str = str(value)
++    if len(value_str) > 20:
++        value_str = f"{value:.16G}"
++
++    # Normalize the exponent marker to uppercase, as required by the FITS
++    # standard, even when the representation came from str(value).
++    value_str = value_str.replace("e", "E")
++
+     if "." not in value_str and "E" not in value_str:
+         value_str += ".0"
+     elif "E" in value_str:

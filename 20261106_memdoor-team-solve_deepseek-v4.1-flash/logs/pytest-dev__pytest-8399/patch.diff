@@ -1,0 +1,54 @@
+diff --git a/changelog/8395.bugfix.rst b/changelog/8395.bugfix.rst
+new file mode 100644
+index 000000000..7650486f8
+--- /dev/null
++++ b/changelog/8395.bugfix.rst
+@@ -0,0 +1 @@
++Fixed the names of the automatically generated unittest fixtures (`setUpClass`/`tearDownClass` and `setup_method`/`teardown_method`) to start with an underscore again, so they are hidden from ``pytest --fixtures`` unless ``-v`` is used.
+diff --git a/src/_pytest/unittest.py b/src/_pytest/unittest.py
+index 719eb4e88..91357cd1c 100644
+--- a/src/_pytest/unittest.py
++++ b/src/_pytest/unittest.py
+@@ -144,7 +144,7 @@ def _make_xunit_fixture(
+         scope=scope,
+         autouse=True,
+         # Use a unique name to speed up lookup.
+-        name=f"unittest_{setup_name}_fixture_{obj.__qualname__}",
++        name=f"_{setup_name}_fixture_{obj.__qualname__}",
+     )
+     def fixture(self, request: FixtureRequest) -> Generator[None, None, None]:
+         if _is_skipped(self):
+diff --git a/testing/test_unittest.py b/testing/test_unittest.py
+index 69bafc26d..d099c7ab1 100644
+--- a/testing/test_unittest.py
++++ b/testing/test_unittest.py
+@@ -993,6 +993,29 @@ def test_class_method_containing_test_issue1558(pytester: Pytester) -> None:
+     reprec.assertoutcome(passed=1)
+ 
+ 
++def test_unittest_fixtures_are_hidden(pytester: Pytester) -> None:
++    """The automatically generated unittest fixtures should be hidden from --fixtures
++    unless -v is given (#8395)."""
++    pytester.makepyfile(
++        """
++        import unittest
++
++        class Tests(unittest.TestCase):
++            @classmethod
++            def setUpClass(cls):
++                pass
++
++            def test_1(self):
++                pass
++        """
++    )
++    result = pytester.runpytest("--fixtures")
++    result.stdout.no_fnmatch_line("*setUpClass_fixture_Tests*")
++
++    result = pytester.runpytest("--fixtures", "-v")
++    result.stdout.fnmatch_lines(["*_setUpClass_fixture_Tests*"])
++
++
+ @pytest.mark.parametrize("base", ["builtins.object", "unittest.TestCase"])
+ def test_usefixtures_marker_on_unittest(base, pytester: Pytester) -> None:
+     """#3498"""

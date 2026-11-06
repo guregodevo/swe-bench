@@ -1,0 +1,48 @@
+diff --git a/sympy/physics/units/tests/test_quantities.py b/sympy/physics/units/tests/test_quantities.py
+index c1830ba5f7..0016332791 100755
+--- a/sympy/physics/units/tests/test_quantities.py
++++ b/sympy/physics/units/tests/test_quantities.py
+@@ -22,7 +22,7 @@
+ 
+ from sympy.physics.units.definitions.dimension_definitions import (
+     Dimension, charge, length, time, temperature, pressure,
+-    energy, mass
++    energy, mass, velocity, acceleration
+ )
+ from sympy.physics.units.prefixes import PREFIXES, kilo
+ from sympy.physics.units.quantities import PhysicalConstant, Quantity
+@@ -343,6 +343,21 @@ def test_factor_and_dimension():
+     assert (2, length/time) == SI._collect_factor_and_dimension(
+         meter/second + 36*km/(10*hour))
+ 
++    v_test = Quantity('v_test')
++    SI.set_quantity_dimension(v_test, velocity)
++    SI.set_quantity_scale_factor(v_test, 2*meter/second)
++
++    a_test = Quantity('a_test')
++    SI.set_quantity_dimension(a_test, acceleration)
++    SI.set_quantity_scale_factor(a_test, -9.8*meter/second**2)
++
++    t_test = Quantity('t_test')
++    SI.set_quantity_dimension(t_test, time)
++    SI.set_quantity_scale_factor(t_test, 5*second)
++
++    assert SI._collect_factor_and_dimension(a_test*t_test + v_test) == \
++        (-47, acceleration*time)
++
+     x, y = symbols('x y')
+     assert (x + y/100, length) == SI._collect_factor_and_dimension(
+         x*m + y*centimeter)
+diff --git a/sympy/physics/units/unitsystem.py b/sympy/physics/units/unitsystem.py
+index a436880c4b..5705c821c2 100755
+--- a/sympy/physics/units/unitsystem.py
++++ b/sympy/physics/units/unitsystem.py
+@@ -175,7 +175,7 @@ def _collect_factor_and_dimension(self, expr):
+             for addend in expr.args[1:]:
+                 addend_factor, addend_dim = \
+                     self._collect_factor_and_dimension(addend)
+-                if dim != addend_dim:
++                if not self.get_dimension_system().equivalent_dims(dim, addend_dim):
+                     raise ValueError(
+                         'Dimension of "{}" is {}, '
+                         'but it should be {}'.format(

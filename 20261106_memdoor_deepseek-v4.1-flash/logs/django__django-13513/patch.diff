@@ -1,0 +1,13 @@
+diff --git a/tests/view_tests/tests/test_debug.py b/tests/view_tests/tests/test_debug.py
+index 3cbeb2e03a..dfc007b9bf 100644
+--- a/tests/view_tests/tests/test_debug.py
++++ b/tests/view_tests/tests/test_debug.py
+@@ -466,6 +466,8 @@ class ExceptionReporterTests(SimpleTestCase):
+         self.assertIn('<h2>Request information</h2>', html)
+         self.assertIn('<p>Request data not supplied</p>', html)
+         self.assertNotIn('During handling of the above exception', html)
++        # The suppressed RuntimeError isn't part of the exception chain.
++        self.assertEqual(len(reporter.get_traceback_frames()), 1)
+ 
+     def test_reporting_of_nested_exceptions(self):
+         request = self.rf.get('/test_view/')

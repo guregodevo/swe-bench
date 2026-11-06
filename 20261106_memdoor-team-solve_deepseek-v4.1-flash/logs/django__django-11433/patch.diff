@@ -1,0 +1,45 @@
+diff --git a/django/forms/models.py b/django/forms/models.py
+index 5edbbd376f..beadc25f9d 100644
+--- a/django/forms/models.py
++++ b/django/forms/models.py
+@@ -49,7 +49,8 @@ def construct_instance(form, instance, fields=None, exclude=None):
+         # Leave defaults for fields that aren't in POST data, except for
+         # checkbox inputs because they don't appear in POST data if not checked.
+         if (f.has_default() and
+-                form[f.name].field.widget.value_omitted_from_data(form.data, form.files, form.add_prefix(f.name))):
++                form[f.name].field.widget.value_omitted_from_data(form.data, form.files, form.add_prefix(f.name)) and
++                cleaned_data.get(f.name) in form[f.name].field.empty_values):
+             continue
+         # Defer saving file-type fields until after the other fields, so a
+         # callable upload_to can use the values from other fields.
+diff --git a/tests/model_forms/tests.py b/tests/model_forms/tests.py
+index 3893eb334c..e6f4e0547d 100644
+--- a/tests/model_forms/tests.py
++++ b/tests/model_forms/tests.py
+@@ -600,6 +600,26 @@ class ModelFormBaseTest(TestCase):
+         self.assertIsInstance(mf1.fields['active'].widget, forms.CheckboxInput)
+         self.assertIs(m1._meta.get_field('active').get_default(), True)
+ 
++    def test_cleaned_data_overrides_default(self):
++        class PubForm(forms.ModelForm):
++            mode = forms.CharField(max_length=255, required=False)
++
++            class Meta:
++                model = PublicationDefaults
++                fields = ('mode',)
++
++            def clean(self):
++                cleaned_data = super().clean()
++                cleaned_data['mode'] = 'de'
++                return cleaned_data
++
++        # A value set in cleaned_data overrides the model field default even
++        # if the field is omitted from the submitted data.
++        mf = PubForm({})
++        self.assertEqual(mf.errors, {})
++        m = mf.save(commit=False)
++        self.assertEqual(m.mode, 'de')
++
+     def test_default_not_populated_on_checkboxselectmultiple(self):
+         class PubForm(forms.ModelForm):
+             mode = forms.CharField(required=False, widget=forms.CheckboxSelectMultiple)

@@ -1,0 +1,378 @@
+astropy__astropy-13398	direct	RESOLVED
+astropy__astropy-13398	single	UNRESOLVED
+astropy__astropy-13398	team	RESOLVED
+astropy__astropy-13579	direct	RESOLVED (same as team)
+astropy__astropy-13579	single	RESOLVED
+astropy__astropy-13579	team	RESOLVED
+astropy__astropy-13977	direct	RESOLVED (same as team)
+astropy__astropy-13977	single	RESOLVED
+astropy__astropy-13977	team	RESOLVED
+astropy__astropy-14096	direct	RESOLVED (same as team)
+astropy__astropy-14096	single	RESOLVED
+astropy__astropy-14096	team	RESOLVED
+astropy__astropy-14309	direct	RESOLVED (same as team)
+astropy__astropy-14309	single	RESOLVED
+astropy__astropy-14309	team	RESOLVED
+astropy__astropy-14369	direct	RESOLVED (same as team)
+astropy__astropy-14369	single	UNRESOLVED
+astropy__astropy-14369	team	RESOLVED
+astropy__astropy-14539	direct	RESOLVED (same as team)
+astropy__astropy-14539	single	RESOLVED
+astropy__astropy-14539	team	RESOLVED
+astropy__astropy-14598	direct	RESOLVED (same as team)
+astropy__astropy-14598	single	UNRESOLVED
+astropy__astropy-14598	team	RESOLVED
+astropy__astropy-7671	direct	RESOLVED (same as team)
+astropy__astropy-7671	single	RESOLVED
+astropy__astropy-7671	team	RESOLVED
+django__django-10554	direct	UNRESOLVED
+django__django-10554	single	RESOLVED
+django__django-10554	team	UNRESOLVED
+django__django-11138	direct	RESOLVED (same as team)
+django__django-11138	single	RESOLVED
+django__django-11138	team	RESOLVED
+django__django-11555	direct	RESOLVED (same as team)
+django__django-11555	single	RESOLVED
+django__django-11555	team	RESOLVED
+django__django-11749	direct	RESOLVED
+django__django-11749	single	UNRESOLVED
+django__django-11749	team	RESOLVED
+django__django-11820	direct	UNRESOLVED (same as team)
+django__django-11820	single	UNRESOLVED
+django__django-11820	team	UNRESOLVED
+django__django-11999	direct	RESOLVED (same as team)
+django__django-11999	single	RESOLVED
+django__django-11999	team	RESOLVED
+django__django-12209	direct	RESOLVED (same as team)
+django__django-12209	single	RESOLVED
+django__django-12209	team	RESOLVED
+django__django-12273	direct	RESOLVED (same as team)
+django__django-12273	single	UNRESOLVED
+django__django-12273	team	RESOLVED
+django__django-12325	direct	RESOLVED (same as team)
+django__django-12325	single	RESOLVED
+django__django-12325	team	RESOLVED
+django__django-12663	direct	RESOLVED (same as team)
+django__django-12663	single	UNRESOLVED
+django__django-12663	team	RESOLVED
+django__django-12708	direct	RESOLVED (same as team)
+django__django-12708	single	RESOLVED
+django__django-12708	team	RESOLVED
+django__django-13028	direct	RESOLVED (same as team)
+django__django-13028	single	RESOLVED
+django__django-13028	team	RESOLVED
+django__django-13033	direct	RESOLVED (same as team)
+django__django-13033	single	RESOLVED
+django__django-13033	team	RESOLVED
+django__django-13112	direct	RESOLVED (same as team)
+django__django-13112	single	RESOLVED
+django__django-13112	team	RESOLVED
+django__django-13121	direct	UNRESOLVED (empty patch)
+django__django-13121	single	RESOLVED
+django__django-13121	team	RESOLVED
+django__django-13158	direct	RESOLVED (same as team)
+django__django-13158	single	RESOLVED
+django__django-13158	team	RESOLVED
+django__django-13297	direct	RESOLVED (same as team)
+django__django-13297	single	UNRESOLVED
+django__django-13297	team	RESOLVED
+django__django-13344	direct	RESOLVED (same as team)
+django__django-13344	single	RESOLVED
+django__django-13344	team	RESOLVED
+django__django-13346	direct	RESOLVED (same as team)
+django__django-13346	single	RESOLVED
+django__django-13346	team	RESOLVED
+django__django-13406	direct	RESOLVED (same as team)
+django__django-13406	single	RESOLVED
+django__django-13406	team	RESOLVED
+django__django-13449	direct	UNRESOLVED (empty patch)
+django__django-13449	single	RESOLVED
+django__django-13449	team	RESOLVED
+django__django-13569	direct	RESOLVED (same as team)
+django__django-13569	single	RESOLVED
+django__django-13569	team	RESOLVED
+django__django-13810	direct	RESOLVED (same as team)
+django__django-13810	single	RESOLVED
+django__django-13810	team	RESOLVED
+django__django-13925	direct	RESOLVED (same as team)
+django__django-13925	single	RESOLVED
+django__django-13925	team	RESOLVED
+django__django-14011	direct	RESOLVED (same as team)
+django__django-14011	single	RESOLVED
+django__django-14011	team	RESOLVED
+django__django-14017	direct	RESOLVED (same as team)
+django__django-14017	single	RESOLVED
+django__django-14017	team	RESOLVED
+django__django-14349	direct	RESOLVED (same as team)
+django__django-14349	single	RESOLVED
+django__django-14349	team	RESOLVED
+django__django-14351	direct	RESOLVED (same as team)
+django__django-14351	single	RESOLVED
+django__django-14351	team	RESOLVED
+django__django-14792	direct	RESOLVED (same as team)
+django__django-14792	single	RESOLVED
+django__django-14792	team	RESOLVED
+django__django-15280	direct	RESOLVED (same as team)
+django__django-15280	single	RESOLVED
+django__django-15280	team	RESOLVED
+django__django-15380	direct	RESOLVED (same as team)
+django__django-15380	single	RESOLVED
+django__django-15380	team	RESOLVED
+django__django-15382	direct	RESOLVED (same as team)
+django__django-15382	single	RESOLVED
+django__django-15382	team	RESOLVED
+django__django-15503	direct	RESOLVED (same as team)
+django__django-15503	single	RESOLVED
+django__django-15503	team	RESOLVED
+django__django-15525	direct	RESOLVED (same as team)
+django__django-15525	single	UNRESOLVED
+django__django-15525	team	RESOLVED
+django__django-15554	direct	RESOLVED (same as team)
+django__django-15554	single	RESOLVED
+django__django-15554	team	RESOLVED
+django__django-15563	direct	RESOLVED (same as team)
+django__django-15563	single	UNRESOLVED
+django__django-15563	team	RESOLVED
+django__django-15732	direct	RESOLVED (same as team)
+django__django-15732	single	UNRESOLVED
+django__django-15732	team	RESOLVED
+django__django-15814	direct	RESOLVED (same as team)
+django__django-15814	single	RESOLVED
+django__django-15814	team	RESOLVED
+django__django-15930	direct	UNRESOLVED (empty patch)
+django__django-15930	single	RESOLVED
+django__django-15930	team	RESOLVED
+django__django-15973	direct	RESOLVED (same as team)
+django__django-15973	single	RESOLVED
+django__django-15973	team	RESOLVED
+django__django-16136	direct	RESOLVED (same as team)
+django__django-16136	single	RESOLVED
+django__django-16136	team	RESOLVED
+django__django-16631	direct	RESOLVED
+django__django-16631	single	UNRESOLVED
+django__django-16631	team	RESOLVED
+django__django-16938	direct	RESOLVED (same as team)
+django__django-16938	single	RESOLVED
+django__django-16938	team	RESOLVED
+django__django-16950	direct	RESOLVED (same as team)
+django__django-16950	single	RESOLVED
+django__django-16950	team	RESOLVED
+django__django-17084	direct	RESOLVED (same as team)
+django__django-17084	single	RESOLVED
+django__django-17084	team	RESOLVED
+matplotlib__matplotlib-20488	direct	RESOLVED (same as team)
+matplotlib__matplotlib-20488	single	RESOLVED
+matplotlib__matplotlib-20488	team	RESOLVED
+matplotlib__matplotlib-20826	direct	UNRESOLVED (empty patch) (same as team)
+matplotlib__matplotlib-20826	single	RESOLVED
+matplotlib__matplotlib-20826	team	UNRESOLVED (empty patch)
+matplotlib__matplotlib-21568	direct	RESOLVED (same as team)
+matplotlib__matplotlib-21568	single	UNRESOLVED
+matplotlib__matplotlib-21568	team	RESOLVED
+matplotlib__matplotlib-22719	direct	RESOLVED (same as team)
+matplotlib__matplotlib-22719	single	RESOLVED
+matplotlib__matplotlib-22719	team	RESOLVED
+matplotlib__matplotlib-22871	direct	RESOLVED (same as team)
+matplotlib__matplotlib-22871	single	RESOLVED
+matplotlib__matplotlib-22871	team	RESOLVED
+matplotlib__matplotlib-23299	direct	RESOLVED
+matplotlib__matplotlib-23299	single	UNRESOLVED
+matplotlib__matplotlib-23299	team	RESOLVED
+matplotlib__matplotlib-23412	direct	RESOLVED
+matplotlib__matplotlib-23412	single	RESOLVED
+matplotlib__matplotlib-23412	team	RESOLVED
+matplotlib__matplotlib-23476	direct	RESOLVED (same as team)
+matplotlib__matplotlib-23476	single	RESOLVED
+matplotlib__matplotlib-23476	team	RESOLVED
+matplotlib__matplotlib-24177	direct	RESOLVED (same as team)
+matplotlib__matplotlib-24177	single	RESOLVED
+matplotlib__matplotlib-24177	team	RESOLVED
+matplotlib__matplotlib-24637	direct	RESOLVED (same as team)
+matplotlib__matplotlib-24637	single	RESOLVED
+matplotlib__matplotlib-24637	team	RESOLVED
+matplotlib__matplotlib-24970	direct	RESOLVED (same as team)
+matplotlib__matplotlib-24970	single	RESOLVED
+matplotlib__matplotlib-24970	team	RESOLVED
+matplotlib__matplotlib-25311	direct	RESOLVED (same as team)
+matplotlib__matplotlib-25311	single	RESOLVED
+matplotlib__matplotlib-25311	team	RESOLVED
+matplotlib__matplotlib-25479	direct	RESOLVED (same as team)
+matplotlib__matplotlib-25479	single	UNRESOLVED
+matplotlib__matplotlib-25479	team	RESOLVED
+matplotlib__matplotlib-26113	direct	RESOLVED
+matplotlib__matplotlib-26113	single	RESOLVED
+matplotlib__matplotlib-26113	team	RESOLVED
+matplotlib__matplotlib-26208	direct	RESOLVED (same as team)
+matplotlib__matplotlib-26208	single	RESOLVED
+matplotlib__matplotlib-26208	team	RESOLVED
+matplotlib__matplotlib-26291	direct	RESOLVED (same as team)
+matplotlib__matplotlib-26291	single	RESOLVED
+matplotlib__matplotlib-26291	team	RESOLVED
+psf__requests-2931	direct	RESOLVED (same as team)
+psf__requests-2931	single	RESOLVED
+psf__requests-2931	team	RESOLVED
+psf__requests-6028	direct	RESOLVED (same as team)
+psf__requests-6028	single	RESOLVED
+psf__requests-6028	team	RESOLVED
+pydata__xarray-6461	direct	RESOLVED (same as team)
+pydata__xarray-6461	single	RESOLVED
+pydata__xarray-6461	team	RESOLVED
+pydata__xarray-6599	direct	RESOLVED (same as team)
+pydata__xarray-6599	single	RESOLVED
+pydata__xarray-6599	team	RESOLVED
+pydata__xarray-6721	direct	RESOLVED (same as team)
+pydata__xarray-6721	single	RESOLVED
+pydata__xarray-6721	team	RESOLVED
+pydata__xarray-6744	direct	RESOLVED (same as team)
+pydata__xarray-6744	single	RESOLVED
+pydata__xarray-6744	team	RESOLVED
+pydata__xarray-6938	direct	RESOLVED (same as team)
+pydata__xarray-6938	single	UNRESOLVED
+pydata__xarray-6938	team	RESOLVED
+pydata__xarray-7229	direct	UNRESOLVED (same as team)
+pydata__xarray-7229	single	RESOLVED
+pydata__xarray-7229	team	UNRESOLVED
+pylint-dev__pylint-6528	direct	UNRESOLVED (same as team)
+pylint-dev__pylint-6528	single	RESOLVED
+pylint-dev__pylint-6528	team	UNRESOLVED
+pylint-dev__pylint-6903	direct	RESOLVED (same as team)
+pylint-dev__pylint-6903	single	RESOLVED
+pylint-dev__pylint-6903	team	RESOLVED
+pylint-dev__pylint-7080	direct	RESOLVED (same as team)
+pylint-dev__pylint-7080	single	RESOLVED
+pylint-dev__pylint-7080	team	RESOLVED
+pytest-dev__pytest-10081	direct	RESOLVED
+pytest-dev__pytest-10081	single	RESOLVED
+pytest-dev__pytest-10081	team	RESOLVED
+pytest-dev__pytest-5787	direct	RESOLVED
+pytest-dev__pytest-5787	single	UNRESOLVED
+pytest-dev__pytest-5787	team	RESOLVED
+pytest-dev__pytest-5840	direct	RESOLVED
+pytest-dev__pytest-5840	single	RESOLVED
+pytest-dev__pytest-5840	team	RESOLVED
+pytest-dev__pytest-6197	direct	RESOLVED
+pytest-dev__pytest-6197	single	RESOLVED
+pytest-dev__pytest-6197	team	RESOLVED
+pytest-dev__pytest-6202	direct	RESOLVED
+pytest-dev__pytest-6202	single	RESOLVED
+pytest-dev__pytest-6202	team	RESOLVED
+pytest-dev__pytest-7236	direct	RESOLVED
+pytest-dev__pytest-7236	single	RESOLVED
+pytest-dev__pytest-7236	team	RESOLVED
+pytest-dev__pytest-7324	direct	RESOLVED
+pytest-dev__pytest-7324	single	RESOLVED
+pytest-dev__pytest-7324	team	RESOLVED
+pytest-dev__pytest-7490	direct	RESOLVED
+pytest-dev__pytest-7490	single	RESOLVED
+pytest-dev__pytest-7490	team	RESOLVED
+scikit-learn__scikit-learn-25747	direct	RESOLVED (same as team)
+scikit-learn__scikit-learn-25747	single	RESOLVED
+scikit-learn__scikit-learn-25747	team	RESOLVED
+scikit-learn__scikit-learn-9288	direct	RESOLVED (same as team)
+scikit-learn__scikit-learn-9288	single	RESOLVED
+scikit-learn__scikit-learn-9288	team	RESOLVED
+sphinx-doc__sphinx-10323	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-10323	single	RESOLVED
+sphinx-doc__sphinx-10323	team	RESOLVED
+sphinx-doc__sphinx-10449	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-10449	single	RESOLVED
+sphinx-doc__sphinx-10449	team	RESOLVED
+sphinx-doc__sphinx-10614	direct	UNRESOLVED
+sphinx-doc__sphinx-10614	single	UNRESOLVED
+sphinx-doc__sphinx-10614	team	UNRESOLVED
+sphinx-doc__sphinx-11445	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-11445	single	RESOLVED
+sphinx-doc__sphinx-11445	team	RESOLVED
+sphinx-doc__sphinx-11510	direct	RESOLVED
+sphinx-doc__sphinx-11510	single	RESOLVED
+sphinx-doc__sphinx-11510	team	RESOLVED
+sphinx-doc__sphinx-7440	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-7440	single	RESOLVED
+sphinx-doc__sphinx-7440	team	RESOLVED
+sphinx-doc__sphinx-7462	direct	UNRESOLVED (same as team)
+sphinx-doc__sphinx-7462	single	UNRESOLVED
+sphinx-doc__sphinx-7462	team	UNRESOLVED
+sphinx-doc__sphinx-7889	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-7889	single	RESOLVED
+sphinx-doc__sphinx-7889	team	RESOLVED
+sphinx-doc__sphinx-7910	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-7910	single	RESOLVED
+sphinx-doc__sphinx-7910	team	RESOLVED
+sphinx-doc__sphinx-8056	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-8056	single	RESOLVED
+sphinx-doc__sphinx-8056	team	RESOLVED
+sphinx-doc__sphinx-8120	direct	RESOLVED
+sphinx-doc__sphinx-8120	single	RESOLVED
+sphinx-doc__sphinx-8120	team	RESOLVED
+sphinx-doc__sphinx-8638	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-8638	single	UNRESOLVED
+sphinx-doc__sphinx-8638	team	RESOLVED
+sphinx-doc__sphinx-9229	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-9229	single	RESOLVED
+sphinx-doc__sphinx-9229	team	RESOLVED
+sphinx-doc__sphinx-9461	direct	UNRESOLVED (same as team)
+sphinx-doc__sphinx-9461	single	UNRESOLVED
+sphinx-doc__sphinx-9461	team	UNRESOLVED
+sphinx-doc__sphinx-9591	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-9591	single	RESOLVED
+sphinx-doc__sphinx-9591	team	RESOLVED
+sphinx-doc__sphinx-9658	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-9658	single	RESOLVED
+sphinx-doc__sphinx-9658	team	RESOLVED
+sphinx-doc__sphinx-9673	direct	RESOLVED (same as team)
+sphinx-doc__sphinx-9673	single	RESOLVED
+sphinx-doc__sphinx-9673	team	RESOLVED
+sympy__sympy-12419	direct	RESOLVED (same as team)
+sympy__sympy-12419	single	RESOLVED
+sympy__sympy-12419	team	RESOLVED
+sympy__sympy-13031	direct	RESOLVED (same as team)
+sympy__sympy-13031	single	RESOLVED
+sympy__sympy-13031	team	RESOLVED
+sympy__sympy-13551	direct	RESOLVED (same as team)
+sympy__sympy-13551	single	RESOLVED
+sympy__sympy-13551	team	RESOLVED
+sympy__sympy-13757	direct	RESOLVED (same as team)
+sympy__sympy-13757	single	RESOLVED
+sympy__sympy-13757	team	RESOLVED
+sympy__sympy-15976	direct	RESOLVED (same as team)
+sympy__sympy-15976	single	RESOLVED
+sympy__sympy-15976	team	RESOLVED
+sympy__sympy-16597	direct	RESOLVED (same as team)
+sympy__sympy-16597	single	UNRESOLVED
+sympy__sympy-16597	team	RESOLVED
+sympy__sympy-17318	direct	RESOLVED (same as team)
+sympy__sympy-17318	single	RESOLVED
+sympy__sympy-17318	team	RESOLVED
+sympy__sympy-17630	direct	RESOLVED (same as team)
+sympy__sympy-17630	single	RESOLVED
+sympy__sympy-17630	team	RESOLVED
+sympy__sympy-17655	direct	RESOLVED (same as team)
+sympy__sympy-17655	single	RESOLVED
+sympy__sympy-17655	team	RESOLVED
+sympy__sympy-19495	direct	UNRESOLVED (empty patch)
+sympy__sympy-19495	single	RESOLVED
+sympy__sympy-19495	team	UNRESOLVED
+sympy__sympy-20428	direct	UNRESOLVED
+sympy__sympy-20428	single	UNRESOLVED
+sympy__sympy-20428	team	UNRESOLVED
+sympy__sympy-20438	direct	RESOLVED (same as team)
+sympy__sympy-20438	single	RESOLVED
+sympy__sympy-20438	team	RESOLVED
+sympy__sympy-20590	direct	RESOLVED (same as team)
+sympy__sympy-20590	single	RESOLVED
+sympy__sympy-20590	team	RESOLVED
+sympy__sympy-20801	direct	RESOLVED (same as team)
+sympy__sympy-20801	single	RESOLVED
+sympy__sympy-20801	team	RESOLVED
+sympy__sympy-21379	direct	RESOLVED (same as team)
+sympy__sympy-21379	single	RESOLVED
+sympy__sympy-21379	team	RESOLVED
+sympy__sympy-22714	direct	RESOLVED (same as team)
+sympy__sympy-22714	single	RESOLVED
+sympy__sympy-22714	team	RESOLVED
+sympy__sympy-23413	direct	RESOLVED (same as team)
+sympy__sympy-23413	single	RESOLVED
+sympy__sympy-23413	team	RESOLVED
+sympy__sympy-24562	direct	RESOLVED (same as team)
+sympy__sympy-24562	single	RESOLVED
+sympy__sympy-24562	team	RESOLVED

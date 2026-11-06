@@ -1,0 +1,43 @@
+diff --git a/django/db/migrations/loader.py b/django/db/migrations/loader.py
+index 95a5062ec9..983bdb9b0c 100644
+--- a/django/db/migrations/loader.py
++++ b/django/db/migrations/loader.py
+@@ -90,7 +90,9 @@ class MigrationLoader:
+             else:
+                 # Empty directories are namespaces.
+                 # getattr() needed on PY36 and older (replace w/attribute access).
+-                if getattr(module, '__file__', None) is None:
++                if getattr(module, '__file__', None) is None and not isinstance(
++                    getattr(module, '__path__', None), list
++                ):
+                     self.unmigrated_apps.add(app_config.label)
+                     continue
+                 # Module is not a package (e.g. migrations.py).
+diff --git a/docs/releases/3.2.txt b/docs/releases/3.2.txt
+index 8cd77ffad0..17fe35c059 100644
+--- a/docs/releases/3.2.txt
++++ b/docs/releases/3.2.txt
+@@ -346,6 +346,10 @@ Migrations
+ * Migrations now support serialization of pure and concrete path objects from
+   :mod:`pathlib`, and :class:`os.PathLike` instances.
+ 
++* The migration loader now supports packages that don't define ``__file__``
++  (e.g. packages in frozen environments) as long as they aren't namespace
++  packages.
++
+ Models
+ ~~~~~~
+ 
+diff --git a/tests/migrations/test_loader.py b/tests/migrations/test_loader.py
+index 27a052ddac..a099a11bc9 100644
+--- a/tests/migrations/test_loader.py
++++ b/tests/migrations/test_loader.py
+@@ -1,5 +1,8 @@
+ import compileall
++import importlib
+ import os
++import types
++from unittest import mock
+ 
+ from django.db import connection, connections
+ from django.db.migrations.exceptions import (

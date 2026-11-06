@@ -1,0 +1,93 @@
+diff --git a/django/core/management/commands/runserver.py b/django/core/management/commands/runserver.py
+index d9fb088350..23ff513d41 100644
+--- a/django/core/management/commands/runserver.py
++++ b/django/core/management/commands/runserver.py
+@@ -51,6 +51,10 @@ class Command(BaseCommand):
+             '--noreload', action='store_false', dest='use_reloader',
+             help='Tells Django to NOT use the auto-reloader.',
+         )
++        parser.add_argument(
++            '--skip-checks', action='store_true',
++            help='Skip system checks.',
++        )
+ 
+     def execute(self, *args, **options):
+         if options['no_color']:
+@@ -114,8 +118,9 @@ class Command(BaseCommand):
+         shutdown_message = options.get('shutdown_message', '')
+         quit_command = 'CTRL-BREAK' if sys.platform == 'win32' else 'CONTROL-C'
+ 
+-        self.stdout.write("Performing system checks...\n\n")
+-        self.check(display_num_errors=True)
++        if not options['skip_checks']:
++            self.stdout.write("Performing system checks...\n\n")
++            self.check(display_num_errors=True)
+         # Need to check migrations here, so can't use the
+         # requires_migrations_check attribute.
+         self.check_migrations()
+diff --git a/docs/ref/django-admin.txt b/docs/ref/django-admin.txt
+index b7f6e175be..d2d39a7317 100644
+--- a/docs/ref/django-admin.txt
++++ b/docs/ref/django-admin.txt
+@@ -1006,6 +1006,12 @@ multithreaded by default.
+ Uses IPv6 for the development server. This changes the default IP address from
+ ``127.0.0.1`` to ``::1``.
+ 
++.. django-admin-option:: --skip-checks
++
++.. versionadded:: 4.0
++
++Skips running system checks prior to starting the server.
++
+ Examples of using different ports and addresses
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+diff --git a/docs/releases/4.0.txt b/docs/releases/4.0.txt
+index 52531c1266..ed991fb672 100644
+--- a/docs/releases/4.0.txt
++++ b/docs/releases/4.0.txt
+@@ -153,7 +153,8 @@ Logging
+ Management Commands
+ ~~~~~~~~~~~~~~~~~~~
+ 
+-* ...
++* The :djadmin:`runserver` management command now supports the
++  :option:`--skip-checks` option.
+ 
+ Migrations
+ ~~~~~~~~~~
+diff --git a/tests/admin_scripts/tests.py b/tests/admin_scripts/tests.py
+index d9ec07a3e3..7aa5e38219 100644
+--- a/tests/admin_scripts/tests.py
++++ b/tests/admin_scripts/tests.py
+@@ -1296,6 +1296,30 @@ class ManageRunserver(SimpleTestCase):
+         call_command(self.cmd, addrport="deadbeef:7654")
+         self.assertServerSettings('deadbeef', '7654')
+ 
++    @mock.patch('django.core.management.commands.runserver.run')
++    @mock.patch.object(RunserverCommand, 'check_migrations')
++    @mock.patch.object(RunserverCommand, 'check')
++    def test_skip_checks(self, mock_check, mock_check_migrations, mock_run):
++        self.cmd.addr = '127.0.0.1'
++        self.cmd.port = '8000'
++        self.cmd._raw_ipv6 = False
++        self.cmd.use_ipv6 = False
++        self.cmd.inner_run(use_threading=False, skip_checks=True)
++        mock_check.assert_not_called()
++        mock_check_migrations.assert_called_once_with()
++
++    @mock.patch('django.core.management.commands.runserver.run')
++    @mock.patch.object(RunserverCommand, 'check_migrations')
++    @mock.patch.object(RunserverCommand, 'check')
++    def test_run_checks(self, mock_check, mock_check_migrations, mock_run):
++        self.cmd.addr = '127.0.0.1'
++        self.cmd.port = '8000'
++        self.cmd._raw_ipv6 = False
++        self.cmd.use_ipv6 = False
++        self.cmd.inner_run(use_threading=False, skip_checks=False)
++        mock_check.assert_called_once_with(display_num_errors=True)
++        mock_check_migrations.assert_called_once_with()
++
+     def test_no_database(self):
+         """
+         Ensure runserver.check_migrations doesn't choke on empty DATABASES.

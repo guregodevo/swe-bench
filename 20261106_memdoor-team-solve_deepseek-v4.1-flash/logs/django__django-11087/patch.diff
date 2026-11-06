@@ -1,0 +1,59 @@
+diff --git a/django/db/models/deletion.py b/django/db/models/deletion.py
+index 3a462f1c4c..b83e659e65 100644
+--- a/django/db/models/deletion.py
++++ b/django/db/models/deletion.py
+@@ -234,7 +234,7 @@ class Collector:
+         """
+         return related.related_model._base_manager.using(self.using).filter(
+             **{"%s__in" % related.field.name: objs}
+-        )
++        ).only(related.field.name)
+ 
+     def instances_with_model(self):
+         for model, instances in self.data.items():
+diff --git a/docs/releases/2.2.txt b/docs/releases/2.2.txt
+index 2639aa886a..1f8342b7dd 100644
+--- a/docs/releases/2.2.txt
++++ b/docs/releases/2.2.txt
+@@ -401,6 +401,10 @@ widgets depending on ``django.jQuery`` must specify
+ Miscellaneous
+ -------------
+ 
++* Cascade deletion now only fetches the fields required to perform the
++  deletion, rather than loading all fields of the related objects. This
++  improves performance and avoids loading data that isn't needed.
++
+ * To improve readability, the ``UUIDField`` form field now displays values with
+   dashes, e.g. ``550e8400-e29b-41d4-a716-446655440000`` instead of
+   ``550e8400e29b41d4a716446655440000``.
+diff --git a/tests/delete/tests.py b/tests/delete/tests.py
+index ed47d0667d..770c21bb16 100644
+--- a/tests/delete/tests.py
++++ b/tests/delete/tests.py
+@@ -4,6 +4,7 @@ from django.db import IntegrityError, connection, models
+ from django.db.models.deletion import Collector
+ from django.db.models.sql.constants import GET_ITERATOR_CHUNK_SIZE
+ from django.test import TestCase, skipIfDBFeature, skipUnlessDBFeature
++from django.test.utils import CaptureQueriesContext
+ 
+ from .models import (
+     MR, A, Avatar, Base, Child, HiddenUser, HiddenUserProfile, M, M2MFrom,
+@@ -437,6 +438,18 @@ class DeletionTests(TestCase):
+         with self.assertNumQueries(2):
+             avatar.delete()
+ 
++    def test_only_referenced_fields_selected(self):
++        """
++        Only referenced fields are selected during cascade deletion.
++        """
++        a = create_a('only_referenced_fields')
++        with CaptureQueriesContext(connection) as ctx:
++            a.cascade.delete()
++        self.assertFalse(A.objects.filter(pk=a.pk).exists())
++        sql = [q['sql'] for q in ctx.captured_queries]
++        self.assertTrue(any('"delete_a"."cascade_id"' in query for query in sql))
++        self.assertFalse(any('"delete_a"."name"' in query for query in sql))
++
+ 
+ class FastDeleteTests(TestCase):
+ 

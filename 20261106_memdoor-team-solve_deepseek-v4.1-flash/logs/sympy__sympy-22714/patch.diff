@@ -1,0 +1,35 @@
+diff --git a/sympy/geometry/point.py b/sympy/geometry/point.py
+index 73c20334d0..11bad7ff9c 100755
+--- a/sympy/geometry/point.py
++++ b/sympy/geometry/point.py
+@@ -152,7 +152,7 @@ def __new__(cls, *args, **kwargs):
+                         'warn' or 'ignore'.'''))
+         if any(coords[dim:]):
+             raise ValueError('Nonzero coordinates cannot be removed.')
+-        if any(a.is_number and im(a) for a in coords):
++        if any(a.is_number and im(a).is_zero is False for a in coords):
+             raise ValueError('Imaginary coordinates are not permitted.')
+         if not all(isinstance(a, Expr) for a in coords):
+             raise TypeError('Coordinates must be valid SymPy expressions.')
+diff --git a/sympy/geometry/tests/test_point.py b/sympy/geometry/tests/test_point.py
+index 930d707735..66bf1a9df9 100755
+--- a/sympy/geometry/tests/test_point.py
++++ b/sympy/geometry/tests/test_point.py
+@@ -1,5 +1,6 @@
+ from sympy.core.basic import Basic
+ from sympy.core.numbers import (I, Rational, pi)
++from sympy.core.parameters import evaluate
+ from sympy.core.singleton import S
+ from sympy.core.symbol import Symbol
+ from sympy.core.sympify import sympify
+@@ -13,6 +14,10 @@
+ 
+ 
+ def test_point():
++    with evaluate(False):
++        assert Point(1, 2) == Point2D(1, 2)
++        assert sympify('Point2D(Integer(1), Integer(2))') == Point2D(1, 2)
++
+     x = Symbol('x', real=True)
+     y = Symbol('y', real=True)
+     x1 = Symbol('x1', real=True)

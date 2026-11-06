@@ -1,0 +1,33 @@
+diff --git a/django/urls/resolvers.py b/django/urls/resolvers.py
+index 9b00e24509..871c196893 100755
+--- a/django/urls/resolvers.py
++++ b/django/urls/resolvers.py
+@@ -45,6 +45,8 @@ class ResolverMatch:
+         self.namespaces = [x for x in namespaces if x] if namespaces else []
+         self.namespace = ':'.join(self.namespaces)
+ 
++        if isinstance(func, functools.partial):
++            func = func.func
+         if not hasattr(func, '__name__'):
+             # A class-based view
+             self._func_path = func.__class__.__module__ + '.' + func.__class__.__name__
+diff --git a/tests/urlpatterns_reverse/tests.py b/tests/urlpatterns_reverse/tests.py
+index 09028be795..110604ffd1 100755
+--- a/tests/urlpatterns_reverse/tests.py
++++ b/tests/urlpatterns_reverse/tests.py
+@@ -1145,6 +1145,15 @@ class ResolverMatchTests(SimpleTestCase):
+             "namespaces=[], route=^no_kwargs/([0-9]+)/([0-9]+)/$)",
+         )
+ 
++    @override_settings(ROOT_URLCONF='urlpatterns_reverse.urls')
++    def test_repr_partial(self):
++        self.assertEqual(
++            repr(resolve('/partial/')),
++            "ResolverMatch(func=urlpatterns_reverse.views.empty_view, "
++            "args=(), kwargs={}, url_name=partial, app_names=[], namespaces=[], "
++            "route=partial/)",
++        )
++
+ 
+ @override_settings(ROOT_URLCONF='urlpatterns_reverse.erroneous_urls')
+ class ErroneousViewTests(SimpleTestCase):

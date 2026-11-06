@@ -1,0 +1,57 @@
+diff --git a/django/db/models/sql/query.py b/django/db/models/sql/query.py
+index 33cc636b22..cf7566d771 100755
+--- a/django/db/models/sql/query.py
++++ b/django/db/models/sql/query.py
+@@ -748,6 +748,7 @@ class Query(BaseExpression):
+                     cur_model = source.related_model
+                 else:
+                     cur_model = source.remote_field.model
++                cur_model = cur_model._meta.concrete_model
+                 opts = cur_model._meta
+                 # Even if we're "just passing through" this model, we must add
+                 # both the current model's pk and the related reference field
+diff --git a/tests/proxy_models/models.py b/tests/proxy_models/models.py
+index 604136b5ac..21763ea726 100755
+--- a/tests/proxy_models/models.py
++++ b/tests/proxy_models/models.py
+@@ -149,6 +149,10 @@ class StateProxy(State):
+         proxy = True
+ 
+ 
++class StateProxyReferrer(models.Model):
++    state = models.ForeignKey(StateProxy, models.CASCADE)
++
++
+ # Proxy models still works with filters (on related fields)
+ # and select_related, even when mixed with model inheritance
+ 
+diff --git a/tests/proxy_models/tests.py b/tests/proxy_models/tests.py
+index f2f465678b..e04ae3dc2c 100755
+--- a/tests/proxy_models/tests.py
++++ b/tests/proxy_models/tests.py
+@@ -28,6 +28,7 @@ from .models import (
+     ProxyTrackerUser,
+     State,
+     StateProxy,
++    StateProxyReferrer,
+     StatusPerson,
+     TrackerUser,
+     User,
+@@ -331,6 +332,17 @@ class ProxyModelTests(TestCase):
+         resp = StateProxy.objects.select_related().get(name="New South Wales")
+         self.assertEqual(resp.name, "New South Wales")
+ 
++    def test_select_related_only(self):
++        country = Country.objects.create(name="Australia")
++        state = StateProxy.objects.create(name="New South Wales", country=country)
++        StateProxyReferrer.objects.create(state=state)
++        referrer = (
++            StateProxyReferrer.objects.select_related("state")
++            .only("state__name")
++            .get()
++        )
++        self.assertEqual(referrer.state.name, "New South Wales")
++
+     def test_filter_proxy_relation_reverse(self):
+         tu = TrackerUser.objects.create(name="Contributor", status="contrib")
+         ptu = ProxyTrackerUser.objects.get()

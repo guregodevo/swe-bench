@@ -1,0 +1,79 @@
+diff --git a/CHANGES.rst b/CHANGES.rst
+index ce5ac0094..cc1fcf6ed 100644
+--- a/CHANGES.rst
++++ b/CHANGES.rst
+@@ -366,6 +366,9 @@ astropy.io.ascii
+   writing a ``Time`` column with one of these formats could result in an exception
+   or else an incorrect output file that cannot be read back in. [#12842]
+ 
++- Fixed the ``io.ascii`` HTML writer so that the ``formats`` argument is
++  applied to the output, including for multidimensional columns. [#13198]
++
+ astropy.io.fits
+ ^^^^^^^^^^^^^^^
+ 
+diff --git a/astropy/io/ascii/html.py b/astropy/io/ascii/html.py
+index 266cf229c..9ed828f52 100644
+--- a/astropy/io/ascii/html.py
++++ b/astropy/io/ascii/html.py
+@@ -349,6 +349,9 @@ class HTML(core.BaseReader):
+         cols = list(table.columns.values())
+ 
+         self.data.header.cols = cols
++        self.data.cols = cols
++        # Apply any formats supplied in the ``formats`` keyword to the columns.
++        self.data._set_col_formats()
+ 
+         if isinstance(self.data.fill_values, tuple):
+             self.data.fill_values = [self.data.fill_values]
+@@ -429,6 +432,7 @@ class HTML(core.BaseReader):
+                                 for i in range(span):
+                                     # Split up multicolumns into separate columns
+                                     new_col = Column([el[i] for el in col])
++                                    new_col.info.format = col.info.format
+ 
+                                     new_col_iter_str_vals = self.fill_values(
+                                         col, new_col.info.iter_str_vals())
+diff --git a/astropy/io/ascii/tests/test_html.py b/astropy/io/ascii/tests/test_html.py
+index 0515efa06..75193baa4 100644
+--- a/astropy/io/ascii/tests/test_html.py
++++ b/astropy/io/ascii/tests/test_html.py
+@@ -636,6 +636,38 @@ def test_write_table_html_fill_values():
+     assert buffer_output.getvalue() == buffer_expected.getvalue()
+ 
+ 
++def test_write_table_html_formats():
++    """
++    Test that passing formats applies the requested formatting to the
++    corresponding column values.
++    """
++    t = Table([(1.23875234858e-24, 3.2348748432e-15), (2, 4)],
++              names=('a', 'b'))
++    buffer_output = StringIO()
++    ascii.write(t, buffer_output, format='html',
++                formats={'a': lambda x: f'{x:.2e}'})
++
++    out = buffer_output.getvalue()
++    assert '<td>1.24e-24</td>' in out
++    assert '<td>3.23e-15</td>' in out
++
++
++@pytest.mark.parametrize('fmt', ['{:.2e}', lambda x: f'{x:.2e}'])
++def test_write_multicolumn_table_html_formats(fmt):
++    """
++    Test that formats are applied when writing multidimensional columns.
++    """
++    t = Table([[(1.234, 2.345), (3.456, 4.567)]], names=('a',))
++    buffer_output = StringIO()
++    ascii.write(t, buffer_output, format='html', formats={'a': fmt})
++
++    out = buffer_output.getvalue()
++    assert '<td>1.23e+00</td>' in out
++    assert '<td>2.35e+00</td>' in out
++    assert '<td>3.46e+00</td>' in out
++    assert '<td>4.57e+00</td>' in out
++
++
+ def test_write_table_html_fill_values_optional_columns():
+     """
+     Test that passing optional column in fill_values should only replace

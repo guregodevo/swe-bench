@@ -1,0 +1,63 @@
+diff --git a/django/conf/global_settings.py b/django/conf/global_settings.py
+index 09c9b95d26..5e30e02773 100644
+--- a/django/conf/global_settings.py
++++ b/django/conf/global_settings.py
+@@ -637,6 +637,6 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+ SECURE_HSTS_PRELOAD = False
+ SECURE_HSTS_SECONDS = 0
+ SECURE_REDIRECT_EXEMPT = []
+-SECURE_REFERRER_POLICY = None
++SECURE_REFERRER_POLICY = "same-origin"
+ SECURE_SSL_HOST = None
+ SECURE_SSL_REDIRECT = False
+diff --git a/docs/ref/settings.txt b/docs/ref/settings.txt
+index b4a5bdc48f..5148a26465 100644
+--- a/docs/ref/settings.txt
++++ b/docs/ref/settings.txt
+@@ -2395,7 +2395,11 @@ from URL paths, so patterns shouldn't include them, e.g.
+ 
+ .. versionadded:: 3.0
+ 
+-Default: ``None``
++Default: ``'same-origin'``
++
++.. versionchanged:: 3.1
++
++    The default was changed from ``None`` to ``'same-origin'``.
+ 
+ If configured, the :class:`~django.middleware.security.SecurityMiddleware` sets
+ the :ref:`referrer-policy` header on all responses that do not already have it
+diff --git a/docs/releases/3.1.txt b/docs/releases/3.1.txt
+index 4a165156e1..52173bf826 100644
+--- a/docs/releases/3.1.txt
++++ b/docs/releases/3.1.txt
+@@ -434,6 +434,12 @@ Miscellaneous
+   Group Specification, i.e. values between 69 and 99 are mapped to the previous
+   century, and values between 0 and 68 are mapped to the current century.
+ 
++* The :setting:`SECURE_REFERRER_POLICY` setting now defaults to
++  ``'same-origin'``. With this configured,
++  :class:`~django.middleware.security.SecurityMiddleware` sets the
++  :ref:`Referrer-Policy <referrer-policy>` header to ``same-origin`` on all
++  responses that do not already have it.
++
+ * Date-only formats are removed from the default list for
+   :setting:`DATETIME_INPUT_FORMATS`.
+ 
+diff --git a/tests/middleware/test_security.py b/tests/middleware/test_security.py
+index 07b72fc73a..f0eeb46b0e 100644
+--- a/tests/middleware/test_security.py
++++ b/tests/middleware/test_security.py
+@@ -247,6 +247,12 @@ class SecurityMiddlewareTest(SimpleTestCase):
+             with self.subTest(value=value), override_settings(SECURE_REFERRER_POLICY=value):
+                 self.assertEqual(self.process_response()['Referrer-Policy'], expected)
+ 
++    def test_referrer_policy_default(self):
++        """
++        The default SECURE_REFERRER_POLICY is 'same-origin'.
++        """
++        self.assertEqual(self.process_response()['Referrer-Policy'], 'same-origin')
++
+     @override_settings(SECURE_REFERRER_POLICY='strict-origin')
+     def test_referrer_policy_already_present(self):
+         """

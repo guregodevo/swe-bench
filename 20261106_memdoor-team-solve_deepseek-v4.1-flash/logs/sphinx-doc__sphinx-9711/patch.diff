@@ -1,0 +1,103 @@
+diff --git a/CHANGES b/CHANGES
+index ae7cbbe7c..9e830b89b 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -63,6 +63,8 @@ Bugs fixed
+ * #9678: linkcheck: file extension was shown twice in warnings
+ * #9697: py domain: An index entry with parens was registered for ``py:method``
+   directive with ``:property:`` option
++* #9704: needs_extensions: Compare extension versions as versions rather than
++  as strings
+ 
+ Testing
+ --------
+diff --git a/doc/usage/configuration.rst b/doc/usage/configuration.rst
+index a1a113873..d64b4876d 100644
+--- a/doc/usage/configuration.rst
++++ b/doc/usage/configuration.rst
+@@ -376,8 +376,9 @@ General configuration
+    This value can be a dictionary specifying version requirements for
+    extensions in :confval:`extensions`, e.g. ``needs_extensions =
+    {'sphinxcontrib.something': '1.5'}``.  The version strings should be in the
+-   form ``major.minor``.  Requirements do not have to be specified for all
+-   extensions, only for those you want to check.
++   form ``major.minor``.  The version strings are compared as PEP 440 versions.
++   Requirements do not have to be specified for all extensions, only for those
++   you want to check.
+ 
+    This requires that the extension specifies its version to Sphinx (see
+    :ref:`dev-extensions` for how to do that).
+diff --git a/sphinx/extension.py b/sphinx/extension.py
+index 7ec6c8518..5786bce56 100644
+--- a/sphinx/extension.py
++++ b/sphinx/extension.py
+@@ -10,6 +10,8 @@
+ 
+ from typing import TYPE_CHECKING, Any, Dict
+ 
++from packaging.version import Version
++
+ from sphinx.config import Config
+ from sphinx.errors import VersionRequirementError
+ from sphinx.locale import __
+@@ -51,7 +53,12 @@ def verify_needs_extensions(app: "Sphinx", config: Config) -> None:
+                               'but it is not loaded.'), extname)
+             continue
+ 
+-        if extension.version == 'unknown version' or reqversion > extension.version:
++        if extension.version == 'unknown version':
++            raise VersionRequirementError(__('This project needs the extension %s at least in '
++                                             'version %s and therefore cannot be built with '
++                                             'the loaded version (%s).') %
++                                          (extname, reqversion, extension.version))
++        elif Version(reqversion) > Version(extension.version):
+             raise VersionRequirementError(__('This project needs the extension %s at least in '
+                                              'version %s and therefore cannot be built with '
+                                              'the loaded version (%s).') %
+diff --git a/tests/roots/test-extensions/versioned.py b/tests/roots/test-extensions/versioned.py
+new file mode 100644
+index 000000000..1ee954e9e
+--- /dev/null
++++ b/tests/roots/test-extensions/versioned.py
+@@ -0,0 +1,4 @@
++def setup(app):
++    return {
++        'version': '0.10.0',
++    }
+diff --git a/tests/roots/test-extensions/versioned_unknown.py b/tests/roots/test-extensions/versioned_unknown.py
+new file mode 100644
+index 000000000..509a4ae33
+--- /dev/null
++++ b/tests/roots/test-extensions/versioned_unknown.py
+@@ -0,0 +1,2 @@
++def setup(app):
++    return {}
+diff --git a/tests/test_application.py b/tests/test_application.py
+index 94ddd04cf..b63fc2c2e 100644
+--- a/tests/test_application.py
++++ b/tests/test_application.py
+@@ -130,3 +130,24 @@ def test_build_specific(app):
+     app.builder.build.assert_called_with(expected,
+                                          method='specific',
+                                          summary='4 source files given on command line')
++
++
++@pytest.mark.sphinx(testroot='extensions')
++def test_needs_extensions(app, status, warning):
++    from sphinx.errors import VersionRequirementError
++
++    app.setup_extension('versioned')
++    app.config.needs_extensions = {'versioned': '0.6.0'}
++    app.emit('config-inited', app.config)
++
++    app.config.needs_extensions = {'versioned': '0.10.0'}
++    app.emit('config-inited', app.config)
++
++    app.config.needs_extensions = {'versioned': '0.11.0'}
++    with pytest.raises(VersionRequirementError):
++        app.emit('config-inited', app.config)
++
++    app.setup_extension('versioned_unknown')
++    app.config.needs_extensions = {'versioned_unknown': '0.1'}
++    with pytest.raises(VersionRequirementError):
++        app.emit('config-inited', app.config)

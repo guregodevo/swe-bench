@@ -1,0 +1,29 @@
+diff --git a/sympy/printing/conventions.py b/sympy/printing/conventions.py
+index 9a3be6bbe9..ba9297643a 100644
+--- a/sympy/printing/conventions.py
++++ b/sympy/printing/conventions.py
+@@ -7,7 +7,9 @@
+ from collections.abc import Iterable
+ from sympy import Derivative
+ 
+-_name_with_digits_p = re.compile(r'^([a-zA-Z]+)([0-9]+)$')
++# Letters may be non-ASCII (e.g. Greek letters such as ``ω``), so use the
++# Unicode-aware "letter" character class instead of ``[a-zA-Z]``.
++_name_with_digits_p = re.compile(r'^([^\W\d_]+)([0-9]+)$')
+ 
+ 
+ def split_super_sub(text):
+diff --git a/sympy/printing/tests/test_conventions.py b/sympy/printing/tests/test_conventions.py
+index 87689aa8fc..ee8b554ca7 100644
+--- a/sympy/printing/tests/test_conventions.py
++++ b/sympy/printing/tests/test_conventions.py
+@@ -29,6 +29,9 @@ def test_super_sub():
+     assert split_super_sub("x__a__b__c__d") == ("x", ["a", "b", "c", "d"], [])
+     assert split_super_sub("alpha_11") == ("alpha", [], ["11"])
+     assert split_super_sub("alpha_11_11") == ("alpha", [], ["11", "11"])
++    assert split_super_sub("ω0") == ("ω", [], ["0"])
++    assert split_super_sub("ω_0") == ("ω", [], ["0"])
++    assert split_super_sub("α12") == ("α", [], ["12"])
+     assert split_super_sub("") == ("", [], [])
+ 
+ 

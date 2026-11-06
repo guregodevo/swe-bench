@@ -1,0 +1,106 @@
+diff --git a/changelog/5357.bugfix.rst b/changelog/5357.bugfix.rst
+new file mode 100644
+index 000000000..58f6abd13
+--- /dev/null
++++ b/changelog/5357.bugfix.rst
+@@ -0,0 +1,2 @@
++Fixed missing marks when a test class inherits from multiple base classes: marks
++from all classes in the MRO are now collected instead of only the first one.
+diff --git a/doc/en/example/markers.rst b/doc/en/example/markers.rst
+index 34d96c2bc..ee8bd6971 100644
+--- a/doc/en/example/markers.rst
++++ b/doc/en/example/markers.rst
+@@ -311,6 +311,9 @@ Due to legacy reasons, before class decorators were introduced, it is possible t
+     class TestClass:
+         pytestmark = pytest.mark.webtest
+ 
++When a test class inherits from multiple base classes, markers from all of them
++are collected following the class' MRO (method resolution order).
++
+ .. _`marking individual tests when using parametrize`:
+ 
+ Marking individual tests when using parametrize
+diff --git a/src/_pytest/mark/structures.py b/src/_pytest/mark/structures.py
+index 800a25c92..9cb892ffa 100644
+--- a/src/_pytest/mark/structures.py
++++ b/src/_pytest/mark/structures.py
+@@ -355,11 +355,33 @@ class MarkDecorator:
+         return self.with_args(*args, **kwargs)
+ 
+ 
+-def get_unpacked_marks(obj: object) -> Iterable[Mark]:
+-    """Obtain the unpacked marks that are stored on an object."""
+-    mark_list = getattr(obj, "pytestmark", [])
+-    if not isinstance(mark_list, list):
+-        mark_list = [mark_list]
++def get_unpacked_marks(
++    obj: object,
++    *,
++    consider_mro: bool = True,
++) -> Iterable[Mark]:
++    """Obtain the unpacked marks that are stored on an object.
++
++    If obj is a class and consider_mro is true, return marks applied to
++    this class and all of its super-classes in MRO order. If consider_mro
++    is false, only return marks applied directly to this class.
++    """
++    if isinstance(obj, type):
++        if consider_mro:
++            mro = obj.__mro__
++        else:
++            mro = (obj,)
++        mark_lists = [x.__dict__.get("pytestmark", []) for x in mro]
++    else:
++        mark_lists = [getattr(obj, "pytestmark", [])]
++
++    # To allow for partial overrides without erroring out we take all the
++    # definitions of ``pytestmark`` in the class and combine them.
++    mark_list = []
++    for mark_list_ in mark_lists:
++        if not isinstance(mark_list_, list):
++            mark_list_ = [mark_list_]
++        mark_list.extend(mark_list_)
+     return normalize_mark_list(mark_list)
+ 
+ 
+@@ -388,7 +410,9 @@ def store_mark(obj, mark: Mark) -> None:
+     assert isinstance(mark, Mark), mark
+     # Always reassign name to avoid updating pytestmark in a reference that
+     # was only borrowed.
+-    obj.pytestmark = [*get_unpacked_marks(obj), mark]
++    # Only consider marks applied directly to this object, as inherited marks
++    # are obtained from the MRO when the object's marks are collected.
++    obj.pytestmark = [*get_unpacked_marks(obj, consider_mro=False), mark]
+ 
+ 
+ # Typing for builtin pytest marks. This is cheating; it gives builtin marks
+diff --git a/testing/test_mark.py b/testing/test_mark.py
+index 65f2581bd..73feb782c 100644
+--- a/testing/test_mark.py
++++ b/testing/test_mark.py
+@@ -561,6 +561,25 @@ class TestFunctional:
+         items, rec = pytester.inline_genitems(p)
+         self.assert_markers(items, test_foo=("a", "b", "c"), test_bar=("a", "b", "d"))
+ 
++    def test_mark_decorator_multiple_baseclasses(self, pytester: Pytester) -> None:
++        """#5357"""
++        p = pytester.makepyfile(
++            """
++            import pytest
++
++            @pytest.mark.a
++            class Base1(object): pass
++
++            @pytest.mark.b
++            class Base2(object): pass
++
++            class Test(Base1, Base2):
++                def test_foo(self): pass
++        """
++        )
++        items, rec = pytester.inline_genitems(p)
++        self.assert_markers(items, test_foo=("a", "b"))
++
+     def test_mark_closest(self, pytester: Pytester) -> None:
+         p = pytester.makepyfile(
+             """

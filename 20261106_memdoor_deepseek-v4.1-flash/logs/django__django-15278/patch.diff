@@ -1,0 +1,56 @@
+diff --git a/django/db/backends/sqlite3/schema.py b/django/db/backends/sqlite3/schema.py
+index 6752a8e3c0..3ff0a3f7db 100644
+--- a/django/db/backends/sqlite3/schema.py
++++ b/django/db/backends/sqlite3/schema.py
+@@ -324,10 +324,15 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
+ 
+     def add_field(self, model, field):
+         """Create a field on a model."""
+-        # Fields with default values cannot by handled by ALTER TABLE ADD
+-        # COLUMN statement because DROP DEFAULT is not supported in
+-        # ALTER TABLE.
+-        if not field.null or self.effective_default(field) is not None:
++        if (
++            # Primary keys and unique fields are not supported in ALTER TABLE
++            # ADD COLUMN.
++            field.primary_key or field.unique or
++            # Fields with default values cannot by handled by ALTER TABLE ADD
++            # COLUMN statement because DROP DEFAULT is not supported in
++            # ALTER TABLE.
++            not field.null or self.effective_default(field) is not None
++        ):
+             self._remake_table(model, create_field=field)
+         else:
+             super().add_field(model, field)
+diff --git a/tests/schema/tests.py b/tests/schema/tests.py
+index cd6a52f6af..4ccbd2fd62 100644
+--- a/tests/schema/tests.py
++++ b/tests/schema/tests.py
+@@ -542,6 +542,27 @@ class SchemaTests(TransactionTestCase):
+             editor.remove_field(Tag, Tag._meta.get_field('slug'))
+         self.assertEqual(editor.deferred_sql, [])
+ 
++    def test_add_field_unique_nullable(self):
++        with connection.schema_editor() as editor:
++            editor.create_model(Author)
++        new_field = IntegerField(null=True, unique=True)
++        new_field.set_attributes_from_name('rank')
++        with connection.schema_editor() as editor:
++            editor.add_field(Author, new_field)
++        columns = self.column_classes(Author)
++        self.assertEqual(
++            columns['rank'][0],
++            connection.features.introspected_field_types['IntegerField'],
++        )
++        # The unique constraint is created.
++        constraints = self.get_constraints(Author._meta.db_table)
++        self.assertTrue(
++            any(
++                constraint['columns'] == ['rank'] and constraint['unique']
++                for constraint in constraints.values()
++            )
++        )
++
+     def test_add_field_temp_default(self):
+         """
+         Tests adding fields to models with a temporary default

@@ -1,0 +1,147 @@
+diff --git a/sphinx/builders/linkcheck.py b/sphinx/builders/linkcheck.py
+index dd5317087..ecaae79f2 100644
+--- a/sphinx/builders/linkcheck.py
++++ b/sphinx/builders/linkcheck.py
+@@ -210,10 +210,16 @@ class CheckExternalLinksBuilder(Builder):
+ 
+         def check() -> Tuple[str, str, int]:
+             # check for various conditions without bothering the network
+-            if len(uri) == 0 or uri.startswith(('#', 'mailto:', 'ftp:')):
++            if len(uri) == 0 or uri.startswith(('#', 'mailto:', 'ftp:', 'tel:')):
+                 return 'unchecked', '', 0
+             elif not uri.startswith(('http:', 'https:')):
+-                return 'local', '', 0
++                for rex in self.to_ignore:
++                    if rex.match(uri):
++                        return 'ignored', '', 0
++                if self._local_link_exists(uri, docname):
++                    return 'local', '', 0
++                else:
++                    return 'broken', __('local target not found'), 0
+             elif uri in self.good:
+                 return 'working', 'old', 0
+             elif uri in self.broken:
+@@ -246,6 +252,58 @@ class CheckExternalLinksBuilder(Builder):
+             status, info, code = check()
+             self.rqueue.put((uri, docname, lineno, status, info, code))
+ 
++    def _source_suffixes(self) -> List[str]:
++        """Return the configured source suffixes, with a leading dot."""
++        suffixes = self.config.source_suffix
++        if isinstance(suffixes, str):
++            suffixes = [suffixes]
++        elif isinstance(suffixes, dict):
++            suffixes = list(suffixes)
++        else:
++            suffixes = list(suffixes)
++        return [suffix if suffix.startswith('.') else '.' + suffix
++                for suffix in suffixes]
++
++    def _local_link_exists(self, uri: str, docname: str) -> bool:
++        """Return True if a local (internal) URI points at an existing target."""
++        # A fragment or query does not name a file itself.  A URI made only of
++        # them refers to the current document and is always valid.
++        target = uri.split('#', 1)[0].split('?', 1)[0]
++        if not target:
++            return True
++        target = unquote(target)
++
++        try:
++            _, source_path = self.env.relfn2path(target, docname)
++        except Exception:
++            return False
++        source_path = path.normpath(source_path)
++
++        # A literal source/target file (document source, image, download, ...).
++        if path.exists(source_path):
++            return True
++
++        suffixes = self._source_suffixes()
++        for suffix in suffixes:
++            if path.exists(source_path + suffix):
++                return True
++
++        # A document name, e.g. ``other`` or ``other.html`` for other.rst.
++        try:
++            rel = path.relpath(source_path, self.srcdir)
++        except ValueError:
++            return False
++        rel = rel.replace(path.sep, '/')
++        for suffix in ('.html', '.htm'):
++            if rel.endswith(suffix):
++                rel = rel[:-len(suffix)]
++                break
++        for suffix in suffixes:
++            if rel.endswith(suffix):
++                rel = rel[:-len(suffix)]
++                break
++        return rel in self.env.found_docs
++
+     def process_result(self, result: Tuple[str, str, int, str, str, int]) -> None:
+         uri, docname, lineno, status, info, code = result
+ 
+@@ -275,6 +333,7 @@ class CheckExternalLinksBuilder(Builder):
+             logger.info(darkgreen('ok        ') + uri + info)
+             self.write_linkstat(linkstat)
+         elif status == 'broken':
++            self.app.statuscode = 1
+             if self.app.quiet or self.app.warningiserror:
+                 logger.warning(__('broken link: %s (%s)'), uri, info,
+                                location=(filename, lineno))
+diff --git a/tests/roots/test-linkcheck-local/conf.py b/tests/roots/test-linkcheck-local/conf.py
+new file mode 100644
+index 000000000..2a35d6957
+--- /dev/null
++++ b/tests/roots/test-linkcheck-local/conf.py
+@@ -0,0 +1 @@
++master_doc = 'index'
+diff --git a/tests/roots/test-linkcheck-local/existing.rst b/tests/roots/test-linkcheck-local/existing.rst
+new file mode 100644
+index 000000000..17519afc4
+--- /dev/null
++++ b/tests/roots/test-linkcheck-local/existing.rst
+@@ -0,0 +1,4 @@
++existing
++========
++
++An existing local document.
+diff --git a/tests/roots/test-linkcheck-local/index.rst b/tests/roots/test-linkcheck-local/index.rst
+new file mode 100644
+index 000000000..620ff0a20
+--- /dev/null
++++ b/tests/roots/test-linkcheck-local/index.rst
+@@ -0,0 +1,10 @@
++test-linkcheck-local
++====================
++
++broken-external_
++broken-local_
++valid-local_
++
++.. _broken-external: http://127.0.0.1:1/
++.. _broken-local: doesntexist
++.. _valid-local: existing
+diff --git a/tests/test_build_linkcheck.py b/tests/test_build_linkcheck.py
+index d1fec550f..7d0f591b9 100644
+--- a/tests/test_build_linkcheck.py
++++ b/tests/test_build_linkcheck.py
+@@ -157,3 +157,19 @@ def test_linkcheck_request_headers(app, status, warning):
+                 assert headers["X-Secret"] == "open sesami"
+             else:
+                 assert headers["Accept"] == "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8"
++
++
++@pytest.mark.sphinx('linkcheck', testroot='linkcheck-local', freshenv=True)
++def test_local_links(app, status, warning):
++    app.builder.build_all()
++
++    content = (app.outdir / 'output.txt').read_text()
++    print(content)
++    # a missing local target is reported as broken
++    assert '[broken] doesntexist' in content
++    # a valid local target is not reported as broken
++    assert '[broken] existing' not in content
++    # external links are still checked
++    assert '[broken] http://127.0.0.1:1/' in content
++    # and broken links make the build fail
++    assert app.statuscode != 0

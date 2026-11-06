@@ -1,0 +1,55 @@
+diff --git a/sympy/physics/quantum/tensorproduct.py b/sympy/physics/quantum/tensorproduct.py
+index 9dd10d219..af3a3b07f 100644
+--- a/sympy/physics/quantum/tensorproduct.py
++++ b/sympy/physics/quantum/tensorproduct.py
+@@ -143,6 +143,21 @@ def flatten(cls, args):
+     def _eval_adjoint(self):
+         return TensorProduct(*[Dagger(i) for i in self.args])
+ 
++    def _eval_power(self, exp):
++        """Calculate the power of a TensorProduct.
++
++        The power of a tensor product is the tensor product of the powers
++        of its factors::
++
++            >>> from sympy import Symbol
++            >>> from sympy.physics.quantum import TensorProduct
++            >>> A = Symbol('A', commutative=False)
++            >>> B = Symbol('B', commutative=False)
++            >>> TensorProduct(A, B)**2
++            (A**2)x(B**2)
++        """
++        return TensorProduct(*[arg**exp for arg in self.args])
++
+     def _eval_rewrite(self, pattern, rule, **hints):
+         sargs = self.args
+         terms = [t._eval_rewrite(pattern, rule, **hints) for t in sargs]
+@@ -376,7 +391,7 @@ def tensor_product_simp(e, **hints):
+     commutators and anticommutators as well:
+ 
+     >>> tensor_product_simp(e**2)
+-    (A*C)x(B*D)**2
++    ((A*C)**2)x((B*D)**2)
+ 
+     """
+     if isinstance(e, Add):
+diff --git a/sympy/physics/quantum/tests/test_tensorproduct.py b/sympy/physics/quantum/tests/test_tensorproduct.py
+index 9f65844c8..7d5efa958 100644
+--- a/sympy/physics/quantum/tests/test_tensorproduct.py
++++ b/sympy/physics/quantum/tests/test_tensorproduct.py
+@@ -49,6 +49,15 @@ def test_tensor_product_simp():
+     assert tensor_product_simp(TP(A, B)*TP(B, C)) == TP(A*B, B*C)
+ 
+ 
++def test_tensor_product_power():
++    assert TP(A, B)**2 == TP(A**2, B**2)
++    assert TP(A, B)**-1 == TP(A**-1, B**-1)
++    assert TP(A, B)**0 == 1
++    assert tensor_product_simp(TP(A, B)**2) == TP(A**2, B**2)
++    assert tensor_product_simp(
++        (TP(A, B)*TP(B, C))**2) == TP((A*B)**2, (B*C)**2)
++
++
+ def test_issue_5923():
+     # most of the issue regarding sympification of args has been handled
+     # and is tested internally by the use of args_cnc through the quantum

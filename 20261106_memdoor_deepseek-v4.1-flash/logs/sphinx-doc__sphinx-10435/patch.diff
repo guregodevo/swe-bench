@@ -1,0 +1,52 @@
+diff --git a/CHANGES b/CHANGES
+index 34524b958..3f9c736b4 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -134,6 +134,9 @@ Features added
+ Bugs fixed
+ ----------
+ 
++* #10360: LaTeX: Inline code highlighting no longer inserts whitespace at the
++  start and end of the code.
++
+ Testing
+ --------
+ 
+diff --git a/sphinx/writers/latex.py b/sphinx/writers/latex.py
+index e0c7d56f8..801a0cdd0 100644
+--- a/sphinx/writers/latex.py
++++ b/sphinx/writers/latex.py
+@@ -1706,15 +1706,11 @@ class LaTeXTranslator(SphinxTranslator):
+ 
+         opts = self.config.highlight_options.get(lang, {})
+         hlcode = self.highlighter.highlight_block(
+-            node.astext(), lang, opts=opts, location=node)
+-        # TODO: Use nowrap option once LaTeX formatter supports it
+-        # https://github.com/pygments/pygments/pull/1343
+-        hlcode = hlcode.replace(r'\begin{Verbatim}[commandchars=\\\{\}]',
+-                                r'\sphinxcode{\sphinxupquote{')
+-        # get consistent trailer
+-        hlcode = hlcode.rstrip()[:-14]  # strip \end{Verbatim}
++            node.astext(), lang, opts=opts, location=node, nowrap=True)
++        hlcode = hlcode.rstrip()
++        self.body.append(r'\sphinxcode{\sphinxupquote{%' + CR)
+         self.body.append(hlcode)
+-        self.body.append('}}')
++        self.body.append('%' + CR + '}}')
+         raise nodes.SkipNode
+ 
+     def depart_literal(self, node: Element) -> None:
+diff --git a/tests/test_build_latex.py b/tests/test_build_latex.py
+index dd0db8aef..642543f1c 100644
+--- a/tests/test_build_latex.py
++++ b/tests/test_build_latex.py
+@@ -1623,7 +1623,7 @@ def test_latex_code_role(app):
+         r'\PYG{p}{)}'
+         r'\PYG{p}{:} '
+         r'\PYG{k}{pass}')
+-    assert (r'Inline \sphinxcode{\sphinxupquote{' + '\n' +
+-            common_content + '\n}} code block') in content
++    assert (r'Inline \sphinxcode{\sphinxupquote{%' + '\n' +
++            common_content + '%' + '\n}} code block') in content
+     assert (r'\begin{sphinxVerbatim}[commandchars=\\\{\}]' +
+             '\n' + common_content + '\n' + r'\end{sphinxVerbatim}') in content

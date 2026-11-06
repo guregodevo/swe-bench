@@ -1,0 +1,62 @@
+diff --git a/CHANGES b/CHANGES
+index e094cd79a..2acfa939d 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -42,6 +42,8 @@ Features added
+ * #9097: Optimize the paralell build
+ * #9131: Add :confval:`nitpick_ignore_regex` to ignore nitpicky warnings using
+   regular expressions
++* #9126: py domain: Support union types specification using ``|`` (ex.
++  ``:type text: bytes | str``)
+ 
+ 
+ Bugs fixed
+diff --git a/sphinx/domains/python.py b/sphinx/domains/python.py
+index 7d39d80ed..0dbc0275c 100644
+--- a/sphinx/domains/python.py
++++ b/sphinx/domains/python.py
+@@ -304,7 +304,7 @@ class PyXrefMixin:
+     def make_xrefs(self, rolename: str, domain: str, target: str,
+                    innernode: Type[TextlikeNode] = nodes.emphasis,
+                    contnode: Node = None, env: BuildEnvironment = None) -> List[Node]:
+-        delims = r'(\s*[\[\]\(\),](?:\s*or\s)?\s*|\s+or\s+|\.\.\.)'
++        delims = r'(\s*[\[\]\(\),|](?:\s*or\s)?\s*|\s+or\s+|\.\.\.)'
+         delims_re = re.compile(delims)
+         sub_targets = re.split(delims, target)
+ 
+diff --git a/tests/test_domain_py.py b/tests/test_domain_py.py
+index 2614c8ff6..01db7c203 100644
+--- a/tests/test_domain_py.py
++++ b/tests/test_domain_py.py
+@@ -1009,6 +1009,31 @@ def test_info_field_list(app):
+                 **{"py:module": "example", "py:class": "Class"})
+ 
+ 
++def test_info_field_list_union_type(app):
++    text = (".. py:function:: foo(text)\n"
++            "\n"
++            "   :param text: a text\n"
++            "   :type text: bytes | str\n")
++    doctree = restructuredtext.parse(app, text)
++
++    assert_node(doctree[1][1][0][0],
++                ([nodes.field_name, "Parameters"],
++                 [nodes.field_body, nodes.paragraph]))
++    assert_node(doctree[1][1][0][0][1][0],
++                ([addnodes.literal_strong, "text"],
++                 " (",
++                 [pending_xref, addnodes.literal_emphasis, "bytes"],
++                 [addnodes.literal_emphasis, " | "],
++                 [pending_xref, addnodes.literal_emphasis, "str"],
++                 ")",
++                 " -- ",
++                 "a text"))
++    assert_node(doctree[1][1][0][0][1][0][2], pending_xref,
++                refdomain="py", reftype="class", reftarget="bytes")
++    assert_node(doctree[1][1][0][0][1][0][4], pending_xref,
++                refdomain="py", reftype="class", reftarget="str")
++
++
+ def test_info_field_list_var(app):
+     text = (".. py:class:: Class\n"
+             "\n"

@@ -1,0 +1,50 @@
+diff --git a/django/db/models/sql/query.py b/django/db/models/sql/query.py
+index 6629a1fd51..7fa8461977 100644
+--- a/django/db/models/sql/query.py
++++ b/django/db/models/sql/query.py
+@@ -1062,6 +1062,14 @@ class Query(BaseExpression):
+             if col.alias in self.external_aliases
+         ]
+ 
++    def get_group_by_cols(self, alias=None):
++        if alias:
++            return [Ref(alias, self)]
++        external_cols = self.get_external_cols()
++        if any(col.possibly_multivalued for col in external_cols):
++            return [self]
++        return external_cols
++
+     def as_sql(self, compiler, connection):
+         sql, params = self.get_compiler(connection=connection).as_sql()
+         if self.subquery:
+diff --git a/docs/releases/3.2.2.txt b/docs/releases/3.2.2.txt
+index d47da08d6c..17e1eee07e 100644
+--- a/docs/releases/3.2.2.txt
++++ b/docs/releases/3.2.2.txt
+@@ -12,3 +12,8 @@ Bugfixes
+ * Prevented, following a regression in Django 3.2.1, :djadmin:`makemigrations`
+   from generating infinite migrations for a model with ``Meta.ordering``
+   contained ``OrderBy`` expressions (:ticket:`32714`).
++
++* Fixed a regression in Django 3.2 that caused a crash of ``QuerySet.filter()``
++  with ``Q()`` objects combining ``__in`` lookups against a related model and
++  aggregates, which raised ``ProgrammingError: subquery must return only one
++  column`` on PostgreSQL (:ticket:`32380`).
+diff --git a/tests/queries/tests.py b/tests/queries/tests.py
+index f6437e1175..a40a00461a 100644
+--- a/tests/queries/tests.py
++++ b/tests/queries/tests.py
+@@ -99,6 +99,13 @@ class Queries1Tests(TestCase):
+         # So, 'U0."id"' is referenced in SELECT and WHERE twice.
+         self.assertEqual(str(qs4.query).lower().count('u0.'), 4)
+ 
++    def test_filter_with_subquery_annotation(self):
++        qs = Item.objects.annotate(Count('tags')).filter(
++            Q(tags__in=Tag.objects.all()) | Q(tags__count=0),
++        ).distinct()
++        self.assertSequenceEqual(qs, [self.i1, self.i2, self.i3, self.i4])
++        self.assertNotIn('SELECT U0.', str(qs.query))
++
+     def test_ticket1050(self):
+         self.assertSequenceEqual(
+             Item.objects.filter(tags__isnull=True),

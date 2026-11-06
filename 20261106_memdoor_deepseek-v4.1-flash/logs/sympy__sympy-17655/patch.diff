@@ -1,0 +1,53 @@
+diff --git a/sympy/geometry/point.py b/sympy/geometry/point.py
+index 7c978c47be..6bc33357c1 100755
+--- a/sympy/geometry/point.py
++++ b/sympy/geometry/point.py
+@@ -104,6 +104,7 @@ class Point(GeometryEntity):
+     """
+ 
+     is_Point = True
++    _op_priority = 10.001
+ 
+     def __new__(cls, *args, **kwargs):
+         evaluate = kwargs.get('evaluate', global_evaluate[0])
+@@ -278,6 +279,19 @@ def __mul__(self, factor):
+         coords = [simplify(x*factor) for x in self.args]
+         return Point(coords, evaluate=False)
+ 
++    def __rmul__(self, factor):
++        """Multiply point's coordinates by a factor."""
++        return self.__mul__(factor)
++
++    def __radd__(self, other):
++        """Add other to self by incrementing self's coordinates by
++        those of other."""
++        return self.__add__(other)
++
++    def __rsub__(self, other):
++        """Subtract this point from other."""
++        return -self + other
++
+     def __neg__(self):
+         """Negate the point."""
+         coords = [-x for x in self.args]
+diff --git a/sympy/geometry/tests/test_point.py b/sympy/geometry/tests/test_point.py
+index 475d1d403f..981097ecfa 100755
+--- a/sympy/geometry/tests/test_point.py
++++ b/sympy/geometry/tests/test_point.py
+@@ -1,4 +1,4 @@
+-from sympy import I, Rational, Symbol, pi, sqrt, S
++from sympy import I, Rational, Symbol, pi, sqrt, S, sympify
+ from sympy.geometry import Line, Point, Point2D, Point3D, Line3D, Plane
+ from sympy.geometry.entity import rotate, scale, translate
+ from sympy.matrices import Matrix
+@@ -92,6 +92,10 @@ def test_point():
+ 
+     assert p4 * 5 == Point(5, 5)
+     assert p4 / 5 == Point(0.2, 0.2)
++    assert 5 * p4 == Point(5, 5)
++    assert S(5) * p4 == Point(5, 5)
++    assert sympify(2.0) * p4 == Point(2.0, 2.0)
++    assert p3 + sympify(2.0) * p4 == p3 + p4 * sympify(2.0)
+ 
+     raises(ValueError, lambda: Point(0, 0) + 10)
+ 

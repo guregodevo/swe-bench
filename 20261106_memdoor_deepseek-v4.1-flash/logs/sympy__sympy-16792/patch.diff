@@ -1,0 +1,148 @@
+diff --git a/sympy/utilities/codegen.py b/sympy/utilities/codegen.py
+index f0befb2bd..5da2f0f95 100755
+--- a/sympy/utilities/codegen.py
++++ b/sympy/utilities/codegen.py
+@@ -719,6 +719,11 @@ def routine(self, name, expr, argument_sequence=None, global_vars=None):
+         if argument_sequence is not None:
+             # if the user has supplied IndexedBase instances, we'll accept that
+             new_sequence = []
++            for arg in argument_sequence:
++                if isinstance(arg, IndexedBase):
++                    array_symbols[arg.label] = arg
++                elif isinstance(arg, MatrixSymbol):
++                    array_symbols[arg] = arg
+             for arg in argument_sequence:
+                 if isinstance(arg, IndexedBase):
+                     new_sequence.append(arg.label)
+@@ -739,7 +744,12 @@ def routine(self, name, expr, argument_sequence=None, global_vars=None):
+                 try:
+                     new_args.append(name_arg_dict[symbol])
+                 except KeyError:
+-                    new_args.append(InputArgument(symbol))
++                    if symbol in array_symbols:
++                        array = array_symbols[symbol]
++                        dims = [(S.Zero, dim - 1) for dim in array.shape]
++                        new_args.append(InputArgument(symbol, dimensions=dims))
++                    else:
++                        new_args.append(InputArgument(symbol))
+             arg_list = new_args
+ 
+         return Routine(name, arg_list, return_val, local_vars, global_vars)
+@@ -1382,6 +1392,11 @@ def routine(self, name, expr, argument_sequence, global_vars):
+         if argument_sequence is not None:
+             # if the user has supplied IndexedBase instances, we'll accept that
+             new_sequence = []
++            for arg in argument_sequence:
++                if isinstance(arg, IndexedBase):
++                    array_symbols[arg.label] = arg
++                elif isinstance(arg, MatrixSymbol):
++                    array_symbols[arg] = arg
+             for arg in argument_sequence:
+                 if isinstance(arg, IndexedBase):
+                     new_sequence.append(arg.label)
+@@ -1402,7 +1417,15 @@ def routine(self, name, expr, argument_sequence, global_vars):
+                 try:
+                     new_args.append(name_arg_dict[symbol])
+                 except KeyError:
+-                    new_args.append(InputArgument(symbol))
++                    # Check if the argument is an array (e.g. a MatrixSymbol
++                    # or IndexedBase) even if it does not appear in the
++                    # expression, so that the correct array type is used.
++                    if symbol in array_symbols:
++                        array = array_symbols[symbol]
++                        dims = [(S.Zero, dim - 1) for dim in array.shape]
++                        new_args.append(InputArgument(symbol, dimensions=dims))
++                    else:
++                        new_args.append(InputArgument(symbol))
+             arg_list = new_args
+ 
+         return Routine(name, arg_list, return_vals, local_vars, global_vars)
+@@ -1590,6 +1613,11 @@ def routine(self, name, expr, argument_sequence, global_vars):
+         if argument_sequence is not None:
+             # if the user has supplied IndexedBase instances, we'll accept that
+             new_sequence = []
++            for arg in argument_sequence:
++                if isinstance(arg, IndexedBase):
++                    array_symbols[arg.label] = arg
++                elif isinstance(arg, MatrixSymbol):
++                    array_symbols[arg] = arg
+             for arg in argument_sequence:
+                 if isinstance(arg, IndexedBase):
+                     new_sequence.append(arg.label)
+@@ -1610,7 +1638,15 @@ def routine(self, name, expr, argument_sequence, global_vars):
+                 try:
+                     new_args.append(name_arg_dict[symbol])
+                 except KeyError:
+-                    new_args.append(InputArgument(symbol))
++                    # Check if the argument is an array (e.g. a MatrixSymbol
++                    # or IndexedBase) even if it does not appear in the
++                    # expression, so that the correct array type is used.
++                    if symbol in array_symbols:
++                        array = array_symbols[symbol]
++                        dims = [(S.Zero, dim - 1) for dim in array.shape]
++                        new_args.append(InputArgument(symbol, dimensions=dims))
++                    else:
++                        new_args.append(InputArgument(symbol))
+             arg_list = new_args
+ 
+         return Routine(name, arg_list, return_vals, local_vars, global_vars)
+@@ -1821,6 +1857,11 @@ def routine(self, name, expr, argument_sequence, global_vars):
+         if argument_sequence is not None:
+             # if the user has supplied IndexedBase instances, we'll accept that
+             new_sequence = []
++            for arg in argument_sequence:
++                if isinstance(arg, IndexedBase):
++                    array_symbols[arg.label] = arg
++                elif isinstance(arg, MatrixSymbol):
++                    array_symbols[arg] = arg
+             for arg in argument_sequence:
+                 if isinstance(arg, IndexedBase):
+                     new_sequence.append(arg.label)
+@@ -1841,7 +1882,15 @@ def routine(self, name, expr, argument_sequence, global_vars):
+                 try:
+                     new_args.append(name_arg_dict[symbol])
+                 except KeyError:
+-                    new_args.append(InputArgument(symbol))
++                    # Check if the argument is an array (e.g. a MatrixSymbol
++                    # or IndexedBase) even if it does not appear in the
++                    # expression, so that the correct array type is used.
++                    if symbol in array_symbols:
++                        array = array_symbols[symbol]
++                        dims = [(S.Zero, dim - 1) for dim in array.shape]
++                        new_args.append(InputArgument(symbol, dimensions=dims))
++                    else:
++                        new_args.append(InputArgument(symbol))
+             arg_list = new_args
+ 
+         return Routine(name, arg_list, return_vals, local_vars, global_vars)
+diff --git a/sympy/utilities/tests/test_codegen.py b/sympy/utilities/tests/test_codegen.py
+index 1cd56e12d..e981ab322 100755
+--- a/sympy/utilities/tests/test_codegen.py
++++ b/sympy/utilities/tests/test_codegen.py
+@@ -157,6 +157,26 @@ def test_c_code_argument_order():
+     assert source == expected
+ 
+ 
++def test_c_code_unused_array_argument():
++    # An array argument that does not occur in the expression should still be
++    # passed as an array (see issue #16868).
++    x = MatrixSymbol('x', 2, 1)
++    routine = make_routine("test", 1.0, argument_sequence=[x])
++    assert routine.arguments[0].dimensions == ((0, 1), (0, 0))
++    code_gen = C89CodeGen()
++    source = get_string(code_gen.dump_c, [routine])
++    expected = (
++        "#include \"file.h\"\n"
++        "#include <math.h>\n"
++        "double test(double *x) {\n"
++        "   double test_result;\n"
++        "   test_result = 1.0;\n"
++        "   return test_result;\n"
++        "}\n"
++    )
++    assert source == expected
++
++
+ def test_simple_c_header():
+     x, y, z = symbols('x,y,z')
+     expr = (x + y)*z

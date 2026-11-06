@@ -1,0 +1,99 @@
+diff --git a/CHANGES b/CHANGES
+index d1058ed3b..26c5916a0 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -37,6 +37,9 @@ Features added
+ Bugs fixed
+ ----------
+ 
++* #7466: py domain: ``IndexError`` is raised when parsing an empty tuple type
++  annotation (``Tuple[()]``)
++
+ Testing
+ --------
+ 
+diff --git a/sphinx/domains/python.py b/sphinx/domains/python.py
+index 3ca730e30..348adecea 100644
+--- a/sphinx/domains/python.py
++++ b/sphinx/domains/python.py
+@@ -100,7 +100,8 @@ def _parse_annotation(annotation: str) -> List[Node]:
+             for elem in node.elts:
+                 result.extend(unparse(elem))
+                 result.append(addnodes.desc_sig_punctuation('', ', '))
+-            result.pop()
++            if node.elts:
++                result.pop()
+             result.append(addnodes.desc_sig_punctuation('', ']'))
+             return result
+         elif isinstance(node, ast.Module):
+@@ -114,6 +115,11 @@ def _parse_annotation(annotation: str) -> List[Node]:
+             result.append(addnodes.desc_sig_punctuation('', ']'))
+             return result
+         elif isinstance(node, ast.Tuple):
++            if not node.elts:
++                # empty tuple
++                return [addnodes.desc_sig_punctuation('', "("),
++                        addnodes.desc_sig_punctuation('', ")")]
++
+             result = []
+             for elem in node.elts:
+                 result.extend(unparse(elem))
+diff --git a/sphinx/util/typing.py b/sphinx/util/typing.py
+index eb38d232c..ac6f540e5 100644
+--- a/sphinx/util/typing.py
++++ b/sphinx/util/typing.py
+@@ -91,7 +91,7 @@ def _stringify_py37(annotation: Any) -> str:
+             return '%s[[%s], %s]' % (qualname, args, returns)
+         elif str(annotation).startswith('typing.Annotated'):  # for py39+
+             return stringify(annotation.__args__[0])
+-        elif annotation._special:
++        elif getattr(annotation, '_special', False):
+             return qualname
+         else:
+             args = ', '.join(stringify(a) for a in annotation.__args__)
+diff --git a/tests/test_domain_py.py b/tests/test_domain_py.py
+index cc3d3cf53..1b9b52f1a 100644
+--- a/tests/test_domain_py.py
++++ b/tests/test_domain_py.py
+@@ -255,6 +255,13 @@ def test_parse_annotation():
+                           [pending_xref, "int"],
+                           [desc_sig_punctuation, "]"]))
+ 
++    doctree = _parse_annotation("Tuple[()]")
++    assert_node(doctree, ([pending_xref, "Tuple"],
++                          [desc_sig_punctuation, "["],
++                          [desc_sig_punctuation, "("],
++                          [desc_sig_punctuation, ")"],
++                          [desc_sig_punctuation, "]"]))
++
+     doctree = _parse_annotation("Callable[[int, int], int]")
+     assert_node(doctree, ([pending_xref, "Callable"],
+                           [desc_sig_punctuation, "["],
+@@ -267,6 +274,15 @@ def test_parse_annotation():
+                           [pending_xref, "int"],
+                           [desc_sig_punctuation, "]"]))
+ 
++    doctree = _parse_annotation("Callable[[], int]")
++    assert_node(doctree, ([pending_xref, "Callable"],
++                          [desc_sig_punctuation, "["],
++                          [desc_sig_punctuation, "["],
++                          [desc_sig_punctuation, "]"],
++                          [desc_sig_punctuation, ", "],
++                          [pending_xref, "int"],
++                          [desc_sig_punctuation, "]"]))
++
+     # None type makes an object-reference (not a class reference)
+     doctree = _parse_annotation("None")
+     assert_node(doctree, ([pending_xref, "None"],))
+diff --git a/tests/test_util_typing.py b/tests/test_util_typing.py
+index f6fd35fb0..2e1173e90 100644
+--- a/tests/test_util_typing.py
++++ b/tests/test_util_typing.py
+@@ -41,6 +41,7 @@ def test_stringify_type_hints_containers():
+     assert stringify(Dict[str, float]) == "Dict[str, float]"
+     assert stringify(Tuple[str, str, str]) == "Tuple[str, str, str]"
+     assert stringify(Tuple[str, ...]) == "Tuple[str, ...]"
++    assert stringify(Tuple[()]) == "Tuple[()]"
+     assert stringify(List[Dict[str, Tuple]]) == "List[Dict[str, Tuple]]"
+ 
+ 

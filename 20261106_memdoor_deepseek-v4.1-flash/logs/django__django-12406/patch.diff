@@ -1,0 +1,56 @@
+diff --git a/django/forms/models.py b/django/forms/models.py
+index dafc11f995..513e733c55 100644
+--- a/django/forms/models.py
++++ b/django/forms/models.py
+@@ -13,7 +13,7 @@ from django.forms.forms import BaseForm, DeclarativeFieldsMetaclass
+ from django.forms.formsets import BaseFormSet, formset_factory
+ from django.forms.utils import ErrorList
+ from django.forms.widgets import (
+-    HiddenInput, MultipleHiddenInput, SelectMultiple,
++    HiddenInput, MultipleHiddenInput, RadioSelect, SelectMultiple,
+ )
+ from django.utils.text import capfirst, get_text_list
+ from django.utils.translation import gettext, gettext_lazy as _
+@@ -1199,6 +1199,10 @@ class ModelChoiceField(ChoiceField):
+         self.queryset = queryset
+         self.limit_choices_to = limit_choices_to   # limit the queryset later.
+         self.to_field_name = to_field_name
++        if required and isinstance(self.widget, RadioSelect):
++            # A required radio field has no valid empty choice, so don't
++            # render one.
++            self.empty_label = None
+ 
+     def get_limit_choices_to(self):
+         """
+diff --git a/tests/model_forms/test_modelchoicefield.py b/tests/model_forms/test_modelchoicefield.py
+index 4a2ef30b90..9ed7a52af6 100644
+--- a/tests/model_forms/test_modelchoicefield.py
++++ b/tests/model_forms/test_modelchoicefield.py
+@@ -139,6 +139,27 @@ class ModelChoiceFieldTests(TestCase):
+         Category.objects.all().delete()
+         self.assertIs(bool(f.choices), True)
+ 
++    def test_required_radioselect_has_no_empty_label(self):
++        f = forms.ModelChoiceField(Category.objects.all(), widget=forms.RadioSelect)
++        self.assertIsNone(f.empty_label)
++        self.assertEqual(list(f.choices), [
++            (self.c1.pk, 'Entertainment'),
++            (self.c2.pk, 'A test'),
++            (self.c3.pk, 'Third'),
++        ])
++
++    def test_optional_radioselect_has_empty_label(self):
++        f = forms.ModelChoiceField(
++            Category.objects.all(), required=False, widget=forms.RadioSelect,
++        )
++        self.assertEqual(f.empty_label, '---------')
++        self.assertEqual(list(f.choices), [
++            ('', '---------'),
++            (self.c1.pk, 'Entertainment'),
++            (self.c2.pk, 'A test'),
++            (self.c3.pk, 'Third'),
++        ])
++
+     def test_deepcopies_widget(self):
+         class ModelChoiceForm(forms.Form):
+             category = forms.ModelChoiceField(Category.objects.all())

@@ -1,0 +1,39 @@
+diff --git a/django/forms/widgets.py b/django/forms/widgets.py
+index 6fe220bea7..d83d63c169 100644
+--- a/django/forms/widgets.py
++++ b/django/forms/widgets.py
+@@ -522,9 +522,7 @@ class CheckboxInput(Input):
+ 
+     def get_context(self, name, value, attrs):
+         if self.check_test(value):
+-            if attrs is None:
+-                attrs = {}
+-            attrs['checked'] = True
++            attrs = {**(attrs or {}), 'checked': True}
+         return super().get_context(name, value, attrs)
+ 
+     def value_from_datadict(self, data, files, name):
+diff --git a/tests/postgres_tests/test_array.py b/tests/postgres_tests/test_array.py
+index 481d93f830..333e7ab35e 100644
+--- a/tests/postgres_tests/test_array.py
++++ b/tests/postgres_tests/test_array.py
+@@ -1124,6 +1124,19 @@ class TestSplitFormWidget(PostgreSQLWidgetTestCase):
+             )
+         )
+ 
++    def test_render_checkbox(self):
++        widget = SplitArrayWidget(forms.CheckboxInput(), size=3)
++        self.check_html(
++            widget, 'array', [True, False, False],
++            html=(
++                """
++                <input checked name="array_0" type="checkbox">
++                <input name="array_1" type="checkbox">
++                <input name="array_2" type="checkbox">
++                """
++            ),
++        )
++
+     def test_value_omitted_from_data(self):
+         widget = SplitArrayWidget(forms.TextInput(), size=2)
+         self.assertIs(widget.value_omitted_from_data({}, {}, 'field'), True)

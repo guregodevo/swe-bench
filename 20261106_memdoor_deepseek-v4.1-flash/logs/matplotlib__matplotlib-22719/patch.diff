@@ -1,0 +1,29 @@
+diff --git a/lib/matplotlib/category.py b/lib/matplotlib/category.py
+index c823b68fd9..7b510cbc9a 100644
+--- a/lib/matplotlib/category.py
++++ b/lib/matplotlib/category.py
+@@ -53,6 +53,9 @@ class StrCategoryConverter(units.ConversionInterface):
+         StrCategoryConverter._validate_unit(unit)
+         # dtype = object preserves numerical pass throughs
+         values = np.atleast_1d(np.array(value, dtype=object))
++        # pass through empty values without warning or updating the unit
++        if values.size == 0:
++            return np.array([])
+         # pass through sequence of non binary numbers
+         with _api.suppress_matplotlib_deprecation_warning():
+             is_numlike = all(units.ConversionInterface.is_numlike(v)
+diff --git a/lib/matplotlib/tests/test_category.py b/lib/matplotlib/tests/test_category.py
+index f0e424bd8e..64fc27eee3 100644
+--- a/lib/matplotlib/tests/test_category.py
++++ b/lib/matplotlib/tests/test_category.py
+@@ -106,6 +106,10 @@ class TestStrCategoryConverter:
+             actual = self.cc.convert(0.0, self.unit, self.ax)
+         np.testing.assert_allclose(actual, np.array([0.]))
+ 
++    def test_convert_empty(self):
++        np.testing.assert_array_equal(self.cc.convert([], self.unit, self.ax),
++                                      np.array([]))
++
+     def test_convert_float_array(self):
+         data = np.array([1, 2, 3], dtype=float)
+         with pytest.warns(MatplotlibDeprecationWarning):

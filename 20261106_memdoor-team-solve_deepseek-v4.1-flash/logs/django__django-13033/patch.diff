@@ -1,0 +1,90 @@
+diff --git a/django/db/models/sql/compiler.py b/django/db/models/sql/compiler.py
+index abbb1e37cb..a8f5b61fbe 100755
+--- a/django/db/models/sql/compiler.py
++++ b/django/db/models/sql/compiler.py
+@@ -727,7 +727,7 @@ class SQLCompiler:
+         # If we get to this point and the field is a relation to another model,
+         # append the default ordering for that model unless it is the pk
+         # shortcut or the attribute name of the field that is specified.
+-        if field.is_relation and opts.ordering and getattr(field, 'attname', None) != name and name != 'pk':
++        if field.is_relation and opts.ordering and getattr(field, 'attname', None) != pieces[-1] and name != 'pk':
+             # Firstly, avoid infinite loops.
+             already_seen = already_seen or set()
+             join_tuple = tuple(getattr(self.query.alias_map[j], 'join_cols', None) for j in joins)
+diff --git a/tests/ordering/models.py b/tests/ordering/models.py
+index 2efb743e44..41926875ff 100755
+--- a/tests/ordering/models.py
++++ b/tests/ordering/models.py
+@@ -59,3 +59,14 @@ class Reference(models.Model):
+ 
+     class Meta:
+         ordering = ('article',)
++
++
++class SelfReference(models.Model):
++    class Meta:
++        ordering = ('-id',)
++
++    parent = models.ForeignKey('self', models.CASCADE, null=True)
++
++
++class SelfReferenceChild(models.Model):
++    parent = models.ForeignKey(SelfReference, models.CASCADE)
+diff --git a/tests/ordering/tests.py b/tests/ordering/tests.py
+index a9cc729c45..676abcd09f 100755
+--- a/tests/ordering/tests.py
++++ b/tests/ordering/tests.py
+@@ -8,7 +8,10 @@ from django.db.models import (
+ from django.db.models.functions import Upper
+ from django.test import TestCase
+ 
+-from .models import Article, Author, ChildArticle, OrderedByFArticle, Reference
++from .models import (
++    Article, Author, ChildArticle, OrderedByFArticle, Reference, SelfReference,
++    SelfReferenceChild,
++)
+ 
+ 
+ class OrderingTests(TestCase):
+@@ -480,3 +483,41 @@ class OrderingTests(TestCase):
+         ca4 = ChildArticle.objects.create(headline='h1', pub_date=datetime(2005, 7, 28))
+         articles = ChildArticle.objects.order_by('article_ptr')
+         self.assertSequenceEqual(articles, [ca4, ca2, ca1, ca3])
++
++
++class SelfReferenceOrderingTests(TestCase):
++    @classmethod
++    def setUpTestData(cls):
++        cls.root = SelfReference.objects.create()
++        cls.child = SelfReference.objects.create(parent=cls.root)
++        cls.record = SelfReferenceChild.objects.create(parent=cls.child)
++
++    def test_order_by_foreign_key_attname(self):
++        qs = SelfReferenceChild.objects.order_by('parent__parent_id')
++        self.assertSequenceEqual(qs, [self.record])
++        sql = str(qs.query)
++        self.assertNotIn('LEFT OUTER JOIN', sql)
++        self.assertEqual(
++            sql.split('ORDER BY')[1].strip(),
++            '"ordering_selfreference"."parent_id" ASC',
++        )
++
++    def test_order_by_foreign_key_attname_descending(self):
++        qs = SelfReferenceChild.objects.order_by('-parent__parent_id')
++        self.assertSequenceEqual(qs, [self.record])
++        sql = str(qs.query)
++        self.assertNotIn('LEFT OUTER JOIN', sql)
++        self.assertEqual(
++            sql.split('ORDER BY')[1].strip(),
++            '"ordering_selfreference"."parent_id" DESC',
++        )
++
++    def test_order_by_foreign_key_pk(self):
++        qs = SelfReferenceChild.objects.order_by('parent__pk')
++        self.assertSequenceEqual(qs, [self.record])
++        sql = str(qs.query)
++        self.assertNotIn('LEFT OUTER JOIN', sql)
++        self.assertEqual(
++            sql.split('ORDER BY')[1].strip(),
++            '"ordering_selfreferencechild"."parent_id" ASC',
++        )

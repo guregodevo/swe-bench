@@ -1,0 +1,39 @@
+diff --git a/django/core/servers/basehttp.py b/django/core/servers/basehttp.py
+index fef5532e58..05548e6ce3 100644
+--- a/django/core/servers/basehttp.py
++++ b/django/core/servers/basehttp.py
+@@ -147,6 +147,11 @@ class ServerHandler(simple_server.ServerHandler):
+         self.get_stdin().read()
+         super().close()
+ 
++    def finish_response(self):
++        if self.environ["REQUEST_METHOD"] == "HEAD":
++            self.result = []
++        super().finish_response()
++
+ 
+ class WSGIRequestHandler(simple_server.WSGIRequestHandler):
+     protocol_version = "HTTP/1.1"
+diff --git a/tests/servers/tests.py b/tests/servers/tests.py
+index 8796db9749..19d5e690b6 100644
+--- a/tests/servers/tests.py
++++ b/tests/servers/tests.py
+@@ -290,6 +290,18 @@ class LiveServerViews(LiveServerBase):
+         with self.urlopen("/example_view/") as f:
+             self.assertEqual(f.read(), b"example view")
+ 
++    def test_head_request(self):
++        conn = HTTPConnection(
++            LiveServerViews.server_thread.host, LiveServerViews.server_thread.port
++        )
++        try:
++            conn.request("HEAD", "/example_view/")
++            response = conn.getresponse()
++            self.assertEqual(response.status, 200)
++            self.assertEqual(response.read(), b"")
++        finally:
++            conn.close()
++
+     def test_static_files(self):
+         with self.urlopen("/static/example_static_file.txt") as f:
+             self.assertEqual(f.read().rstrip(b"\r\n"), b"example static file")

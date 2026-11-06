@@ -1,0 +1,38 @@
+diff --git a/sympy/printing/pycode.py b/sympy/printing/pycode.py
+index a3f031073..10d69f230 100644
+--- a/sympy/printing/pycode.py
++++ b/sympy/printing/pycode.py
+@@ -346,6 +346,10 @@ def _print_Stream(self, strm):
+     def _print_NoneToken(self, arg):
+         return 'None'
+ 
++    def _print_Indexed(self, expr):
++        base, *index = expr.args
++        return "{}[{}]".format(str(base), ", ".join([self._print(ind) for ind in index]))
++
+ 
+ class PythonCodePrinter(AbstractPythonCodePrinter):
+ 
+diff --git a/sympy/printing/tests/test_pycode.py b/sympy/printing/tests/test_pycode.py
+index f1a9a3789..969848c84 100644
+--- a/sympy/printing/tests/test_pycode.py
++++ b/sympy/printing/tests/test_pycode.py
+@@ -8,6 +8,7 @@
+ from sympy.functions import acos, Piecewise, sign
+ from sympy.logic import And, Or
+ from sympy.matrices import SparseMatrix, MatrixSymbol
++from sympy.tensor import IndexedBase
+ from sympy.printing.pycode import (
+     MpmathPrinter, NumPyPrinter, PythonCodePrinter, pycode, SciPyPrinter
+ )
+@@ -96,3 +97,10 @@ def test_NumPyPrinter_print_seq():
+     n = NumPyPrinter()
+ 
+     assert n._print_seq(range(2)) == '(0, 1,)'
++
++
++def test_Indexed():
++    p = IndexedBase("p")
++    assert pycode(p[0]) == 'p[0]'
++    assert pycode(p[0, 1]) == 'p[0, 1]'
++    assert NumPyPrinter().doprint(p[0]) == 'p[0]'

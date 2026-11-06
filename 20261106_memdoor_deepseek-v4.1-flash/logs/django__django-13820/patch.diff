@@ -1,0 +1,45 @@
+diff --git a/django/db/migrations/loader.py b/django/db/migrations/loader.py
+index 95a5062ec9..00b194ab9b 100644
+--- a/django/db/migrations/loader.py
++++ b/django/db/migrations/loader.py
+@@ -90,7 +90,10 @@ class MigrationLoader:
+             else:
+                 # Empty directories are namespaces.
+                 # getattr() needed on PY36 and older (replace w/attribute access).
+-                if getattr(module, '__file__', None) is None:
++                if (
++                    getattr(module, '__file__', None) is None and
++                    not isinstance(getattr(module, '__path__', None), list)
++                ):
+                     self.unmigrated_apps.add(app_config.label)
+                     continue
+                 # Module is not a package (e.g. migrations.py).
+diff --git a/tests/migrations/test_loader.py b/tests/migrations/test_loader.py
+index 27a052ddac..d110448022 100644
+--- a/tests/migrations/test_loader.py
++++ b/tests/migrations/test_loader.py
+@@ -1,5 +1,7 @@
+ import compileall
+ import os
++from importlib import import_module
++from unittest import mock
+ 
+ from django.db import connection, connections
+ from django.db.migrations.exceptions import (
+@@ -191,6 +193,16 @@ class LoaderTests(TestCase):
+                 "App missing __init__.py in migrations module not in unmigrated apps."
+             )
+ 
++    @override_settings(MIGRATION_MODULES={"migrations": "migrations.test_migrations"})
++    def test_load_migrations_without_file(self):
++        """Migration packages without __file__ are loaded."""
++        module = import_module('migrations.test_migrations')
++        with mock.patch.object(module, '__file__', None), \
++                mock.patch('django.db.migrations.loader.reload'):
++            loader = MigrationLoader(connection)
++            loader.load_disk()
++        self.assertIn(('migrations', '0001_initial'), loader.disk_migrations)
++
+     @override_settings(
+         INSTALLED_APPS=['migrations.migrations_test_apps.migrated_app'],
+     )

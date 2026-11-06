@@ -1,0 +1,44 @@
+diff --git a/sklearn/ensemble/_iforest.py b/sklearn/ensemble/_iforest.py
+index 4d6c1c3f0..8fb6d73f8 100644
+--- a/sklearn/ensemble/_iforest.py
++++ b/sklearn/ensemble/_iforest.py
+@@ -345,7 +345,12 @@ class IsolationForest(OutlierMixin, BaseBagging):
+             return self
+ 
+         # else, define offset_ wrt contamination parameter
+-        self.offset_ = np.percentile(self.score_samples(X), 100.0 * self.contamination)
++        # To avoid a validation warning when X is a DataFrame, we compute the
++        # scores directly on the already validated data instead of calling
++        # `score_samples` which would validate X a second time.
++        self.offset_ = np.percentile(
++            -self._compute_chunked_score_samples(X), 100.0 * self.contamination
++        )
+ 
+         return self
+ 
+diff --git a/sklearn/ensemble/tests/test_iforest.py b/sklearn/ensemble/tests/test_iforest.py
+index 5f046540f..ccbc0a10d 100644
+--- a/sklearn/ensemble/tests/test_iforest.py
++++ b/sklearn/ensemble/tests/test_iforest.py
+@@ -179,6 +179,21 @@ def test_iforest_works(contamination, global_random_seed):
+     assert_array_equal(pred, 6 * [1] + 2 * [-1])
+ 
+ 
++def test_iforest_contamination_dataframe_no_warning():
++    """Check that fitting on a DataFrame with a non-default contamination does
++    not raise a feature names warning. Non-regression test for gh-25796."""
++    pd = pytest.importorskip("pandas")
++
++    X = pd.DataFrame({"a": [-1.1, 0.3, 0.5, 100]})
++    clf = IsolationForest(random_state=0, contamination=0.05)
++
++    with warnings.catch_warnings():
++        warnings.simplefilter("error", UserWarning)
++        clf.fit(X)
++
++    assert_array_equal(clf.feature_names_in_, np.array(["a"], dtype=object))
++
++
+ def test_max_samples_consistency():
+     # Make sure validated max_samples in iforest and BaseBagging are identical
+     X = iris.data

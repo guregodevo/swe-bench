@@ -1,0 +1,32 @@
+diff --git a/sympy/core/symbol.py b/sympy/core/symbol.py
+index f4a555c13f..2aca8bab27 100644
+--- a/sympy/core/symbol.py
++++ b/sympy/core/symbol.py
+@@ -791,7 +791,7 @@ def literal(s):
+         return tuple(result)
+     else:
+         for name in names:
+-            result.append(symbols(name, **args))
++            result.append(symbols(name, cls=cls, **args))
+ 
+         return type(names)(result)
+ 
+diff --git a/sympy/core/tests/test_symbol.py b/sympy/core/tests/test_symbol.py
+index 19494c2083..8fbaf5e887 100644
+--- a/sympy/core/tests/test_symbol.py
++++ b/sympy/core/tests/test_symbol.py
+@@ -336,6 +336,14 @@ def test_symbols_become_functions_issue_3539():
+     raises(TypeError, lambda: phi(t))
+ 
+ 
++def test_symbols_with_cls_and_nested_sequences():
++    from sympy.core.function import Function, FunctionClass
++    q, u = symbols(('q:2', 'u:2'), cls=Function)
++    assert all(isinstance(s, FunctionClass) for s in q + u)
++    assert [type(s) for s in symbols(['a', 'b'], cls=Function)] == \
++        [type(Function('a')), type(Function('b'))]
++
++
+ def test_unicode():
+     xu = Symbol('x')
+     x = Symbol('x')

@@ -1,0 +1,95 @@
+diff --git a/django/db/models/sql/compiler.py b/django/db/models/sql/compiler.py
+index 59a5d6abbb..0ef334b947 100644
+--- a/django/db/models/sql/compiler.py
++++ b/django/db/models/sql/compiler.py
+@@ -1836,7 +1836,17 @@ class SQLUpdateCompiler(SQLCompiler):
+         query.clear_ordering(force=True)
+         query.extra = {}
+         query.select = []
+-        query.add_fields([query.get_meta().pk.name])
++        # Select the primary key of the model being updated as well as the
++        # primary keys of the related (parent) models, so that each related
++        # update can be filtered on the correct identifiers.
++        related_id_fields = {
++            model: query.get_meta().get_ancestor_link(model).name
++            for model in self.query.related_updates
++        }
++        id_fields = list(
++            dict.fromkeys([query.get_meta().pk.name, *related_id_fields.values()])
++        )
++        query.add_fields(id_fields)
+         super().pre_sql_setup()
+ 
+         must_pre_select = (
+@@ -1851,10 +1861,14 @@ class SQLUpdateCompiler(SQLCompiler):
+             # don't want them to change), or the db backend doesn't support
+             # selecting from the updating table (e.g. MySQL).
+             idents = []
++            related_ids = {model: [] for model in self.query.related_updates}
+             for rows in query.get_compiler(self.using).execute_sql(MULTI):
+-                idents.extend(r[0] for r in rows)
++                for row in rows:
++                    idents.append(row[0])
++                    for model, field_name in related_id_fields.items():
++                        related_ids[model].append(row[id_fields.index(field_name)])
+             self.query.add_filter("pk__in", idents)
+-            self.query.related_ids = idents
++            self.query.related_ids = related_ids
+         else:
+             # The fast path. Filters and updates in one query.
+             self.query.add_filter("pk__in", query)
+diff --git a/django/db/models/sql/subqueries.py b/django/db/models/sql/subqueries.py
+index 04063f73bc..d8a246d369 100644
+--- a/django/db/models/sql/subqueries.py
++++ b/django/db/models/sql/subqueries.py
+@@ -134,7 +134,7 @@ class UpdateQuery(Query):
+             query = UpdateQuery(model)
+             query.values = values
+             if self.related_ids is not None:
+-                query.add_filter("pk__in", self.related_ids)
++                query.add_filter("pk__in", self.related_ids[model])
+             result.append(query)
+         return result
+ 
+diff --git a/tests/model_inheritance_regress/tests.py b/tests/model_inheritance_regress/tests.py
+index 6c593d4521..270e494a36 100644
+--- a/tests/model_inheritance_regress/tests.py
++++ b/tests/model_inheritance_regress/tests.py
+@@ -346,6 +346,37 @@ class ModelInheritanceTest(TestCase):
+         derivedms = list(DerivedM.objects.all())
+         self.assertEqual(derivedms, [derivedm1])
+ 
++    def test_queryset_update_on_multiple_parent_models(self):
++        # Ensure the primary keys of the two parent tables differ so that
++        # using the child's primary key for both updates is detected.
++        person = Person.objects.create(name="John")
++        Politician.objects.create(title="senator 1")
++        Politician.objects.create(title="senator 2")
++        congressman = Congressman.objects.create(
++            state="PA", name="John", title="senator 1"
++        )
++        other_politician = Politician.objects.create(title="senator 3")
++
++        # Updating only a field from the second parent must update the child's
++        # row in that parent table, not an unrelated row with the same pk.
++        updated = Congressman.objects.update(title="representative")
++        self.assertEqual(updated, 1)
++        congressman.refresh_from_db()
++        self.assertEqual(congressman.title, "representative")
++        self.assertEqual(congressman.name, "John")
++
++        updated = Congressman.objects.update(name="Bill", title="senator")
++        self.assertEqual(updated, 1)
++
++        congressman.refresh_from_db()
++        self.assertEqual(congressman.title, "senator")
++        self.assertEqual(congressman.name, "Bill")
++        # Unrelated rows in the parent table are left untouched.
++        self.assertEqual(
++            Politician.objects.get(pk=other_politician.pk).title, "senator 3"
++        )
++        self.assertEqual(Person.objects.get(pk=person.pk).name, "John")
++
+     def test_use_explicit_o2o_to_parent_as_pk(self):
+         """
+         The connector from child to parent need not be the pk on the child.

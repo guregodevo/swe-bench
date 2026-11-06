@@ -1,0 +1,36 @@
+diff --git a/django/utils/dateformat.py b/django/utils/dateformat.py
+index afd36d79e0..5793ca6634 100644
+--- a/django/utils/dateformat.py
++++ b/django/utils/dateformat.py
+@@ -326,7 +326,7 @@ class DateFormat(TimeFormat):
+ 
+     def y(self):
+         "Year, 2 digits; e.g. '99'"
+-        return str(self.data.year)[2:]
++        return str(self.data.year % 100).zfill(2)
+ 
+     def Y(self):
+         "Year, 4 digits; e.g. '1999'"
+diff --git a/tests/utils_tests/test_dateformat.py b/tests/utils_tests/test_dateformat.py
+index d050ac4352..dffb92ee03 100644
+--- a/tests/utils_tests/test_dateformat.py
++++ b/tests/utils_tests/test_dateformat.py
+@@ -105,6 +105,18 @@ class DateFormatTests(SimpleTestCase):
+         self.assertEqual(dateformat.format(my_birthday, 'Y'), '1979')
+         self.assertEqual(dateformat.format(my_birthday, 'z'), '189')
+ 
++    def test_year_before_1000(self):
++        tests = [
++            (datetime(1, 1, 1), '01'),
++            (datetime(99, 1, 1), '99'),
++            (datetime(123, 1, 1), '23'),
++            (datetime(999, 1, 1), '99'),
++            (datetime(1000, 1, 1), '00'),
++        ]
++        for value, expected in tests:
++            with self.subTest(value=value):
++                self.assertEqual(dateformat.format(value, 'y'), expected)
++
+     def test_dateformat(self):
+         my_birthday = datetime(1979, 7, 8, 22, 00)
+ 

@@ -1,0 +1,39 @@
+diff --git a/django/contrib/admin/utils.py b/django/contrib/admin/utils.py
+index e4ddc8f017..39025ef9fc 100755
+--- a/django/contrib/admin/utils.py
++++ b/django/contrib/admin/utils.py
+@@ -396,6 +396,11 @@ def display_for_field(value, field, empty_value_display):
+         return formats.number_format(value, field.decimal_places)
+     elif isinstance(field, (models.IntegerField, models.FloatField)):
+         return formats.number_format(value)
++    elif isinstance(field, models.JSONField) and value:
++        try:
++            return field.formfield().prepare_value(value)
++        except TypeError:
++            return display_for_value(value, empty_value_display)
+     elif isinstance(field, models.FileField) and value:
+         return format_html('<a href="{}">{}</a>', value.url, value)
+     else:
+diff --git a/tests/admin_utils/tests.py b/tests/admin_utils/tests.py
+index 463ba9556d..ae3cf6e7e0 100755
+--- a/tests/admin_utils/tests.py
++++ b/tests/admin_utils/tests.py
+@@ -197,6 +197,18 @@ class UtilsTests(SimpleTestCase):
+         display_value = display_for_field(12345, models.IntegerField(), self.empty_value)
+         self.assertEqual(display_value, '12,345')
+ 
++    def test_json_display_for_field(self):
++        tests = [
++            ({'a': {'b': 'c'}}, '{"a": {"b": "c"}}'),
++            (['a', 'b'], '["a", "b"]'),
++            ('a', '"a"'),
++            (None, self.empty_value),
++        ]
++        for value, expected in tests:
++            with self.subTest(value=value):
++                display_value = display_for_field(value, models.JSONField(), self.empty_value)
++                self.assertEqual(display_value, expected)
++
+     def test_list_display_for_value(self):
+         display_value = display_for_value([1, 2, 3], self.empty_value)
+         self.assertEqual(display_value, '1, 2, 3')

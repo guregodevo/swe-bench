@@ -1,0 +1,94 @@
+diff --git a/doc/whats_new/v0.20.rst b/doc/whats_new/v0.20.rst
+index 32b4ef309..13424a570 100644
+--- a/doc/whats_new/v0.20.rst
++++ b/doc/whats_new/v0.20.rst
+@@ -253,6 +253,11 @@ Model evaluation and meta-estimators
+   return estimators fitted on each split. :issue:`9686` by :user:`Aurélien Bellet
+   <bellet>`.
+ 
++- :class:`model_selection.GridSearchCV` and
++  :class:`model_selection.RandomizedSearchCV` now expose a ``refit_time_``
++  attribute holding the time in seconds used to refit the best model on the
++  whole dataset. :issue:`11310` by :user:`Jan N. van Rijn <janvanrijn>`.
++
+ Decomposition and manifold learning
+ 
+ - Speed improvements for both 'exact' and 'barnes_hut' methods in
+diff --git a/sklearn/model_selection/_search.py b/sklearn/model_selection/_search.py
+index 99d6096af..98e9a4104 100644
+--- a/sklearn/model_selection/_search.py
++++ b/sklearn/model_selection/_search.py
+@@ -17,6 +17,7 @@ from collections import Mapping, namedtuple, defaultdict, Sequence, Iterable
+ from functools import partial, reduce
+ from itertools import product
+ import operator
++import time
+ import warnings
+ 
+ import numpy as np
+@@ -766,10 +767,12 @@ class BaseSearchCV(six.with_metaclass(ABCMeta, BaseEstimator,
+         if self.refit:
+             self.best_estimator_ = clone(base_estimator).set_params(
+                 **self.best_params_)
++            start_time = time.time()
+             if y is not None:
+                 self.best_estimator_.fit(X, y, **fit_params)
+             else:
+                 self.best_estimator_.fit(X, **fit_params)
++            self.refit_time_ = time.time() - start_time
+ 
+         # Store the only scorer not as a dict for single metric evaluation
+         self.scorer_ = scorers if self.multimetric_ else scorers['score']
+@@ -1076,6 +1079,13 @@ class GridSearchCV(BaseSearchCV):
+     n_splits_ : int
+         The number of cross-validation splits (folds/iterations).
+ 
++    refit_time_ : float
++        Seconds used for refitting the best model on the whole dataset.
++
++        This is present only if ``refit`` is not False.
++
++        .. versionadded:: 0.20
++
+     Notes
+     ------
+     The parameters selected are those that maximize the score of the left out
+@@ -1387,6 +1397,13 @@ class RandomizedSearchCV(BaseSearchCV):
+     n_splits_ : int
+         The number of cross-validation splits (folds/iterations).
+ 
++    refit_time_ : float
++        Seconds used for refitting the best model on the whole dataset.
++
++        This is present only if ``refit`` is not False.
++
++        .. versionadded:: 0.20
++
+     Notes
+     -----
+     The parameters selected are those that maximize the score of the held-out
+diff --git a/sklearn/model_selection/tests/test_search.py b/sklearn/model_selection/tests/test_search.py
+index f436c7b55..f3cb37272 100644
+--- a/sklearn/model_selection/tests/test_search.py
++++ b/sklearn/model_selection/tests/test_search.py
+@@ -1161,6 +1161,8 @@ def test_search_cv_timing():
+ 
+     for search in (gs, rs):
+         search.fit(X, y)
++        assert_true(search.refit_time_ >= 0)
++        assert_true(search.refit_time_ < 1)
+         for key in ['mean_fit_time', 'std_fit_time']:
+             # NOTE The precision of time.time in windows is not high
+             # enough for the fit/score times to be non-zero for trivial X and y
+@@ -1172,6 +1174,11 @@ def test_search_cv_timing():
+             assert_true(search.cv_results_[key][0] == 0.0)
+             assert_true(np.all(search.cv_results_[key] < 1))
+ 
++    # refit_time_ is not available when refitting is disabled
++    gs = GridSearchCV(svc, {'C': [0, 1]}, cv=2, error_score=0, refit=False)
++    gs.fit(X, y)
++    assert_false(hasattr(gs, 'refit_time_'))
++
+ 
+ def test_grid_search_correct_score_results():
+     # test that correct scores are used

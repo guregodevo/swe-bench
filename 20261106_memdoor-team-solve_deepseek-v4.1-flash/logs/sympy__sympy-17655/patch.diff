@@ -1,0 +1,40 @@
+diff --git a/sympy/geometry/point.py b/sympy/geometry/point.py
+index 7c978c47be..da93173fc0 100755
+--- a/sympy/geometry/point.py
++++ b/sympy/geometry/point.py
+@@ -105,6 +105,8 @@ class Point(GeometryEntity):
+ 
+     is_Point = True
+ 
++    _op_priority = 10.001
++
+     def __new__(cls, *args, **kwargs):
+         evaluate = kwargs.get('evaluate', global_evaluate[0])
+         on_morph = kwargs.get('on_morph', 'ignore')
+@@ -278,6 +280,26 @@ def __mul__(self, factor):
+         coords = [simplify(x*factor) for x in self.args]
+         return Point(coords, evaluate=False)
+ 
++    def __rmul__(self, factor):
++        """Multiply point's coordinates by a factor."""
++        return self * factor
++
++    def __radd__(self, other):
++        """Add other to this point."""
++        return self + other
++
++    def __rsub__(self, other):
++        """Subtract this point from other."""
++        if isinstance(other, Point):
++            return other - self
++        raise TypeError("Don't know how to subtract {} and a Point object"
++                        .format(other))
++
++    def __rdiv__(self, other):
++        """Divide other by this point."""
++        raise TypeError("Don't know how to divide {} by a Point object"
++                        .format(other))
++
+     def __neg__(self):
+         """Negate the point."""
+         coords = [-x for x in self.args]

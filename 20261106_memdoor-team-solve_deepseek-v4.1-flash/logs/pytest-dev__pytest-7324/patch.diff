@@ -1,0 +1,46 @@
+diff --git a/src/_pytest/mark/expression.py b/src/_pytest/mark/expression.py
+index 04c73411a..9541b53d1 100644
+--- a/src/_pytest/mark/expression.py
++++ b/src/_pytest/mark/expression.py
+@@ -161,6 +161,12 @@ def not_expr(s: Scanner) -> ast.expr:
+         return ret
+     ident = s.accept(TokenType.IDENT)
+     if ident:
++        if ident.value == "True":
++            return ast.NameConstant(True)
++        elif ident.value == "False":
++            return ast.NameConstant(False)
++        elif ident.value == "None":
++            return ast.NameConstant(None)
+         return ast.Name(ident.value, ast.Load())
+     s.reject((TokenType.NOT, TokenType.LPAREN, TokenType.IDENT))
+ 
+diff --git a/testing/test_mark_expression.py b/testing/test_mark_expression.py
+index 335888618..13bddd79f 100644
+--- a/testing/test_mark_expression.py
++++ b/testing/test_mark_expression.py
+@@ -128,8 +128,6 @@ def test_syntax_errors(expr: str, column: int, message: str) -> None:
+         "not[and]or",
+         "1234+5678",
+         "123.232",
+-        "True",
+-        "False",
+         "if",
+         "else",
+         "while",
+@@ -139,6 +137,15 @@ def test_valid_idents(ident: str) -> None:
+     assert evaluate(ident, {ident: True}.__getitem__)
+ 
+ 
++@pytest.mark.parametrize(
++    ("expr", "expected"),
++    (("True", True), ("False", False), ("None", None)),
++)
++def test_reserved_constants(expr: str, expected: object) -> None:
++    # Regression test for the debug-build crash on Expression.compile("False").
++    assert evaluate(expr, lambda ident: not expected) is expected
++
++
+ @pytest.mark.parametrize(
+     "ident",
+     (

@@ -1,0 +1,66 @@
+diff --git a/django/db/models/sql/query.py b/django/db/models/sql/query.py
+index 35f3c5e1ea..8e55bd092d 100644
+--- a/django/db/models/sql/query.py
++++ b/django/db/models/sql/query.py
+@@ -1702,7 +1702,9 @@ class Query(BaseExpression):
+         handle.
+         """
+         filter_lhs, filter_rhs = filter_expr
+-        if isinstance(filter_rhs, F):
++        if isinstance(filter_rhs, OuterRef):
++            filter_expr = (filter_lhs, OuterRef(filter_rhs))
++        elif isinstance(filter_rhs, F):
+             filter_expr = (filter_lhs, OuterRef(filter_rhs.name))
+         # Generate the inner query.
+         query = Query(self.model)
+diff --git a/tests/queries/test_qs_combinators.py b/tests/queries/test_qs_combinators.py
+index 668d5e6ad6..82142279e4 100644
+--- a/tests/queries/test_qs_combinators.py
++++ b/tests/queries/test_qs_combinators.py
+@@ -1,9 +1,11 @@
+ from django.db import connection
+-from django.db.models import Exists, F, IntegerField, OuterRef, Value
++from django.db.models import Exists, F, IntegerField, OuterRef, Q, Value
+ from django.db.utils import DatabaseError, NotSupportedError
+ from django.test import TestCase, skipIfDBFeature, skipUnlessDBFeature
+ 
+-from .models import Number, ReservedName
++from .models import (
++    Author, ExtraInfo, Item, NamedCategory, Note, Number, ReservedName, Tag,
++)
+ 
+ 
+ @skipUnlessDBFeature('supports_select_union')
+@@ -154,6 +156,32 @@ class QuerySetSetOperationTests(TestCase):
+         qs2 = Number.objects.filter(num=9)
+         self.assertCountEqual(qs1.union(qs2).values_list('num', flat=True), [1, 9])
+ 
++    def test_union_with_excluded_outer_ref(self):
++        note = Note.objects.create(note='n', misc='m')
++        extra = ExtraInfo.objects.create(info='e', note=note)
++        author = Author.objects.create(name='a', num=1, extra=extra)
++        NamedCategory.objects.create(name='c1')
++        category = NamedCategory.objects.create(name='c2')
++        tag = Tag.objects.create(name='t', category=category)
++        item = Item.objects.create(
++            name='i', created='2019-01-01', creator=author, note=note,
++        )
++        item.tags.add(tag)
++        Number.objects.create(num=100)
++        expected = list(
++            Number.objects.exclude(pk=category.pk).order_by('num')
++            .values_list('num', flat=True)
++        )
++        for queryset in (
++            Item.objects.exclude(tags__category_id=OuterRef('pk')),
++            Item.objects.filter(~Q(tags__category_id=OuterRef('pk'))),
++        ):
++            with self.subTest(queryset=queryset.query):
++                qs = Number.objects.annotate(
++                    foo=Exists(queryset),
++                ).filter(foo=True).order_by('num')
++                self.assertNumbersEqual(qs, expected)
++
+     def test_union_with_values_list_and_order(self):
+         ReservedName.objects.bulk_create([
+             ReservedName(name='rn1', order=7),
