@@ -1,0 +1,48 @@
+diff --git a/lib/matplotlib/cbook/__init__.py b/lib/matplotlib/cbook/__init__.py
+index 34c6ddb861..88fc1cb0dc 100755
+--- a/lib/matplotlib/cbook/__init__.py
++++ b/lib/matplotlib/cbook/__init__.py
+@@ -1746,7 +1746,8 @@ def _safe_first_finite(obj, *, skip_nonfinite=True):
+         raise RuntimeError("matplotlib does not "
+                            "support generators as input")
+     else:
+-        return next(val for val in obj if safe_isfinite(val))
++        return next((val for val in obj if safe_isfinite(val)),
++                    safe_first_element(obj))
+ 
+ 
+ def sanitize_sequence(data):
+diff --git a/lib/matplotlib/tests/test_axes.py b/lib/matplotlib/tests/test_axes.py
+index 9fb95cbd68..a71bc99351 100755
+--- a/lib/matplotlib/tests/test_axes.py
++++ b/lib/matplotlib/tests/test_axes.py
+@@ -1717,6 +1717,13 @@ def test_nan_bar_values():
+     ax.bar([0, 1], [np.nan, 4])
+ 
+ 
++def test_bar_all_nan():
++    fig, ax = plt.subplots()
++    b = ax.bar([np.nan], [np.nan])
++    assert np.isnan(b[0].get_x())
++    assert np.isnan(b[0].get_height())
++
++
+ def test_bar_ticklabel_fail():
+     fig, ax = plt.subplots()
+     ax.bar([], [])
+diff --git a/lib/matplotlib/tests/test_cbook.py b/lib/matplotlib/tests/test_cbook.py
+index eda0c3b7eb..0ee1398fc4 100755
+--- a/lib/matplotlib/tests/test_cbook.py
++++ b/lib/matplotlib/tests/test_cbook.py
+@@ -755,6 +755,11 @@ def test_contiguous_regions():
+     assert cbook.contiguous_regions([]) == []
+ 
+ 
++def test_safe_first_element_with_none():
++    assert cbook._safe_first_finite([None, 1]) == 1
++    assert np.isnan(cbook._safe_first_finite([np.nan, np.nan]))
++
++
+ def test_safe_first_element_pandas_series(pd):
+     # deliberately create a pandas series with index not starting from 0
+     s = pd.Series(range(5), index=range(10, 15))

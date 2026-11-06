@@ -1,0 +1,52 @@
+diff --git a/CHANGES b/CHANGES
+index 327dc5e43..360c023d8 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -53,6 +53,8 @@ Features added
+ Bugs fixed
+ ----------
+ 
++* #8250: py domain: type fields (``:type:`` and ``:rtype:``) wrongly resolve
++  unqualified names using a fuzzy search instead of the current module context
+ * #7613: autodoc: autodoc does not respect __signature__ of the class
+ * #4606: autodoc: the location of the warning is incorrect for inherited method
+ * #8105: autodoc: the signature of class constructor is incorrect if the class
+diff --git a/sphinx/domains/python.py b/sphinx/domains/python.py
+index 79d7e4f46..10882f486 100644
+--- a/sphinx/domains/python.py
++++ b/sphinx/domains/python.py
+@@ -1216,6 +1216,9 @@ class PythonDomain(Domain):
+         self.modules[name] = ModuleEntry(self.env.docname, node_id,
+                                          synopsis, platform, deprecated)
+ 
++    def process_field_xref(self, pnode: pending_xref) -> None:
++        pnode.attributes.update(self.env.ref_context)
++
+     def clear_doc(self, docname: str) -> None:
+         for fullname, obj in list(self.objects.items()):
+             if obj.docname == docname:
+diff --git a/tests/test_domain_py.py b/tests/test_domain_py.py
+index 2dc97bed9..4f522f5c4 100644
+--- a/tests/test_domain_py.py
++++ b/tests/test_domain_py.py
+@@ -508,6 +508,20 @@ def test_pydata(app):
+     assert domain.objects['example.var'] == ('index', 'example.var', 'data')
+ 
+ 
++def test_pyfunction_field_types(app):
++    text = (".. py:module:: example\n"
++            ".. py:function:: func()\n"
++            "\n"
++            "   :param int arg: description\n"
++            "   :rtype: str\n")
++    doctree = restructuredtext.parse(app, text)
++    refnodes = list(doctree.traverse(pending_xref))
++    assert_node(refnodes[0], pending_xref, **{"py:module": "example",
++                                              "reftarget": "int"})
++    assert_node(refnodes[1], pending_xref, **{"py:module": "example",
++                                              "reftarget": "str"})
++
++
+ def test_pyfunction(app):
+     text = (".. py:function:: func1\n"
+             ".. py:module:: example\n"

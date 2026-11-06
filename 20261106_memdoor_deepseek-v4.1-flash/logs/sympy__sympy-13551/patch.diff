@@ -1,0 +1,52 @@
+diff --git a/sympy/concrete/products.py b/sympy/concrete/products.py
+index 66aafde2d..fb009fc58 100644
+--- a/sympy/concrete/products.py
++++ b/sympy/concrete/products.py
+@@ -276,16 +276,18 @@ def _eval_product(self, term, limits):
+ 
+         elif term.is_Add:
+             p, q = term.as_numer_denom()
++            if p == term:
++                # as_numer_denom() did not split the sum into a product,
++                # so there is nothing that can be evaluated here.  In
++                # particular, the product of a sum is not the sum of the
++                # products of its terms.
++                return None
+             q = self._eval_product(q, (k, a, n))
+-            if q.is_Number:
+-
+-                # There is expression, which couldn't change by
+-                # as_numer_denom(). E.g. n**(2/3) + 1 --> (n**(2/3) + 1, 1).
+-                # We have to catch this case.
+-
+-                p = sum([self._eval_product(i, (k, a, n)) for i in p.as_coeff_Add()])
+-            else:
+-                p = self._eval_product(p, (k, a, n))
++            if q is None:
++                return None
++            p = self._eval_product(p, (k, a, n))
++            if p is None:
++                return None
+             return p / q
+ 
+         elif term.is_Mul:
+diff --git a/sympy/concrete/tests/test_products.py b/sympy/concrete/tests/test_products.py
+index 311d5153e..1ef6ce6c2 100644
+--- a/sympy/concrete/tests/test_products.py
++++ b/sympy/concrete/tests/test_products.py
+@@ -236,6 +236,15 @@ def test__eval_product():
+     assert product(2**i, (i, 1, n)) == 2**(n/2 + n**2/2)
+ 
+ 
++def test_issue_13723():
++    # The product of a sum is not the sum of the products of its terms,
++    # so this product must stay unevaluated instead of returning a wrong
++    # result.
++    p = Product(n + 1/2**k, (k, 0, n - 1))
++    assert p.doit() == p
++    assert p.doit().subs(n, 2).doit() == Rational(15, 2)
++
++
+ def test_product_pow():
+     # issue 4817
+     assert product(2**f(k), (k, 1, n)) == 2**Sum(f(k), (k, 1, n))

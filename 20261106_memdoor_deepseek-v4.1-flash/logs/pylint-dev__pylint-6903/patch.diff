@@ -1,0 +1,37 @@
+diff --git a/pylint/lint/run.py b/pylint/lint/run.py
+index a7e5d557..ca394264 100644
+--- a/pylint/lint/run.py
++++ b/pylint/lint/run.py
+@@ -76,8 +76,8 @@ def _cpu_count() -> int:
+     else:
+         cpu_count = 1
+     if cpu_share is not None:
+-        return min(cpu_share, cpu_count)
+-    return cpu_count
++        return max(1, min(cpu_share, cpu_count))
++    return max(1, cpu_count)
+ 
+ 
+ UNUSED_PARAM_SENTINEL = object()
+diff --git a/tests/lint/unittest_lint.py b/tests/lint/unittest_lint.py
+index 3dbde39c..3e8effa3 100644
+--- a/tests/lint/unittest_lint.py
++++ b/tests/lint/unittest_lint.py
+@@ -39,6 +39,7 @@ from pylint.constants import (
+ )
+ from pylint.exceptions import InvalidMessageError
+ from pylint.lint import PyLinter
++from pylint.lint.run import _cpu_count
+ from pylint.lint.utils import fix_import_path
+ from pylint.message import Message
+ from pylint.reporters import text
+@@ -931,3 +932,9 @@ print(submodule1)
+         with fix_import_path([tmpdir]):
+             linter.check(["submodule2.py"])
+     assert not linter.stats.by_msg
++
++
++def test_cpu_count_is_at_least_one(monkeypatch: pytest.MonkeyPatch) -> None:
++    """The number of CPUs must never be zero, even if cgroup detection fails."""
++    monkeypatch.setattr("pylint.lint.run._query_cpu", lambda: 0)
++    assert _cpu_count() >= 1

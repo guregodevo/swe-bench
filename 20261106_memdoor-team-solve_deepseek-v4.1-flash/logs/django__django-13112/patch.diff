@@ -1,0 +1,72 @@
+diff --git a/django/db/migrations/operations/utils.py b/django/db/migrations/operations/utils.py
+index 6e2bacd549..facfd9fc60 100644
+--- a/django/db/migrations/operations/utils.py
++++ b/django/db/migrations/operations/utils.py
+@@ -19,7 +19,8 @@ def resolve_relation(model, app_label=None, model_name=None):
+                 )
+             return app_label, model_name
+         if '.' in model:
+-            return tuple(model.lower().split('.', 1))
++            app_label, model_name = model.split('.', 1)
++            return app_label, model_name.lower()
+         if app_label is None:
+             raise TypeError(
+                 'app_label must be provided to resolve unscoped model '
+diff --git a/django/db/models/fields/related.py b/django/db/models/fields/related.py
+index c2aea9c730..ea1efd5ccb 100644
+--- a/django/db/models/fields/related.py
++++ b/django/db/models/fields/related.py
+@@ -582,7 +582,11 @@ class ForeignObject(RelatedField):
+         if self.remote_field.parent_link:
+             kwargs['parent_link'] = self.remote_field.parent_link
+         if isinstance(self.remote_field.model, str):
+-            kwargs['to'] = self.remote_field.model.lower()
++            if '.' in self.remote_field.model:
++                app_label, model_name = self.remote_field.model.split('.', 1)
++                kwargs['to'] = '%s.%s' % (app_label, model_name.lower())
++            else:
++                kwargs['to'] = self.remote_field.model.lower()
+         else:
+             kwargs['to'] = self.remote_field.model._meta.label_lower
+         # If swappable is True, then see if we're actually pointing to the target
+diff --git a/tests/field_deconstruction/tests.py b/tests/field_deconstruction/tests.py
+index bf00aa44e2..6eec57ecf0 100644
+--- a/tests/field_deconstruction/tests.py
++++ b/tests/field_deconstruction/tests.py
+@@ -260,6 +260,11 @@ class FieldDeconstructionTests(SimpleTestCase):
+         self.assertEqual(args, [])
+         self.assertEqual(kwargs, {"to": "auth.permission", "unique": True, "on_delete": models.CASCADE})
+ 
++    def test_foreign_key_mixed_case_app_label(self):
++        field = models.ForeignKey("DJ_RegLogin.Category", models.CASCADE)
++        name, path, args, kwargs = field.deconstruct()
++        self.assertEqual(kwargs["to"], "DJ_RegLogin.category")
++
+     @override_settings(AUTH_USER_MODEL="auth.Permission")
+     def test_foreign_key_swapped(self):
+         with isolate_lru_cache(apps.get_swappable_settings_name):
+diff --git a/tests/migrations/test_autodetector.py b/tests/migrations/test_autodetector.py
+index 236af43834..ebb7deb5a9 100644
+--- a/tests/migrations/test_autodetector.py
++++ b/tests/migrations/test_autodetector.py
+@@ -1068,6 +1068,20 @@ class AutodetectorTests(TestCase):
+         self.assertNumberMigrations(changes, 'testapp', 0)
+         self.assertNumberMigrations(changes, 'otherapp', 0)
+ 
++    def test_mixed_case_app_label(self):
++        category = ModelState('DJ_RegLogin', 'Category', [
++            ('id', models.AutoField(primary_key=True)),
++        ])
++        content = ModelState('DJ_RegLogin', 'Content', [
++            ('id', models.AutoField(primary_key=True)),
++            ('category', models.ForeignKey('DJ_RegLogin.Category', models.CASCADE)),
++        ])
++        changes = self.get_changes([], [category, content])
++        self.assertNumberMigrations(changes, 'DJ_RegLogin', 1)
++        self.assertOperationTypes(changes, 'DJ_RegLogin', 0, ['CreateModel', 'CreateModel'])
++        field = dict(changes['DJ_RegLogin'][0].operations[1].fields)['category']
++        self.assertEqual(field.deconstruct()[3]['to'], 'DJ_RegLogin.category')
++
+     def test_rename_m2m_through_model(self):
+         """
+         Tests autodetection of renamed models that are used in M2M relations as

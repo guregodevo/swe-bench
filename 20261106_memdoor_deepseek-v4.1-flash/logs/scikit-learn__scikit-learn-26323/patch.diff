@@ -1,0 +1,51 @@
+diff --git a/sklearn/compose/_column_transformer.py b/sklearn/compose/_column_transformer.py
+index 4eddd12b1..3a89f0d63 100644
+--- a/sklearn/compose/_column_transformer.py
++++ b/sklearn/compose/_column_transformer.py
+@@ -303,6 +303,9 @@ class ColumnTransformer(TransformerMixin, _BaseComposition):
+         for trans in transformers:
+             _safe_set_output(trans, transform=transform)
+ 
++        if self.remainder not in {"passthrough", "drop"}:
++            _safe_set_output(self.remainder, transform=transform)
++
+         return self
+ 
+     def get_params(self, deep=True):
+diff --git a/sklearn/compose/tests/test_column_transformer.py b/sklearn/compose/tests/test_column_transformer.py
+index b9c8f5831..bc6798fe1 100644
+--- a/sklearn/compose/tests/test_column_transformer.py
++++ b/sklearn/compose/tests/test_column_transformer.py
+@@ -20,6 +20,7 @@ from sklearn.compose import (
+     make_column_selector,
+ )
+ from sklearn.exceptions import NotFittedError
++from sklearn.feature_selection import VarianceThreshold
+ from sklearn.preprocessing import FunctionTransformer
+ from sklearn.preprocessing import StandardScaler, Normalizer, OneHotEncoder
+ 
+@@ -2053,6 +2054,24 @@ def test_column_transform_set_output_after_fitting(remainder):
+         assert dtype == expected_dtypes[col]
+ 
+ 
++def test_column_transformer_set_output_remainder():
++    """Check that `set_output` is propagated to an estimator used as `remainder`."""
++    pd = pytest.importorskip("pandas")
++    df = pd.DataFrame({"a": [True, False, True], "b": [1, 2, 3]})
++
++    ct = ColumnTransformer(
++        [("select_bool", VarianceThreshold(), make_column_selector(dtype_include=bool))],
++        remainder=VarianceThreshold(),
++        verbose_feature_names_out=False,
++    ).set_output(transform="pandas")
++
++    X_trans = ct.fit_transform(df)
++
++    assert isinstance(X_trans, pd.DataFrame)
++    assert_array_equal(X_trans.columns, ct.get_feature_names_out())
++    assert X_trans["a"].dtype == bool
++
++
+ # PandasOutTransformer that does not define get_feature_names_out and always expects
+ # the input to be a DataFrame.
+ class PandasOutTransformer(BaseEstimator):

@@ -1,0 +1,60 @@
+diff --git a/doc/whats_new/v1.3.rst b/doc/whats_new/v1.3.rst
+index b297155b3..e8d2a262e 100755
+--- a/doc/whats_new/v1.3.rst
++++ b/doc/whats_new/v1.3.rst
+@@ -222,6 +222,11 @@ Changelog
+ :mod:`sklearn.pipeline`
+ .......................
+ 
++- |Fix| :class:`pipeline.FeatureUnion` and other transformers no longer raise a
++  `ValueError` when the output of `transform` has a different number of rows
++  than its input and the global output configuration is set to `"pandas"`.
++  :pr:`25747` by :user:`Guillaume Lemaitre <glemaitre>`.
++
+ - |Feature| :class:`pipeline.FeatureUnion` can now use indexing notation (e.g.
+   `feature_union["scalar"]`) to access transformers by name. :pr:`25093` by
+   `Thomas Fan`_.
+diff --git a/sklearn/utils/_set_output.py b/sklearn/utils/_set_output.py
+index 335773c6a..56d3b8ef8 100755
+--- a/sklearn/utils/_set_output.py
++++ b/sklearn/utils/_set_output.py
+@@ -52,6 +52,12 @@ def _wrap_in_pandas_container(
+ 
+     pd = check_pandas_support("Setting output container to 'pandas'")
+ 
++    if index is not None and len(index) != len(data_to_wrap):
++        # The index is not the same length as the data, so it cannot be used.
++        # This can happen when a transformer changes the number of samples,
++        # for instance when aggregating the input data.
++        index = None
++
+     if isinstance(data_to_wrap, pd.DataFrame):
+         if columns is not None:
+             data_to_wrap.columns = columns
+diff --git a/sklearn/utils/tests/test_set_output.py b/sklearn/utils/tests/test_set_output.py
+index ac73ca094..d15e0373b 100755
+--- a/sklearn/utils/tests/test_set_output.py
++++ b/sklearn/utils/tests/test_set_output.py
+@@ -36,6 +36,22 @@ def test__wrap_in_pandas_container_dense_update_columns_and_index():
+     assert_array_equal(new_df.index, new_index)
+ 
+ 
++def test__wrap_in_pandas_container_index_is_different_length():
++    """Check that the index is ignored when it has a different length.
++
++    Non-regression test for gh-25747.
++    """
++    pd = pytest.importorskip("pandas")
++    X_df = pd.DataFrame([[1, 0, 3], [0, 0, 1]], columns=["a", "b", "c"])
++    new_index = [10, 12, 14]
++
++    new_df = _wrap_in_pandas_container(X_df, columns=None, index=new_index)
++
++    # The index of `X_df` should be unchanged since the provided one is not
++    # compatible with the number of rows.
++    assert_array_equal(new_df.index, X_df.index)
++
++
+ def test__wrap_in_pandas_container_error_validation():
+     """Check errors in _wrap_in_pandas_container."""
+     X = np.asarray([[1, 0, 3], [0, 0, 1]])

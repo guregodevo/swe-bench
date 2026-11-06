@@ -1,0 +1,103 @@
+diff --git a/django/views/generic/base.py b/django/views/generic/base.py
+index ea5baca08d..c95aec602e 100644
+--- a/django/views/generic/base.py
++++ b/django/views/generic/base.py
+@@ -11,7 +11,7 @@ from django.template.response import TemplateResponse
+ from django.urls import reverse
+ from django.utils.decorators import classonlymethod
+ from django.utils.deprecation import RemovedInDjango40Warning
+-from django.utils.functional import SimpleLazyObject
++from django.utils.functional import lazy
+ 
+ logger = logging.getLogger('django.request')
+ 
+@@ -169,7 +169,6 @@ def _wrap_url_kwargs_with_deprecation_warning(url_kwargs):
+     context_kwargs = {}
+     for key, value in url_kwargs.items():
+         # Bind into function closure.
+-        @SimpleLazyObject
+         def access_value(key=key, value=value):
+             warnings.warn(
+                 'TemplateView passing URL kwargs to the context is '
+@@ -178,7 +177,7 @@ def _wrap_url_kwargs_with_deprecation_warning(url_kwargs):
+                 RemovedInDjango40Warning, stacklevel=2,
+             )
+             return value
+-        context_kwargs[key] = access_value
++        context_kwargs[key] = lazy(access_value, str)()
+     return context_kwargs
+ 
+ 
+diff --git a/tests/generic_views/test_base.py b/tests/generic_views/test_base.py
+index d498d23a68..dee0435eb9 100644
+--- a/tests/generic_views/test_base.py
++++ b/tests/generic_views/test_base.py
+@@ -3,7 +3,7 @@ import time
+ from django.core.exceptions import ImproperlyConfigured
+ from django.http import HttpResponse
+ from django.test import (
+-    RequestFactory, SimpleTestCase, ignore_warnings, override_settings,
++    RequestFactory, SimpleTestCase, TestCase, ignore_warnings, override_settings,
+ )
+ from django.test.utils import require_jinja2
+ from django.urls import resolve
+@@ -11,6 +11,7 @@ from django.utils.deprecation import RemovedInDjango40Warning
+ from django.views.generic import RedirectView, TemplateView, View
+ 
+ from . import views
++from .models import Author
+ 
+ 
+ class SimpleView(View):
+@@ -603,3 +604,16 @@ class DeprecationTests(SimpleTestCase):
+             str(response.context['foo2'])
+         self.assertEqual(response.context['key'], 'value')
+         self.assertIsInstance(response.context['view'], View)
++
++
++@override_settings(ROOT_URLCONF='generic_views.urls')
++class TemplateViewURLKwargsTest(TestCase):
++    @classmethod
++    def setUpTestData(cls):
++        cls.author = Author.objects.create(name='Jane Doe', slug='jane-doe')
++
++    @ignore_warnings(category=RemovedInDjango40Warning)
++    def test_url_kwargs_usable_in_queries(self):
++        response = self.client.get('/template/author/jane-doe/')
++        self.assertEqual(response.status_code, 200)
++        self.assertEqual(response.context['author'], self.author)
+diff --git a/tests/generic_views/urls.py b/tests/generic_views/urls.py
+index 9537240ab8..bd5f3c5613 100644
+--- a/tests/generic_views/urls.py
++++ b/tests/generic_views/urls.py
+@@ -16,6 +16,10 @@ urlpatterns = [
+         'template/custom/<foo1>/<foo2>/',
+         views.CustomTemplateView.as_view(template_name='generic_views/about.html'),
+     ),
++    path(
++        'template/author/<slug:slug>/',
++        views.AuthorTemplateView.as_view(),
++    ),
+     path(
+         'template/content_type/',
+         TemplateView.as_view(template_name='generic_views/robots.txt', content_type='text/plain'),
+diff --git a/tests/generic_views/views.py b/tests/generic_views/views.py
+index 02717333a6..0f2c4064f3 100644
+--- a/tests/generic_views/views.py
++++ b/tests/generic_views/views.py
+@@ -17,6 +17,15 @@ class CustomTemplateView(generic.TemplateView):
+         return context
+ 
+ 
++class AuthorTemplateView(generic.TemplateView):
++    template_name = 'generic_views/about.html'
++
++    def get_context_data(self, **kwargs):
++        # URL kwargs are lazy objects; they must be usable in queries.
++        author = Author.objects.get(slug=kwargs['slug'])
++        return {'author': author}
++
++
+ class ObjectDetail(generic.DetailView):
+     template_name = 'generic_views/detail.html'
+ 

@@ -1,0 +1,108 @@
+diff --git a/CHANGES b/CHANGES
+index 3942c4240..a339e634c 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -63,6 +63,7 @@ Features added
+ * #7543: html theme: Add top and bottom margins to tables
+ * C and C++: allow semicolon in the end of declarations.
+ * C++, parse parameterized noexcept specifiers.
++* C++, add support for user-defined literals.
+ * #7143: py domain: Add ``:final:`` option to :rst:dir:`py:class:`,
+   :rst:dir:`py:exception:` and :rst:dir:`py:method:` directives
+ 
+diff --git a/sphinx/domains/cpp.py b/sphinx/domains/cpp.py
+index fe52d881d..cfea60459 100644
+--- a/sphinx/domains/cpp.py
++++ b/sphinx/domains/cpp.py
+@@ -298,6 +298,7 @@ T = TypeVar('T')
+ 
+ _string_re = re.compile(r"[LuU8]?('([^'\\]*(?:\\.[^'\\]*)*)'"
+                         r'|"([^"\\]*(?:\\.[^"\\]*)*)")', re.S)
++_udl_suffix_re = re.compile(r'[a-zA-Z_][a-zA-Z0-9_]*')
+ _visibility_re = re.compile(r'\b(public|private|protected)\b')
+ _operator_re = re.compile(r'''(?x)
+         \[\s*\]
+@@ -882,6 +883,24 @@ class ASTCharLiteral(ASTLiteral):
+         signode.append(nodes.Text(txt, txt))
+ 
+ 
++class ASTUserDefinedLiteral(ASTLiteral):
++    def __init__(self, literal: ASTLiteral, ident: ASTIdentifier) -> None:
++        self.literal = literal
++        self.ident = ident
++
++    def _stringify(self, transform: StringifyTransform) -> str:
++        return transform(self.literal) + transform(self.ident)
++
++    def get_id(self, version: int) -> str:
++        # TODO: this is not correct, but we don't have a better option
++        return self.literal.get_id(version) + self.ident.get_id(version)
++
++    def describe_signature(self, signode: TextElement, mode: str,
++                           env: "BuildEnvironment", symbol: "Symbol") -> None:
++        self.literal.describe_signature(signode, mode, env, symbol)
++        self.ident.describe_signature(signode, "noneIsName", env, "", "", symbol)
++
++
+ class ASTThisLiteral(ASTExpression):
+     def _stringify(self, transform: StringifyTransform) -> str:
+         return "this"
+@@ -4664,27 +4683,36 @@ class DefinitionParser(BaseParser):
+             if self.match(regex):
+                 while self.current_char in 'uUlLfF':
+                     self.pos += 1
+-                return ASTNumberLiteral(self.definition[pos:self.pos])
++                literal = ASTNumberLiteral(self.definition[pos:self.pos])
++                return self._parse_user_defined_literal(literal)
+ 
+         string = self._parse_string()
+         if string is not None:
+-            return ASTStringLiteral(string)
++            return self._parse_user_defined_literal(ASTStringLiteral(string))
+ 
+         # character-literal
+         if self.match(char_literal_re):
+             prefix = self.last_match.group(1)  # may be None when no prefix
+             data = self.last_match.group(2)
+             try:
+-                return ASTCharLiteral(prefix, data)
++                literal = ASTCharLiteral(prefix, data)
++                return self._parse_user_defined_literal(literal)
+             except UnicodeDecodeError as e:
+                 self.fail("Can not handle character literal. Internal error was: %s" % e)
+             except UnsupportedMultiCharacterCharLiteral:
+                 self.fail("Can not handle character literal"
+                           " resulting in multiple decoded characters.")
+ 
+-        # TODO: user-defined lit
+         return None
+ 
++    def _parse_user_defined_literal(self, literal: ASTLiteral) -> ASTLiteral:
++        # user-defined-literal -> literal ud-suffix
++        # The suffix must immediately follow the literal, without whitespace.
++        if self.match(_udl_suffix_re):
++            ident = ASTIdentifier(self.matched_text)
++            return ASTUserDefinedLiteral(literal, ident)
++        return literal
++
+     def _parse_fold_or_paren_expression(self) -> ASTExpression:
+         # "(" expression ")"
+         # fold-expression
+diff --git a/tests/test_domain_cpp.py b/tests/test_domain_cpp.py
+index 9db741ae5..645fd1a5e 100644
+--- a/tests/test_domain_cpp.py
++++ b/tests/test_domain_cpp.py
+@@ -176,7 +176,12 @@ def test_expressions():
+         exprCheck(p + "'\\U0001f34c'", t + "127820")
+         exprCheck(p + "'\\U0001F34C'", t + "127820")
+ 
+-    # TODO: user-defined lit
++    # user-defined literals
++    exprCheck('1q_s', 'L1E3q_s')
++    exprCheck('1.0_km', 'L1.0E3_km')
++    exprCheck('"abc"_s', 'LA3_KcE2_s')
++    exprCheck("'a'_c", 'c972_c')
++    exprCheck('6.62607015e-34q_J * 1q_s', 'mlL6.62607015e-34E3q_JL1E3q_s')
+     exprCheck('(... + Ns)', '(... + Ns)', id4='flpl2Ns')
+     exprCheck('(Ns + ...)', '(Ns + ...)', id4='frpl2Ns')
+     exprCheck('(Ns + ... + 0)', '(Ns + ... + 0)', id4='fLpl2NsL0E')

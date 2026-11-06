@@ -1,0 +1,33 @@
+diff --git a/sympy/utilities/lambdify.py b/sympy/utilities/lambdify.py
+index da67263b19..0488410968 100755
+--- a/sympy/utilities/lambdify.py
++++ b/sympy/utilities/lambdify.py
+@@ -961,7 +961,11 @@ def _recursive_to_string(doprint, arg):
+             left, right = "()"
+         else:
+             raise NotImplementedError("unhandled type: %s, %s" % (type(arg), arg))
+-        return left +', '.join(_recursive_to_string(doprint, e) for e in arg) + right
++        inner = ', '.join(_recursive_to_string(doprint, e) for e in arg)
++        if isinstance(arg, tuple) and len(arg) == 1:
++            # A one-element tuple needs a trailing comma to be valid Python.
++            inner += ','
++        return left + inner + right
+     elif isinstance(arg, str):
+         return arg
+     else:
+diff --git a/sympy/utilities/tests/test_lambdify.py b/sympy/utilities/tests/test_lambdify.py
+index 023c2fb55a..33ca2f49c8 100755
+--- a/sympy/utilities/tests/test_lambdify.py
++++ b/sympy/utilities/tests/test_lambdify.py
+@@ -1570,3 +1570,11 @@ def assertAllClose(self, result, *, abstol=1e-15, reltol=1e-15):
+ def test_deprecated_set():
+     with warns_deprecated_sympy():
+         lambdify({x, y}, x + y)
++
++
++def test_single_element_tuple():
++    # A one-element tuple must be printed with a trailing comma, otherwise
++    # the generated code returns the element itself instead of a tuple.
++    f = lambdify([], tuple([1]))
++    assert f() == (1,)
++    assert 'return (1,)' in inspect.getsource(f)

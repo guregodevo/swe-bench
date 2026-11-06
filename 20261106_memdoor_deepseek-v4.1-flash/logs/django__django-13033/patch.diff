@@ -1,0 +1,63 @@
+diff --git a/django/db/models/sql/compiler.py b/django/db/models/sql/compiler.py
+index abbb1e37cb..a8f5b61fbe 100755
+--- a/django/db/models/sql/compiler.py
++++ b/django/db/models/sql/compiler.py
+@@ -727,7 +727,7 @@ class SQLCompiler:
+         # If we get to this point and the field is a relation to another model,
+         # append the default ordering for that model unless it is the pk
+         # shortcut or the attribute name of the field that is specified.
+-        if field.is_relation and opts.ordering and getattr(field, 'attname', None) != name and name != 'pk':
++        if field.is_relation and opts.ordering and getattr(field, 'attname', None) != pieces[-1] and name != 'pk':
+             # Firstly, avoid infinite loops.
+             already_seen = already_seen or set()
+             join_tuple = tuple(getattr(self.query.alias_map[j], 'join_cols', None) for j in joins)
+diff --git a/tests/ordering/models.py b/tests/ordering/models.py
+index 2efb743e44..4fc39058a1 100755
+--- a/tests/ordering/models.py
++++ b/tests/ordering/models.py
+@@ -59,3 +59,10 @@ class Reference(models.Model):
+ 
+     class Meta:
+         ordering = ('article',)
++
++
++class SelfReference(models.Model):
++    parent = models.ForeignKey('self', models.CASCADE, null=True)
++
++    class Meta:
++        ordering = ('-id',)
+diff --git a/tests/ordering/tests.py b/tests/ordering/tests.py
+index a9cc729c45..74bb50dab9 100755
+--- a/tests/ordering/tests.py
++++ b/tests/ordering/tests.py
+@@ -8,7 +8,9 @@ from django.db.models import (
+ from django.db.models.functions import Upper
+ from django.test import TestCase
+ 
+-from .models import Article, Author, ChildArticle, OrderedByFArticle, Reference
++from .models import (
++    Article, Author, ChildArticle, OrderedByFArticle, Reference, SelfReference,
++)
+ 
+ 
+ class OrderingTests(TestCase):
+@@ -343,6 +345,19 @@ class OrderingTests(TestCase):
+             attrgetter("headline")
+         )
+ 
++    def test_order_by_fk_attname_with_meta_ordering(self):
++        """
++        Ordering by a foreign key's attname doesn't inherit the related
++        model's Meta.ordering, even for self-referencing foreign keys.
++        """
++        parent = SelfReference.objects.create()
++        child = SelfReference.objects.create(parent=parent)
++        qs = SelfReference.objects.filter(parent__isnull=False).order_by('parent_id')
++        # No join and no inherited ordering from the related model.
++        self.assertEqual(str(qs.query).count('JOIN'), 0)
++        self.assertIn('ORDER BY "ordering_selfreference"."parent_id" ASC', str(qs.query))
++        self.assertSequenceEqual(qs, [child])
++
+     def test_order_by_f_expression(self):
+         self.assertQuerysetEqual(
+             Article.objects.order_by(F('headline')), [

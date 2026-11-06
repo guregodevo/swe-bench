@@ -1,0 +1,114 @@
+diff --git a/lib/matplotlib/scale.py b/lib/matplotlib/scale.py
+index b482a664b..e4a66aa0a 100644
+--- a/lib/matplotlib/scale.py
++++ b/lib/matplotlib/scale.py
+@@ -12,6 +12,43 @@ from matplotlib.ticker import (
+ from matplotlib.transforms import Transform, IdentityTransform
+ 
+ 
++class _OrderPreservingLogLocator(LogLocator):
++    """A :class:`~matplotlib.ticker.LogLocator` that keeps the order of the
++    view limits it is given.
++
++    ``set_ylim(100, 1)`` on a log axis must invert the axis, as it does on a
++    linear axis (gh:14179).  The base locator sorts the endpoints in its
++    :meth:`~matplotlib.ticker.LogLocator.nonsingular`, which discards that
++    order before the scale ever sees it; here the original order is restored.
++    """
++
++    def nonsingular(self, vmin, vmax):
++        inverted = vmin > vmax
++        vmin, vmax = super().nonsingular(vmin, vmax)
++        if inverted and vmin < vmax:
++            vmin, vmax = vmax, vmin
++        return vmin, vmax
++
++
++class _OrderPreservingLogitLocator(LogitLocator):
++    """A :class:`~matplotlib.ticker.LogitLocator` that keeps the order of the
++    view limits it is given (see gh:14179)."""
++
++    def nonsingular(self, vmin, vmax):
++        inverted = vmin > vmax
++        vmin, vmax = super().nonsingular(vmin, vmax)
++        if inverted and vmin < vmax:
++            vmin, vmax = vmax, vmin
++        return vmin, vmax
++
++    def tick_values(self, vmin, vmax):
++        # Tick positions are computed over the sorted interval; only the
++        # stored view limits keep their (possibly inverted) order.
++        if vmin > vmax:
++            vmin, vmax = vmax, vmin
++        return super().tick_values(vmin, vmax)
++
++
+ class ScaleBase(object):
+     """
+     The base class for all scales.
+@@ -403,9 +440,9 @@ class LogScale(ScaleBase):
+         Set the locators and formatters to specialized versions for
+         log scaling.
+         """
+-        axis.set_major_locator(LogLocator(self.base))
++        axis.set_major_locator(_OrderPreservingLogLocator(self.base))
+         axis.set_major_formatter(LogFormatterSciNotation(self.base))
+-        axis.set_minor_locator(LogLocator(self.base, self.subs))
++        axis.set_minor_locator(_OrderPreservingLogLocator(self.base, self.subs))
+         axis.set_minor_formatter(
+             LogFormatterSciNotation(self.base,
+                                     labelOnlyBase=(self.subs is not None)))
+@@ -688,9 +725,9 @@ class LogitScale(ScaleBase):
+ 
+     def set_default_locators_and_formatters(self, axis):
+         # ..., 0.01, 0.1, 0.5, 0.9, 0.99, ...
+-        axis.set_major_locator(LogitLocator())
++        axis.set_major_locator(_OrderPreservingLogitLocator())
+         axis.set_major_formatter(LogitFormatter())
+-        axis.set_minor_locator(LogitLocator(minor=True))
++        axis.set_minor_locator(_OrderPreservingLogitLocator(minor=True))
+         axis.set_minor_formatter(LogitFormatter())
+ 
+     def limit_range_for_scale(self, vmin, vmax, minpos):
+diff --git a/lib/matplotlib/tests/test_scale.py b/lib/matplotlib/tests/test_scale.py
+index e406b1b9a..6714e3cdd 100644
+--- a/lib/matplotlib/tests/test_scale.py
++++ b/lib/matplotlib/tests/test_scale.py
+@@ -123,6 +123,37 @@ def test_logscale_invert_transform():
+     assert isinstance(Log10Transform().inverted(), InvertedLog10Transform)
+ 
+ 
++@pytest.mark.parametrize('scale', ['linear', 'log', 'symlog', 'logit'])
++def test_invert_axes_with_limits(scale):
++    # Test that an axis can be inverted by passing its limits in reverse
++    # order, for all scales (in particular log scales, see gh:14179).
++    fig, ax = plt.subplots()
++    ax.set_xscale(scale)
++    ax.set_yscale(scale)
++
++    if scale == 'logit':
++        lim = (0.9, 0.1)
++        ax.plot([0.2, 0.8], [0.2, 0.8])
++    else:
++        lim = (100, 1)
++        ax.plot([1, 100], [1, 100])
++    ax.set_xlim(lim)
++    ax.set_ylim(lim)
++
++    assert ax.get_xlim() == lim
++    assert ax.get_ylim() == lim
++    assert ax.xaxis_inverted()
++    assert ax.yaxis_inverted()
++
++    # Setting the limits back in increasing order un-inverts the axes.
++    ax.set_xlim(lim[::-1])
++    ax.set_ylim(lim[::-1])
++    assert ax.get_xlim() == lim[::-1]
++    assert ax.get_ylim() == lim[::-1]
++    assert not ax.xaxis_inverted()
++    assert not ax.yaxis_inverted()
++
++
+ def test_logscale_transform_repr():
+     # check that repr of log transform succeeds
+     fig, ax = plt.subplots()

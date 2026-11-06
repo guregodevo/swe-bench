@@ -1,0 +1,55 @@
+diff --git a/doc/whats-new.rst b/doc/whats-new.rst
+index 6cba8563..7dcf2ad4 100644
+--- a/doc/whats-new.rst
++++ b/doc/whats-new.rst
+@@ -93,6 +93,8 @@ Deprecations
+ Bug fixes
+ ~~~~~~~~~
+ 
++- Fix :py:func:`polyval` returning wrong results when the coordinate is of
++  ``timedelta64`` dtype (:issue:`6604`).
+ - Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
+   ensure it skips missing values for float dtypes (consistent with other methods). This should
+   not change the behavior (:pull:`6303`).
+diff --git a/xarray/core/computation.py b/xarray/core/computation.py
+index 823cbe02..a97c28a8 100644
+--- a/xarray/core/computation.py
++++ b/xarray/core/computation.py
+@@ -1933,7 +1933,7 @@ def _ensure_numeric(data: T_Xarray) -> T_Xarray:
+     from .dataset import Dataset
+ 
+     def to_floatable(x: DataArray) -> DataArray:
+-        if x.dtype.kind in "mM":
++        if x.dtype.kind == "M":
+             return x.copy(
+                 data=datetime_to_numeric(
+                     x.data,
+@@ -1941,6 +1941,9 @@ def _ensure_numeric(data: T_Xarray) -> T_Xarray:
+                     datetime_unit="ns",
+                 ),
+             )
++        elif x.dtype.kind == "m":
++            # timedeltas
++            return x.copy(data=duck_array_ops.astype(x.data, dtype=float))
+         return x
+ 
+     if isinstance(data, Dataset):
+diff --git a/xarray/tests/test_computation.py b/xarray/tests/test_computation.py
+index 737ed82b..b8aa05c7 100644
+--- a/xarray/tests/test_computation.py
++++ b/xarray/tests/test_computation.py
+@@ -2010,6 +2010,14 @@ def test_where_attrs() -> None:
+             ),
+             id="datetime",
+         ),
++        pytest.param(
++            xr.DataArray(
++                np.array([1000, 2000, 3000], dtype="timedelta64[ns]"), dims="x"
++            ),
++            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
++            xr.DataArray([1000.0, 2000.0, 3000.0], dims="x"),
++            id="timedelta",
++        ),
+     ],
+ )
+ def test_polyval(

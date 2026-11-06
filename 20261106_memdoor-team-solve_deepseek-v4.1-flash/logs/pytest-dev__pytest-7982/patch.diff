@@ -1,0 +1,53 @@
+diff --git a/changelog/7950.bugfix.rst b/changelog/7950.bugfix.rst
+new file mode 100644
+index 000000000..a1b4b27d5
+--- /dev/null
++++ b/changelog/7950.bugfix.rst
+@@ -0,0 +1 @@
++Fixed regression where symlinked directories were not collected anymore.
+diff --git a/src/_pytest/pathlib.py b/src/_pytest/pathlib.py
+index f0bdb1481..b96cba069 100644
+--- a/src/_pytest/pathlib.py
++++ b/src/_pytest/pathlib.py
+@@ -558,7 +558,7 @@ def visit(
+     entries = sorted(os.scandir(path), key=lambda entry: entry.name)
+     yield from entries
+     for entry in entries:
+-        if entry.is_dir(follow_symlinks=False) and recurse(entry):
++        if entry.is_dir() and recurse(entry):
+             yield from visit(entry.path, recurse)
+ 
+ 
+diff --git a/testing/test_collection.py b/testing/test_collection.py
+index 841aa358b..c59e5d6c3 100644
+--- a/testing/test_collection.py
++++ b/testing/test_collection.py
+@@ -1178,6 +1178,28 @@ def test_collect_symlink_out_of_tree(testdir):
+     assert result.ret == 0
+ 
+ 
++def test_collect_symlink_directory(testdir):
++    """Directories which are symlinks are collected (regression #7950)."""
++    real = testdir.mkdir("real")
++    real.join("test_real.py").write(
++        textwrap.dedent(
++            """
++            def test_nodeid(request):
++                assert request.node.nodeid == "tests/symlink/test_real.py::test_nodeid"
++            """
++        )
++    )
++
++    tests = testdir.mkdir("tests")
++    symlink_or_skip(real, tests.join("symlink"))
++
++    result = testdir.runpytest("-v", str(tests))
++    result.stdout.fnmatch_lines(
++        ["tests/symlink/test_real.py::test_nodeid PASSED*", "*1 passed in*"]
++    )
++    assert result.ret == 0
++
++
+ def test_collectignore_via_conftest(testdir):
+     """collect_ignore in parent conftest skips importing child (issue #4592)."""
+     tests = testdir.mkpydir("tests")

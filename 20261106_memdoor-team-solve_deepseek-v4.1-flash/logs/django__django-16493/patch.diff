@@ -1,0 +1,56 @@
+diff --git a/django/db/models/fields/files.py b/django/db/models/fields/files.py
+index 7a99b12691..652a1147a4 100644
+--- a/django/db/models/fields/files.py
++++ b/django/db/models/fields/files.py
+@@ -295,8 +295,10 @@ class FileField(Field):
+         if kwargs.get("max_length") == 100:
+             del kwargs["max_length"]
+         kwargs["upload_to"] = self.upload_to
+-        if self.storage is not default_storage:
+-            kwargs["storage"] = getattr(self, "_storage_callable", self.storage)
++        if hasattr(self, "_storage_callable"):
++            kwargs["storage"] = self._storage_callable
++        elif self.storage is not default_storage:
++            kwargs["storage"] = self.storage
+         return name, path, args, kwargs
+ 
+     def get_internal_type(self):
+diff --git a/tests/field_deconstruction/tests.py b/tests/field_deconstruction/tests.py
+index c78ed62876..adab293d83 100644
+--- a/tests/field_deconstruction/tests.py
++++ b/tests/field_deconstruction/tests.py
+@@ -1,4 +1,5 @@
+ from django.apps import apps
++from django.core.files.storage import FileSystemStorage, default_storage
+ from django.db import models
+ from django.test import SimpleTestCase, override_settings
+ from django.test.utils import isolate_lru_cache
+@@ -169,6 +170,28 @@ class FieldDeconstructionTests(SimpleTestCase):
+         self.assertEqual(path, "django.db.models.FileField")
+         self.assertEqual(args, [])
+         self.assertEqual(kwargs, {"upload_to": "foo/bar"})
++        # Test callable storage.
++        def get_storage():
++            return default_storage
++
++        field = models.FileField(upload_to="foo/bar", storage=get_storage)
++        name, path, args, kwargs = field.deconstruct()
++        self.assertEqual(path, "django.db.models.FileField")
++        self.assertEqual(args, [])
++        self.assertEqual(kwargs, {"upload_to": "foo/bar", "storage": get_storage})
++        # Test callable storage returning a non-default storage.
++        other_storage = FileSystemStorage(location="/media/other")
++
++        def get_other_storage():
++            return other_storage
++
++        field = models.FileField(upload_to="foo/bar", storage=get_other_storage)
++        name, path, args, kwargs = field.deconstruct()
++        self.assertEqual(path, "django.db.models.FileField")
++        self.assertEqual(args, [])
++        self.assertEqual(
++            kwargs, {"upload_to": "foo/bar", "storage": get_other_storage}
++        )
+         # Test max_length
+         field = models.FileField(upload_to="foo/bar", max_length=200)
+         name, path, args, kwargs = field.deconstruct()

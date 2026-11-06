@@ -1,0 +1,73 @@
+diff --git a/django/db/backends/base/schema.py b/django/db/backends/base/schema.py
+index 9d6952df21..44675e31b9 100644
+--- a/django/db/backends/base/schema.py
++++ b/django/db/backends/base/schema.py
+@@ -1369,7 +1369,8 @@ class BaseDatabaseSchemaEditor:
+             output.append(self._create_index_sql(model, fields=[field]))
+         return output
+ 
+-    def _field_should_be_altered(self, old_field, new_field):
++    def _field_should_be_altered(self, old_field, new_field, ignore=None):
++        ignore = ignore or set()
+         _, old_path, old_args, old_kwargs = old_field.deconstruct()
+         _, new_path, new_args, new_kwargs = new_field.deconstruct()
+         # Don't alter when:
+@@ -1390,7 +1391,7 @@ class BaseDatabaseSchemaEditor:
+             "validators",
+             "verbose_name",
+         ]
+-        for attr in non_database_attrs:
++        for attr in non_database_attrs + list(ignore):
+             old_kwargs.pop(attr, None)
+             new_kwargs.pop(attr, None)
+         return self.quote_name(old_field.column) != self.quote_name(
+diff --git a/django/db/backends/sqlite3/schema.py b/django/db/backends/sqlite3/schema.py
+index b3a2f4282b..8f5d6b2127 100644
+--- a/django/db/backends/sqlite3/schema.py
++++ b/django/db/backends/sqlite3/schema.py
+@@ -173,6 +173,19 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
+         else:
+             super().alter_field(model, old_field, new_field, strict=strict)
+ 
++    def _field_should_be_altered(self, old_field, new_field, ignore=None):
++        ignore = ignore or set()
++        # Don't alter when the changes only affect choices as they aren't
++        # enforced at the database level (see #21961).
++        if (
++            old_field.remote_field is None
++            and new_field.remote_field is None
++            and old_field.db_parameters(self.connection)
++            == new_field.db_parameters(self.connection)
++        ):
++            ignore = {*ignore, "choices"}
++        return super()._field_should_be_altered(old_field, new_field, ignore=ignore)
++
+     def _remake_table(
+         self, model, create_field=None, delete_field=None, alter_field=None
+     ):
+diff --git a/tests/schema/tests.py b/tests/schema/tests.py
+index d9e59d32dc..17b9bb1a95 100644
+--- a/tests/schema/tests.py
++++ b/tests/schema/tests.py
+@@ -3961,6 +3961,21 @@ class SchemaTests(TransactionTestCase):
+         with connection.schema_editor() as editor, self.assertNumQueries(0):
+             editor.alter_field(Book, new_field, old_field, strict=True)
+ 
++    def test_alter_field_choices_noop(self):
++        """
++        No queries are performed when only a field's choices change as they
++        aren't enforced at the database level.
++        """
++        with connection.schema_editor() as editor:
++            editor.create_model(Author)
++        old_field = Author._meta.get_field("name")
++        new_field = CharField(max_length=255, choices=[("a", "A")])
++        new_field.set_attributes_from_name("name")
++        with connection.schema_editor() as editor, self.assertNumQueries(0):
++            editor.alter_field(Author, old_field, new_field, strict=True)
++        with connection.schema_editor() as editor, self.assertNumQueries(0):
++            editor.alter_field(Author, new_field, old_field, strict=True)
++
+     def test_add_textfield_unhashable_default(self):
+         # Create the table
+         with connection.schema_editor() as editor:

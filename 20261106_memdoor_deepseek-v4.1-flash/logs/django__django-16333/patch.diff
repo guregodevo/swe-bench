@@ -1,0 +1,54 @@
+diff --git a/django/contrib/auth/forms.py b/django/contrib/auth/forms.py
+index d73d1c8495..4c9a4f5556 100644
+--- a/django/contrib/auth/forms.py
++++ b/django/contrib/auth/forms.py
+@@ -141,6 +141,7 @@ class UserCreationForm(forms.ModelForm):
+         user.set_password(self.cleaned_data["password1"])
+         if commit:
+             user.save()
++            self.save_m2m()
+         return user
+ 
+ 
+diff --git a/tests/auth_tests/test_forms.py b/tests/auth_tests/test_forms.py
+index 78078316e8..6b2721d09b 100644
+--- a/tests/auth_tests/test_forms.py
++++ b/tests/auth_tests/test_forms.py
+@@ -14,7 +14,7 @@ from django.contrib.auth.forms import (
+     UserChangeForm,
+     UserCreationForm,
+ )
+-from django.contrib.auth.models import User
++from django.contrib.auth.models import Group, User
+ from django.contrib.auth.signals import user_login_failed
+ from django.contrib.sites.models import Site
+ from django.core import mail
+@@ -223,6 +223,28 @@ class UserCreationFormTest(TestDataMixin, TestCase):
+         form = CustomUserCreationForm(data)
+         self.assertTrue(form.is_valid())
+ 
++    def test_custom_form_with_many_to_many(self):
++        class CustomUserCreationForm(UserCreationForm):
++            class Meta(UserCreationForm.Meta):
++                model = ExtensionUser
++                fields = UserCreationForm.Meta.fields + (
++                    "date_of_birth",
++                    "groups",
++                )
++
++        group = Group.objects.create(name="test_group")
++        data = {
++            "username": "testclient",
++            "password1": "testclient",
++            "password2": "testclient",
++            "date_of_birth": "1988-02-24",
++            "groups": [group.pk],
++        }
++        form = CustomUserCreationForm(data)
++        self.assertTrue(form.is_valid())
++        user = form.save()
++        self.assertSequenceEqual(user.groups.all(), [group])
++
+     def test_custom_form_with_different_username_field(self):
+         class CustomUserCreationForm(UserCreationForm):
+             class Meta(UserCreationForm.Meta):

@@ -1,0 +1,100 @@
+diff --git a/sphinx/domains/python.py b/sphinx/domains/python.py
+index d79de154e..4708104e3 100644
+--- a/sphinx/domains/python.py
++++ b/sphinx/domains/python.py
+@@ -852,6 +852,7 @@ class PyProperty(PyObject):
+     option_spec = PyObject.option_spec.copy()
+     option_spec.update({
+         'abstractmethod': directives.flag,
++        'classmethod': directives.flag,
+         'type': directives.unchanged,
+     })
+ 
+@@ -865,9 +866,12 @@ class PyProperty(PyObject):
+         return fullname, prefix
+ 
+     def get_signature_prefix(self, sig: str) -> str:
+-        prefix = ['property']
++        prefix = []
+         if 'abstractmethod' in self.options:
+-            prefix.insert(0, 'abstract')
++            prefix.append('abstract')
++        if 'classmethod' in self.options:
++            prefix.append('classmethod')
++        prefix.append('property')
+ 
+         return ' '.join(prefix) + ' '
+ 
+diff --git a/sphinx/ext/autodoc/__init__.py b/sphinx/ext/autodoc/__init__.py
+index 1cecb1f79..ba282eb9b 100644
+--- a/sphinx/ext/autodoc/__init__.py
++++ b/sphinx/ext/autodoc/__init__.py
+@@ -2663,6 +2663,27 @@ class PropertyDocumenter(DocstringStripSignatureMixin, ClassLevelDocumenter):  #
+                             ) -> bool:
+         return inspect.isproperty(member) and isinstance(parent, ClassDocumenter)
+ 
++    def import_object(self, raiseerror: bool = False) -> bool:
++        ret = super().import_object(raiseerror)
++        if not ret:
++            return ret
++
++        self._is_classmethod = False
++
++        # A classmethod (or staticmethod) wrapping a property returns the value
++        # of the property on attribute access.  Retrieve the underlying property
++        # descriptor instead so that its docstring and signature are available.
++        for cls in inspect.getmro(self.parent):
++            if self.object_name in cls.__dict__:
++                obj = cls.__dict__[self.object_name]
++                if (isinstance(obj, (classmethod, staticmethod)) and
++                        inspect.isproperty(obj.__func__)):
++                    self.object = obj.__func__
++                    self._is_classmethod = isinstance(obj, classmethod)
++                break
++
++        return ret
++
+     def document_members(self, all_members: bool = False) -> None:
+         pass
+ 
+@@ -2675,6 +2696,8 @@ class PropertyDocumenter(DocstringStripSignatureMixin, ClassLevelDocumenter):  #
+         sourcename = self.get_sourcename()
+         if inspect.isabstractmethod(self.object):
+             self.add_line('   :abstractmethod:', sourcename)
++        if getattr(self, '_is_classmethod', False):
++            self.add_line('   :classmethod:', sourcename)
+ 
+         if safe_getattr(self.object, 'fget', None) and self.config.autodoc_typehints != 'none':
+             try:
+diff --git a/sphinx/ext/autodoc/importer.py b/sphinx/ext/autodoc/importer.py
+index 1a8ea0973..35721fe15 100644
+--- a/sphinx/ext/autodoc/importer.py
++++ b/sphinx/ext/autodoc/importer.py
+@@ -18,7 +18,7 @@ from sphinx.ext.autodoc.mock import ismock, undecorate
+ from sphinx.pycode import ModuleAnalyzer, PycodeError
+ from sphinx.util import logging
+ from sphinx.util.inspect import (getannotations, getmro, getslots, isclass, isenumclass,
+-                                 safe_getattr)
++                                 isproperty, safe_getattr)
+ 
+ if False:
+     # For type annotation
+@@ -280,6 +280,18 @@ def get_class_members(subject: Any, objpath: List[str], attrgetter: Callable
+ 
+             unmangled = unmangle(subject, name)
+             if unmangled and unmangled not in members:
++                # A classmethod (or staticmethod) wrapping a property returns the
++                # value of the property on attribute access.  Retrieve the
++                # underlying property descriptor instead so that it can be
++                # documented as a property.
++                for cls in getmro(subject):
++                    if name in cls.__dict__:
++                        raw = cls.__dict__[name]
++                        if (isinstance(raw, (classmethod, staticmethod)) and
++                                isproperty(raw.__func__)):
++                            value = raw.__func__
++                        break
++
+                 if name in obj_dict:
+                     members[unmangled] = ObjectMember(unmangled, value, class_=subject)
+                 else:

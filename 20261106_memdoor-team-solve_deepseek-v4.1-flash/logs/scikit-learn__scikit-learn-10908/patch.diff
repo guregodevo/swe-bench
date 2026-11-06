@@ -1,0 +1,30 @@
+diff --git a/sklearn/feature_extraction/tests/test_text.py b/sklearn/feature_extraction/tests/test_text.py
+index 22fbd3f17..55fba37ca 100644
+--- a/sklearn/feature_extraction/tests/test_text.py
++++ b/sklearn/feature_extraction/tests/test_text.py
+@@ -545,6 +545,11 @@ def test_feature_names():
+     # test for Value error on unfitted/empty vocabulary
+     assert_raises(ValueError, cv.get_feature_names)
+ 
++    # test that get_feature_names works without fitting when a vocabulary
++    # was provided to the constructor
++    cv_vocab = CountVectorizer(vocabulary=['a', 'b', 'c'])
++    assert_equal(['a', 'b', 'c'], cv_vocab.get_feature_names())
++
+     X = cv.fit_transform(ALL_FOOD_DOCS)
+     n_samples, n_features = X.shape
+     assert_equal(len(cv.vocabulary_), n_features)
+diff --git a/sklearn/feature_extraction/text.py b/sklearn/feature_extraction/text.py
+index 9b1ebd632..789e101cc 100644
+--- a/sklearn/feature_extraction/text.py
++++ b/sklearn/feature_extraction/text.py
+@@ -993,6 +993,9 @@ class CountVectorizer(BaseEstimator, VectorizerMixin):
+ 
+     def get_feature_names(self):
+         """Array mapping from feature integer indices to feature name"""
++        if not hasattr(self, 'vocabulary_'):
++            self._validate_vocabulary()
++
+         self._check_vocabulary()
+ 
+         return [t for t, i in sorted(six.iteritems(self.vocabulary_),

@@ -1,0 +1,50 @@
+diff --git a/django/forms/boundfield.py b/django/forms/boundfield.py
+index 2ff8b0ee26..2365559571 100755
+--- a/django/forms/boundfield.py
++++ b/django/forms/boundfield.py
+@@ -277,7 +277,12 @@ class BoundWidget:
+ 
+     @property
+     def id_for_label(self):
+-        return 'id_%s_%s' % (self.data['name'], self.data['index'])
++        """
++        Wrapper around the field widget's `id_for_label` method.
++        Useful, for example, for focusing on this subwidget when its label is
++        clicked.
++        """
++        return self.data['attrs'].get('id')
+ 
+     @property
+     def choice_label(self):
+diff --git a/tests/forms_tests/tests/test_forms.py b/tests/forms_tests/tests/test_forms.py
+index f3ee64ceda..287bb923a5 100755
+--- a/tests/forms_tests/tests/test_forms.py
++++ b/tests/forms_tests/tests/test_forms.py
+@@ -720,11 +720,26 @@ Java</label></li>
+         fields = list(BeatleForm(auto_id=False)['name'])
+         self.assertEqual(len(fields), 4)
+ 
+-        self.assertEqual(fields[0].id_for_label, 'id_name_0')
++        self.assertIsNone(fields[0].id_for_label)
+         self.assertEqual(fields[0].choice_label, 'John')
+         self.assertHTMLEqual(fields[0].tag(), '<option value="john">John</option>')
+         self.assertHTMLEqual(str(fields[0]), '<option value="john">John</option>')
+ 
++    def test_iterable_boundfield_id_custom_auto_id(self):
++        class BeatleForm(Form):
++            name = ChoiceField(
++                choices=[('john', 'John'), ('paul', 'Paul')],
++                widget=CheckboxSelectMultiple,
++            )
++
++        fields = list(BeatleForm(auto_id='%s_id')['name'])
++        self.assertEqual(fields[0].id_for_label, 'name_id_0')
++        self.assertHTMLEqual(
++            fields[0].tag(),
++            '<input type="checkbox" name="name" value="john" id="name_id_0">'
++        )
++        self.assertEqual(fields[1].id_for_label, 'name_id_1')
++
+     def test_form_with_noniterable_boundfield(self):
+         # You can iterate over any BoundField, not just those with widget=RadioSelect.
+         class BeatleForm(Form):

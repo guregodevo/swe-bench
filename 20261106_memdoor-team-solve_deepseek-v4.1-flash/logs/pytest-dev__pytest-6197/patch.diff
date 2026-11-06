@@ -1,0 +1,44 @@
+diff --git a/src/_pytest/python.py b/src/_pytest/python.py
+index 306e5f217..7e6391c67 100644
+--- a/src/_pytest/python.py
++++ b/src/_pytest/python.py
+@@ -639,7 +639,6 @@ class Package(Module):
+         return path in self.session._initialpaths
+ 
+     def collect(self):
+-        self._mount_obj_if_needed()
+         this_path = self.fspath.dirpath()
+         init_module = this_path.join("__init__.py")
+         if init_module.check(file=1) and path_matches_patterns(
+diff --git a/tmp_repro/foobar/__init__.py b/tmp_repro/foobar/__init__.py
+new file mode 100644
+index 000000000..2cfffa40d
+--- /dev/null
++++ b/tmp_repro/foobar/__init__.py
+@@ -0,0 +1 @@
++assert False
+diff --git a/tmp_repro/test_foo.py b/tmp_repro/test_foo.py
+new file mode 100644
+index 000000000..59124758b
+--- /dev/null
++++ b/tmp_repro/test_foo.py
+@@ -0,0 +1 @@
++def test_foo(): pass
+diff --git a/tmp_skip/__init__.py b/tmp_skip/__init__.py
+new file mode 100644
+index 000000000..a1edda5fb
+--- /dev/null
++++ b/tmp_skip/__init__.py
+@@ -0,0 +1,2 @@
++import pytest
++pytestmark = pytest.mark.skip
+diff --git a/tmp_skip/test_skip.py b/tmp_skip/test_skip.py
+new file mode 100644
+index 000000000..5a255d357
+--- /dev/null
++++ b/tmp_skip/test_skip.py
+@@ -0,0 +1,4 @@
++def test_skip1():
++    assert 0
++def test_skip2():
++    assert 0

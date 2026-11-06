@@ -1,0 +1,48 @@
+diff --git a/astropy/units/quantity.py b/astropy/units/quantity.py
+index b98abfafb..440512ac2 100644
+--- a/astropy/units/quantity.py
++++ b/astropy/units/quantity.py
+@@ -640,7 +640,23 @@ class Quantity(np.ndarray):
+         # input to that expected (e.g., radian for np.sin), or to get
+         # consistent units between two inputs (e.g., in np.add) --
+         # and the unit of the result (or tuple of units for nout > 1).
+-        converters, unit = converters_and_unit(function, method, *inputs)
++        # If an input is not a Quantity or ndarray but does implement the
++        # __array_ufunc__ protocol, it may be able to deal with the operation
++        # itself (e.g., a duck array with its own unit handling).  In that
++        # case, we should return NotImplemented rather than raising an error
++        # if we cannot determine the units ourselves, so that the other
++        # object gets a chance to handle the operation.
++        has_array_ufunc = any(
++            not isinstance(input_, (Quantity, np.ndarray))
++            and hasattr(input_, "__array_ufunc__")
++            for input_ in inputs
++        )
++        try:
++            converters, unit = converters_and_unit(function, method, *inputs)
++        except UnitConversionError:
++            if has_array_ufunc:
++                return NotImplemented
++            raise
+ 
+         out = kwargs.get("out", None)
+         # Avoid loop back by turning any Quantity output into array views.
+@@ -667,7 +683,17 @@ class Quantity(np.ndarray):
+         arrays = []
+         for input_, converter in zip(inputs, converters):
+             input_ = getattr(input_, "value", input_)
+-            arrays.append(converter(input_) if converter else input_)
++            if converter is None:
++                arrays.append(input_)
++                continue
++            try:
++                arrays.append(converter(input_))
++            except (TypeError, ValueError):
++                # The input could not be converted, possibly because it is a
++                # duck array that does its own unit conversion.  Let it try.
++                if has_array_ufunc:
++                    return NotImplemented
++                raise
+ 
+         # Call our superclass's __array_ufunc__
+         result = super().__array_ufunc__(function, method, *arrays, **kwargs)

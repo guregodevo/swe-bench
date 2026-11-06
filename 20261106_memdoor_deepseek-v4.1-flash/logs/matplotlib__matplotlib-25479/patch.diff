@@ -1,0 +1,44 @@
+diff --git a/lib/matplotlib/cm.py b/lib/matplotlib/cm.py
+index 38158db956..e38e34adb6 100644
+--- a/lib/matplotlib/cm.py
++++ b/lib/matplotlib/cm.py
+@@ -146,6 +146,9 @@ class ColormapRegistry(Mapping):
+                                "that was already in the registry.")
+ 
+         self._cmaps[name] = cmap.copy()
++        # This is to ensure that the colormap name is consistent with the
++        # registered name.
++        self._cmaps[name].name = name
+ 
+     def unregister(self, name):
+         """
+diff --git a/lib/matplotlib/tests/test_colors.py b/lib/matplotlib/tests/test_colors.py
+index 2e841699cd..2f9d7cc747 100644
+--- a/lib/matplotlib/tests/test_colors.py
++++ b/lib/matplotlib/tests/test_colors.py
+@@ -80,6 +80,8 @@ def test_register_cmap():
+             match=r"matplotlib\.colormaps\.register\(name\)"
+     ):
+         cm.register_cmap(target, new_cm)
++    assert mpl.colormaps[target].name == target
++    new_cm.name = target
+     assert mpl.colormaps[target] == new_cm
+ 
+     with pytest.raises(ValueError,
+@@ -1649,3 +1651,16 @@ def test_cm_set_cmap_error():
+     bad_cmap = 'AardvarksAreAwkward'
+     with pytest.raises(ValueError, match=bad_cmap):
+         sm.set_cmap(bad_cmap)
++
++
++def test_register_cmap_name_mismatch():
++    # The registered name should be used, even if it differs from cmap.name.
++    cmap = mpl.colors.LinearSegmentedColormap.from_list(
++        "some_cmap_name", [[0, 0, 0], [1, 1, 1]])
++    mpl.colormaps.register(cmap, name="my_cmap_name")
++    try:
++        assert mpl.colormaps["my_cmap_name"].name == "my_cmap_name"
++        sm = cm.ScalarMappable(cmap="my_cmap_name")
++        assert sm.get_cmap().name == "my_cmap_name"
++    finally:
++        mpl.colormaps.unregister("my_cmap_name")

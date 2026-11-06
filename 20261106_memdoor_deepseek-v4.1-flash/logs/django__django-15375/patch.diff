@@ -1,0 +1,30 @@
+diff --git a/django/db/models/aggregates.py b/django/db/models/aggregates.py
+index 8c4eae7906..bc31b48d8d 100644
+--- a/django/db/models/aggregates.py
++++ b/django/db/models/aggregates.py
+@@ -65,7 +65,9 @@ class Aggregate(Func):
+         if hasattr(default, 'resolve_expression'):
+             default = default.resolve_expression(query, allow_joins, reuse, summarize)
+         c.default = None  # Reset the default argument before wrapping.
+-        return Coalesce(c, default, output_field=c._output_field_or_none)
++        coalesce = Coalesce(c, default, output_field=c._output_field_or_none)
++        coalesce.is_summary = c.is_summary
++        return coalesce
+ 
+     @property
+     def default_alias(self):
+diff --git a/tests/aggregation/tests.py b/tests/aggregation/tests.py
+index 87ae945a7e..7e73f3e0b2 100644
+--- a/tests/aggregation/tests.py
++++ b/tests/aggregation/tests.py
+@@ -1464,6 +1464,10 @@ class AggregateTestCase(TestCase):
+                 )
+                 self.assertEqual(result['value'], 0)
+ 
++    def test_aggregation_default_after_annotate(self):
++        result = Book.objects.annotate(idx=F('id')).aggregate(Sum('id', default=0))
++        self.assertEqual(result['id__sum'], sum(range(1, 7)))
++
+     def test_aggregation_default_integer(self):
+         for Aggregate in [Avg, Max, Min, StdDev, Sum, Variance]:
+             with self.subTest(Aggregate):

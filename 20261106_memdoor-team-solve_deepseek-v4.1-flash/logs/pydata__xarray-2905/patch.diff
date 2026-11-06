@@ -1,0 +1,48 @@
+diff --git a/doc/whats-new.rst b/doc/whats-new.rst
+index 277c32b1..f6b1ee2a 100644
+--- a/doc/whats-new.rst
++++ b/doc/whats-new.rst
+@@ -90,6 +90,9 @@ New Features
+ 
+ Bug fixes
+ ~~~~~~~~~
++- :py:class:`Variable` no longer coerces objects with a ``values`` attribute
++  (e.g. ``lmfit.ModelResult``) to the value of that attribute when assigning
++  them into object-dtype arrays (:issue:`1749`).
+ - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
+ - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
+ - By default, when possible, xarray will now always use values of type ``int64`` when encoding
+diff --git a/xarray/core/variable.py b/xarray/core/variable.py
+index 45553eb9..7ca90d6b 100644
+--- a/xarray/core/variable.py
++++ b/xarray/core/variable.py
+@@ -218,7 +218,8 @@ def as_compatible_data(data, fastpath=False):
+         data = np.timedelta64(getattr(data, "value", data), "ns")
+ 
+     # we don't want nested self-described arrays
+-    data = getattr(data, "values", data)
++    if isinstance(data, (pd.Series, pd.Index, pd.DataFrame)):
++        data = data.values
+ 
+     if isinstance(data, np.ma.MaskedArray):
+         mask = np.ma.getmaskarray(data)
+diff --git a/xarray/tests/test_variable.py b/xarray/tests/test_variable.py
+index e1ae3e1f..51f0a39c 100644
+--- a/xarray/tests/test_variable.py
++++ b/xarray/tests/test_variable.py
+@@ -2186,6 +2186,15 @@ class TestAsCompatibleData:
+             assert np.ndarray == type(actual)
+             assert np.asarray(input_array).dtype == actual.dtype
+ 
++    def test_objects_with_values_attribute(self):
++        class HasValues:
++            values = 5
++
++        obj = HasValues()
++        actual = as_compatible_data(obj)
++        assert actual.dtype == object
++        assert actual[()] is obj
++
+     def test_masked_array(self):
+         original = np.ma.MaskedArray(np.arange(5))
+         expected = np.arange(5)

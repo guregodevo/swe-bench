@@ -1,0 +1,85 @@
+diff --git a/django/core/serializers/base.py b/django/core/serializers/base.py
+index da85cb4b92..517d2cad85 100644
+--- a/django/core/serializers/base.py
++++ b/django/core/serializers/base.py
+@@ -336,7 +336,9 @@ def build_instance(Model, data, db):
+         and hasattr(default_manager, "get_by_natural_key")
+         and hasattr(Model, "natural_key")
+     ):
+-        natural_key = Model(**data).natural_key()
++        obj = Model(**data)
++        obj._state.db = db
++        natural_key = obj.natural_key()
+         try:
+             data[Model._meta.pk.attname] = Model._meta.pk.to_python(
+                 default_manager.db_manager(db).get_by_natural_key(*natural_key).pk
+diff --git a/tests/serializers/models/natural.py b/tests/serializers/models/natural.py
+index 1e439b34eb..b9bdcdcb30 100644
+--- a/tests/serializers/models/natural.py
++++ b/tests/serializers/models/natural.py
+@@ -23,6 +23,23 @@ class FKDataNaturalKey(models.Model):
+     data = models.ForeignKey(NaturalKeyAnchor, models.SET_NULL, null=True)
+ 
+ 
++class NaturalKeyWithFkManager(models.Manager):
++    def get_by_natural_key(self, key, data):
++        return self.get(key=key, data__data=data)
++
++
++class NaturalKeyWithFk(models.Model):
++    key = models.CharField(max_length=100, unique=True)
++    data = models.ForeignKey(NaturalKeyAnchor, models.CASCADE)
++
++    objects = NaturalKeyWithFkManager()
++
++    def natural_key(self):
++        return (self.key,) + self.data.natural_key()
++
++    natural_key.dependencies = ["serializers.naturalkeyanchor"]
++
++
+ class NaturalKeyThing(models.Model):
+     key = models.CharField(max_length=100, unique=True)
+     other_thing = models.ForeignKey(
+diff --git a/tests/serializers/test_natural.py b/tests/serializers/test_natural.py
+index 6b6cfae6f3..15d7bd6c59 100644
+--- a/tests/serializers/test_natural.py
++++ b/tests/serializers/test_natural.py
+@@ -8,6 +8,7 @@ from .models import (
+     FKDataNaturalKey,
+     NaturalKeyAnchor,
+     NaturalKeyThing,
++    NaturalKeyWithFk,
+     NaturalPKWithDefault,
+ )
+ from .tests import register_tests
+@@ -17,6 +18,29 @@ class NaturalKeySerializerTests(TestCase):
+     pass
+ 
+ 
++class NaturalKeyMultiDatabaseTests(TestCase):
++    databases = {"default", "other"}
++
++    def test_deserialize_natural_key_with_fk_using_other_database(self):
++        anchor = NaturalKeyAnchor.objects.using("other").create(data="anchor")
++        obj = NaturalKeyWithFk.objects.using("other").create(key="key", data=anchor)
++        serialized_data = serializers.serialize(
++            "json",
++            [anchor, obj],
++            use_natural_foreign_keys=True,
++            use_natural_primary_keys=True,
++        )
++        # The related object only exists in the "other" database.
++        self.assertFalse(NaturalKeyAnchor.objects.using("default").exists())
++        deserialized = list(
++            serializers.deserialize("json", serialized_data, using="other")
++        )
++        self.assertEqual(len(deserialized), 2)
++        for obj in deserialized:
++            obj.save(using="other")
++        self.assertEqual(deserialized[1].object.data, anchor)
++
++
+ def natural_key_serializer_test(self, format):
+     # Create all the objects defined in the test data
+     with connection.constraint_checks_disabled():

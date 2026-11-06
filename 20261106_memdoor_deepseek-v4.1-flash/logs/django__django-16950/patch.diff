@@ -1,0 +1,49 @@
+diff --git a/django/forms/models.py b/django/forms/models.py
+index 3fa04b821f..50c8d87265 100644
+--- a/django/forms/models.py
++++ b/django/forms/models.py
+@@ -1177,7 +1177,9 @@ class BaseInlineFormSet(BaseModelFormSet):
+                 to_field = self.instance._meta.get_field(kwargs["to_field"])
+             else:
+                 to_field = self.instance._meta.pk
+-            if to_field.has_default():
++            if to_field.has_default() and (
++                to_field.attname == self.instance._meta.pk.attname
++            ):
+                 setattr(self.instance, to_field.attname, None)
+ 
+         form.fields[name] = InlineForeignKeyField(self.instance, **kwargs)
+diff --git a/tests/model_formsets/test_uuid.py b/tests/model_formsets/test_uuid.py
+index 2097bde82b..2e286e7fb7 100644
+--- a/tests/model_formsets/test_uuid.py
++++ b/tests/model_formsets/test_uuid.py
+@@ -90,4 +90,28 @@ class InlineFormsetTests(TestCase):
+             ParentWithUUIDAlternateKey, ChildRelatedViaAK, fields="__all__"
+         )
+         formset = FormSet()
+-        self.assertIsNone(formset.forms[0].fields["parent"].initial)
++        self.assertIsNotNone(formset.forms[0].fields["parent"].initial)
++
++    def test_inlineformset_factory_alternate_key_relation_saves_parent(self):
++        """
++        A parent's alternate key with a default isn't cleared when saving an
++        inline formset for a new parent (#32156).
++        """
++        FormSet = inlineformset_factory(
++            ParentWithUUIDAlternateKey, ChildRelatedViaAK, fields="__all__"
++        )
++        parent = ParentWithUUIDAlternateKey(name="foo")
++        formset = FormSet(
++            {
++                "childrelatedviaak_set-TOTAL_FORMS": "1",
++                "childrelatedviaak_set-INITIAL_FORMS": "0",
++                "childrelatedviaak_set-MAX_NUM_FORMS": "",
++                "childrelatedviaak_set-0-name": "bar",
++            },
++            instance=parent,
++        )
++        self.assertIsNotNone(parent.uuid)
++        self.assertTrue(formset.is_valid())
++        parent.save()
++        formset.save()
++        self.assertEqual(ChildRelatedViaAK.objects.get().parent_id, parent.uuid)

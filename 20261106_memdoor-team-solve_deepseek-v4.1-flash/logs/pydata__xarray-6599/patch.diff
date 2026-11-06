@@ -1,0 +1,180 @@
+diff --git a/doc/whats-new.rst b/doc/whats-new.rst
+index 6cba8563..80b934b1 100644
+--- a/doc/whats-new.rst
++++ b/doc/whats-new.rst
+@@ -93,6 +93,9 @@ Deprecations
+ Bug fixes
+ ~~~~~~~~~
+ 
++- Fix ``polyval`` with ``timedelta64`` and ``cftime`` coordinates, which
++  returned incorrect results or raised an error (:issue:`6603`).
++  By `Michael Niklas <https://github.com/headtr1ck>`_.
+ - Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
+   ensure it skips missing values for float dtypes (consistent with other methods). This should
+   not change the behavior (:pull:`6303`).
+diff --git a/xarray/core/computation.py b/xarray/core/computation.py
+index 823cbe02..ff40bf9d 100644
+--- a/xarray/core/computation.py
++++ b/xarray/core/computation.py
+@@ -1909,7 +1909,7 @@ def polyval(
+ 
+     # using Horner's method
+     # https://en.wikipedia.org/wiki/Horner%27s_method
+-    res = coeffs.isel({degree_dim: max_deg}, drop=True) + zeros_like(coord)
++    res = zeros_like(coord) + coeffs.isel({degree_dim: max_deg}, drop=True)
+     for deg in range(max_deg - 1, -1, -1):
+         res *= coord
+         res += coeffs.isel({degree_dim: deg}, drop=True)
+@@ -1932,15 +1932,29 @@ def _ensure_numeric(data: T_Xarray) -> T_Xarray:
+     """
+     from .dataset import Dataset
+ 
++    def _cfoffset(x: DataArray) -> Any:
++        scalar = x.compute().data[0]
++        if not utils.is_scalar(scalar):
++            # we do not get a scalar back on dask == 2021.04.1
++            scalar = scalar.item()
++        return type(scalar)(1970, 1, 1)
++
+     def to_floatable(x: DataArray) -> DataArray:
+-        if x.dtype.kind in "mM":
++        if x.dtype.kind in "MO":
++            # datetimes (CFIndexes are object type)
++            offset = (
++                np.datetime64("1970-01-01") if x.dtype.kind == "M" else _cfoffset(x)
++            )
+             return x.copy(
+                 data=datetime_to_numeric(
+                     x.data,
+-                    offset=np.datetime64("1970-01-01"),
++                    offset=offset,
+                     datetime_unit="ns",
+                 ),
+             )
++        elif x.dtype.kind == "m":
++            # timedeltas
++            return duck_array_ops.astype(x, dtype=float)
+         return x
+ 
+     if isinstance(data, Dataset):
+diff --git a/xarray/core/duck_array_ops.py b/xarray/core/duck_array_ops.py
+index 253a68b7..528cf158 100644
+--- a/xarray/core/duck_array_ops.py
++++ b/xarray/core/duck_array_ops.py
+@@ -431,7 +431,14 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
+     # Compute timedelta object.
+     # For np.datetime64, this can silently yield garbage due to overflow.
+     # One option is to enforce 1970-01-01 as the universal offset.
+-    array = array - offset
++
++    # This map_blocks call is for backwards compatibility.
++    # dask == 2021.04.1 does not support subtracting object arrays
++    # which is required for cftime
++    if is_duck_dask_array(array) and array.dtype.kind in "O":
++        array = array.map_blocks(lambda a, b: a - b, offset, meta=array._meta)
++    else:
++        array = array - offset
+ 
+     # Scalar is converted to 0d-array
+     if not hasattr(array, "dtype"):
+@@ -517,10 +524,22 @@ def pd_timedelta_to_float(value, datetime_unit):
+     return np_timedelta64_to_float(value, datetime_unit)
+ 
+ 
++def _timedelta_to_seconds(array):
++    if isinstance(array, datetime.timedelta):
++        return array.total_seconds() * 1e6
++    else:
++        return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
++
++
+ def py_timedelta_to_float(array, datetime_unit):
+     """Convert a timedelta object to a float, possibly at a loss of resolution."""
+-    array = np.asarray(array)
+-    array = np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
++    array = asarray(array)
++    if is_duck_dask_array(array):
++        array = array.map_blocks(
++            _timedelta_to_seconds, meta=np.array([], dtype=np.float64)
++        )
++    else:
++        array = _timedelta_to_seconds(array)
+     conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
+     return conversion_factor * array
+ 
+diff --git a/xarray/tests/test_computation.py b/xarray/tests/test_computation.py
+index 737ed82b..f16e3be4 100644
+--- a/xarray/tests/test_computation.py
++++ b/xarray/tests/test_computation.py
+@@ -26,7 +26,7 @@ from xarray.core.computation import (
+ from xarray.core.pycompat import dask_version
+ from xarray.core.types import T_Xarray
+ 
+-from . import has_dask, raise_if_dask_computes, requires_dask
++from . import has_dask, raise_if_dask_computes, requires_cftime, requires_dask
+ 
+ 
+ def assert_identical(a, b):
+@@ -1951,7 +1951,7 @@ def test_where_attrs() -> None:
+             xr.DataArray(
+                 [[0, 1], [0, 1]], dims=("y", "degree"), coords={"degree": [0, 1]}
+             ),
+-            xr.DataArray([[1, 2, 3], [1, 2, 3]], dims=("y", "x")),
++            xr.DataArray([[1, 1], [2, 2], [3, 3]], dims=("x", "y")),
+             id="broadcast-x",
+         ),
+         pytest.param(
+@@ -2010,6 +2010,12 @@ def test_where_attrs() -> None:
+             ),
+             id="datetime",
+         ),
++        pytest.param(
++            xr.DataArray(np.array([0, 1, 2], dtype="timedelta64[ns]"), dims="x"),
++            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
++            xr.DataArray([0, 1, 2], dims="x"),
++            id="timedelta",
++        ),
+     ],
+ )
+ def test_polyval(
+@@ -2028,6 +2034,40 @@ def test_polyval(
+     xr.testing.assert_allclose(actual, expected)
+ 
+ 
++@requires_cftime
++@pytest.mark.parametrize("use_dask", [False, True])
++@pytest.mark.parametrize("date", ["1970-01-01", "0753-04-21"])
++def test_polyval_cftime(use_dask: bool, date: str) -> None:
++    import cftime
++
++    x = xr.DataArray(
++        xr.date_range(date, freq="1S", periods=3, use_cftime=True),
++        dims="x",
++    )
++    coeffs = xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]})
++
++    if use_dask:
++        if not has_dask:
++            pytest.skip("requires dask")
++        coeffs = coeffs.chunk({"degree": 2})
++        x = x.chunk({"x": 2})
++
++    with raise_if_dask_computes(max_computes=1):
++        actual = xr.polyval(coord=x, coeffs=coeffs)
++
++    t0 = xr.date_range(date, periods=1)[0]
++    offset = (t0 - cftime.DatetimeGregorian(1970, 1, 1)).total_seconds() * 1e9
++    expected = (
++        xr.DataArray(
++            [0, 1e9, 2e9],
++            dims="x",
++            coords={"x": xr.date_range(date, freq="1S", periods=3, use_cftime=True)},
++        )
++        + offset
++    )
++    xr.testing.assert_allclose(actual, expected)
++
++
+ def test_polyval_degree_dim_checks():
+     x = (xr.DataArray([1, 2, 3], dims="x"),)
+     coeffs = xr.DataArray([2, 3, 4], dims="degree", coords={"degree": [0, 1, 2]})

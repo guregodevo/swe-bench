@@ -1,0 +1,85 @@
+diff --git a/CHANGES b/CHANGES
+index e30d42e43..054acb67a 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -35,6 +35,7 @@ Bugs fixed
+ * #8142: autodoc: Wrong constructor signature for the class derived from
+   typing.Generic
+ * #8157: autodoc: TypeError is raised when annotation has invalid __args__
++* #7872: autodoc: Default values of tuple are not shown correctly
+ * #8192: napoleon: description is disappeared when it contains inline literals
+ * #8142: napoleon: Potential of regex denial of service in google style docs
+ * #8169: LaTeX: pxjahyper loaded even when latex_engine is not platex
+diff --git a/sphinx/pycode/ast.py b/sphinx/pycode/ast.py
+index 9bafff11c..218699a64 100644
+--- a/sphinx/pycode/ast.py
++++ b/sphinx/pycode/ast.py
+@@ -166,14 +166,28 @@ class _UnparseVisitor(ast.NodeVisitor):
+         return "{" + ", ".join(self.visit(e) for e in node.elts) + "}"
+ 
+     def visit_Subscript(self, node: ast.Subscript) -> str:
+-        return "%s[%s]" % (self.visit(node.value), self.visit(node.slice))
++        def is_simple_tuple(value: ast.AST) -> bool:
++            return (
++                isinstance(value, ast.Tuple) and
++                bool(value.elts) and
++                not any(isinstance(elt, ast.Starred) for elt in value.elts)
++            )
++
++        if is_simple_tuple(node.slice):
++            elts = ", ".join(self.visit(e) for e in node.slice.elts)
++            return "%s[%s]" % (self.visit(node.value), elts)
++        else:
++            return "%s[%s]" % (self.visit(node.value), self.visit(node.slice))
+ 
+     def visit_UnaryOp(self, node: ast.UnaryOp) -> str:
+         return "%s %s" % (self.visit(node.op), self.visit(node.operand))
+ 
+     def visit_Tuple(self, node: ast.Tuple) -> str:
+         if node.elts:
+-            return ", ".join(self.visit(e) for e in node.elts)
++            if len(node.elts) == 1:
++                return "(%s,)" % self.visit(node.elts[0])
++            else:
++                return "(%s)" % ", ".join(self.visit(e) for e in node.elts)
+         else:
+             return "()"
+ 
+diff --git a/tests/test_pycode_ast.py b/tests/test_pycode_ast.py
+index 9b12d24d5..bd2d1fe7e 100644
+--- a/tests/test_pycode_ast.py
++++ b/tests/test_pycode_ast.py
+@@ -53,7 +53,8 @@ from sphinx.pycode import ast
+     ("+ a", "+ a"),                             # UAdd
+     ("- 1", "- 1"),                             # UnaryOp
+     ("- a", "- a"),                             # USub
+-    ("(1, 2, 3)", "1, 2, 3"),                   # Tuple
++    ("(1, 2, 3)", "(1, 2, 3)"),                 # Tuple
++    ("(1,)", "(1,)"),                           # Tuple (single element)
+     ("()", "()"),                               # Tuple (empty)
+ ])
+ def test_unparse(source, expected):
+diff --git a/tests/test_util_inspect.py b/tests/test_util_inspect.py
+index c21eaaa16..4357e8df6 100644
+--- a/tests/test_util_inspect.py
++++ b/tests/test_util_inspect.py
+@@ -292,7 +292,8 @@ def test_signature_from_str_basic():
+ def test_signature_from_str_default_values():
+     signature = ('(a=0, b=0.0, c="str", d=b"bytes", e=..., f=True, '
+                  'g=[1, 2, 3], h={"a": 1}, i={1, 2, 3}, '
+-                 'j=lambda x, y: None, k=None, l=object(), m=foo.bar.CONSTANT)')
++                 'j=lambda x, y: None, k=None, l=object(), m=foo.bar.CONSTANT, '
++                 'n=(1, 2, 3), o=(1,), p=())')
+     sig = inspect.signature_from_str(signature)
+     assert sig.parameters['a'].default == '0'
+     assert sig.parameters['b'].default == '0.0'
+@@ -307,6 +308,9 @@ def test_signature_from_str_default_values():
+     assert sig.parameters['k'].default == 'None'
+     assert sig.parameters['l'].default == 'object()'
+     assert sig.parameters['m'].default == 'foo.bar.CONSTANT'
++    assert sig.parameters['n'].default == '(1, 2, 3)'
++    assert sig.parameters['o'].default == '(1,)'
++    assert sig.parameters['p'].default == '()'
+ 
+ 
+ def test_signature_from_str_annotations():

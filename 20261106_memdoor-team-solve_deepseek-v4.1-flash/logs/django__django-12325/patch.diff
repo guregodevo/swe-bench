@@ -1,0 +1,63 @@
+diff --git a/django/db/models/base.py b/django/db/models/base.py
+index 8ea6c05ef9..24a811b824 100644
+--- a/django/db/models/base.py
++++ b/django/db/models/base.py
+@@ -204,7 +204,12 @@ class ModelBase(type):
+             for field in base._meta.local_fields:
+                 if isinstance(field, OneToOneField):
+                     related = resolve_relation(new_class, field.remote_field.model)
+-                    parent_links[make_model_tuple(related)] = field
++                    related = make_model_tuple(related)
++                    # Use the field explicitly marked as the parent link,
++                    # regardless of its position relative to other
++                    # OneToOneFields pointing to the same model.
++                    if related not in parent_links or field.remote_field.parent_link:
++                        parent_links[related] = field
+ 
+         # Track fields inherited from base models.
+         inherited_attributes = set()
+diff --git a/tests/model_inheritance/tests.py b/tests/model_inheritance/tests.py
+index 5eef0f5bfa..d584a53f4e 100644
+--- a/tests/model_inheritance/tests.py
++++ b/tests/model_inheritance/tests.py
+@@ -174,6 +174,40 @@ class ModelInheritanceTests(TestCase):
+ 
+         self.assertIs(C._meta.parents[A], C._meta.get_field('a'))
+ 
++    @isolate_apps('model_inheritance')
++    def test_parent_link_with_other_one_to_one_field(self):
++        class A(models.Model):
++            pass
++
++        class ParentLinkFirst(A):
++            a = models.OneToOneField(
++                A,
++                on_delete=models.CASCADE,
++                parent_link=True,
++                related_name='+',
++            )
++            other = models.OneToOneField(
++                A,
++                on_delete=models.CASCADE,
++                related_name='+',
++            )
++
++        class ParentLinkLast(A):
++            other = models.OneToOneField(
++                A,
++                on_delete=models.CASCADE,
++                related_name='+',
++            )
++            a = models.OneToOneField(
++                A,
++                on_delete=models.CASCADE,
++                parent_link=True,
++                related_name='+',
++            )
++
++        self.assertIs(ParentLinkFirst._meta.parents[A], ParentLinkFirst._meta.get_field('a'))
++        self.assertIs(ParentLinkLast._meta.parents[A], ParentLinkLast._meta.get_field('a'))
++
+     @isolate_apps('model_inheritance')
+     def test_init_subclass(self):
+         saved_kwargs = {}

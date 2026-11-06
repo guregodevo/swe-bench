@@ -1,0 +1,84 @@
+diff --git a/sympy/printing/pycode.py b/sympy/printing/pycode.py
+index b669a2c783..71e36316bd 100644
+--- a/sympy/printing/pycode.py
++++ b/sympy/printing/pycode.py
+@@ -234,7 +234,7 @@ def _print_ComplexInfinity(self, expr):
+ 
+     def _print_Mod(self, expr):
+         PREC = precedence(expr)
+-        return ('{} % {}'.format(*map(lambda x: self.parenthesize(x, PREC), expr.args)))
++        return ('({} % {})'.format(*map(lambda x: self.parenthesize(x, PREC), expr.args)))
+ 
+     def _print_Piecewise(self, expr):
+         result = []
+diff --git a/sympy/printing/tests/test_pycode.py b/sympy/printing/tests/test_pycode.py
+index cf18825eb1..eb4d9c01c4 100644
+--- a/sympy/printing/tests/test_pycode.py
++++ b/sympy/printing/tests/test_pycode.py
+@@ -29,7 +29,10 @@ def test_PythonCodePrinter():
+     assert not prntr.module_imports
+ 
+     assert prntr.doprint(x**y) == 'x**y'
+-    assert prntr.doprint(Mod(x, 2)) == 'x % 2'
++    assert prntr.doprint(Mod(x, 2)) == '(x % 2)'
++    assert prntr.doprint(-Mod(x, y)) == '-(x % y)'
++    assert prntr.doprint(2*Mod(x, y)) == '2*(x % y)'
++    assert prntr.doprint(x*Mod(y, 2)) == 'x*(y % 2)'
+     assert prntr.doprint(And(x, y)) == 'x and y'
+     assert prntr.doprint(Or(x, y)) == 'x or y'
+     assert not prntr.module_imports
+@@ -221,7 +224,7 @@ def test_frac():
+     assert prntr.doprint(expr) == 'numpy.mod(x, 1)'
+ 
+     prntr = PythonCodePrinter()
+-    assert prntr.doprint(expr) == 'x % 1'
++    assert prntr.doprint(expr) == '(x % 1)'
+ 
+     prntr = MpmathPrinter()
+     assert prntr.doprint(expr) == 'mpmath.frac(x)'
+diff --git a/sympy/utilities/tests/test_lambdify.py b/sympy/utilities/tests/test_lambdify.py
+index e25986b4a0..9cffc7d216 100644
+--- a/sympy/utilities/tests/test_lambdify.py
++++ b/sympy/utilities/tests/test_lambdify.py
+@@ -8,7 +8,7 @@
+     symbols, lambdify, sqrt, sin, cos, tan, pi, acos, acosh, Rational,
+     Float, Lambda, Piecewise, exp, E, Integral, oo, I, Abs, Function,
+     true, false, And, Or, Not, ITE, Min, Max, floor, diff, IndexedBase, Sum,
+-    DotProduct, Eq, Dummy, sinc, erf, erfc, factorial, gamma, loggamma,
++    DotProduct, Eq, Dummy, sinc, erf, erfc, factorial, gamma, loggamma, Mod,
+     digamma, RisingFactorial, besselj, bessely, besseli, besselk, S, beta,
+     betainc, betainc_regularized, fresnelc, fresnels)
+ from sympy.codegen.cfunctions import expm1, log1p, exp2, log2, log10, hypot
+@@ -1152,6 +1152,32 @@ def test_lambdify_inspect():
+     assert 'x**2' in inspect.getsource(f)
+ 
+ 
++def test_lambdify_Mod():
++    # The modulus must be parenthesized so that a surrounding factor isn't
++    # moved into the first argument of Mod (issue #21884).
++    expr = -Mod(x, y)
++    for modules in (None, []):
++        f = lambdify([x, y], expr, modules=modules)
++        assert f(3, 7) == -3
++        assert f(-3, 7) == -4
++        assert '-(x % y)' in inspect.getsource(f)
++
++    expr = 2*Mod(x, y)
++    for modules in (None, []):
++        f = lambdify([x, y], expr, modules=modules)
++        assert f(3, 7) == 6
++        assert f(-3, 7) == 8
++        assert f(8, 3) == 4
++        assert '2*(x % y)' in inspect.getsource(f)
++
++    expr = x*Mod(y, 2)
++    for modules in (None, []):
++        f = lambdify([x, y], expr, modules=modules)
++        assert f(5, 3) == 5
++        assert f(5, 4) == 0
++        assert 'x*(y % 2)' in inspect.getsource(f)
++
++
+ def test_issue_14941():
+     x, y = Dummy(), Dummy()
+ 

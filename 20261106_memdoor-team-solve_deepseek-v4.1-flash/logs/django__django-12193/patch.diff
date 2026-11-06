@@ -1,0 +1,69 @@
+diff --git a/django/contrib/postgres/forms/array.py b/django/contrib/postgres/forms/array.py
+index 2e19cd574a..fb1a836896 100644
+--- a/django/contrib/postgres/forms/array.py
++++ b/django/contrib/postgres/forms/array.py
+@@ -144,10 +144,11 @@ class SplitArrayWidget(forms.Widget):
+                 widget_value = value[i]
+             except IndexError:
+                 widget_value = None
++            widget_attrs = final_attrs.copy()
+             if id_:
+-                final_attrs = {**final_attrs, 'id': '%s_%s' % (id_, i)}
++                widget_attrs['id'] = '%s_%s' % (id_, i)
+             context['widget']['subwidgets'].append(
+-                self.widget.get_context(name + '_%s' % i, widget_value, final_attrs)['widget']
++                self.widget.get_context(name + '_%s' % i, widget_value, widget_attrs)['widget']
+             )
+         return context
+ 
+diff --git a/django/forms/widgets.py b/django/forms/widgets.py
+index 6fe220bea7..d83d63c169 100644
+--- a/django/forms/widgets.py
++++ b/django/forms/widgets.py
+@@ -522,9 +522,7 @@ class CheckboxInput(Input):
+ 
+     def get_context(self, name, value, attrs):
+         if self.check_test(value):
+-            if attrs is None:
+-                attrs = {}
+-            attrs['checked'] = True
++            attrs = {**(attrs or {}), 'checked': True}
+         return super().get_context(name, value, attrs)
+ 
+     def value_from_datadict(self, data, files, name):
+diff --git a/tests/forms_tests/widget_tests/test_checkboxinput.py b/tests/forms_tests/widget_tests/test_checkboxinput.py
+index 6483b7f211..3c4bf79a1c 100644
+--- a/tests/forms_tests/widget_tests/test_checkboxinput.py
++++ b/tests/forms_tests/widget_tests/test_checkboxinput.py
+@@ -44,6 +44,12 @@ class CheckboxInputTest(WidgetTest):
+             html='<input checked type="checkbox" name="is_cool" value="1">',
+         )
+ 
++    def test_get_context_does_not_mutate_attrs(self):
++        attrs = {'id': 'is_cool'}
++        context = self.widget.get_context('is_cool', True, attrs)
++        self.assertIs(context['widget']['attrs']['checked'], True)
++        self.assertEqual(attrs, {'id': 'is_cool'})
++
+     def test_render_check_test(self):
+         """
+         You can pass 'check_test' to the constructor. This is a callable that
+diff --git a/tests/postgres_tests/test_array.py b/tests/postgres_tests/test_array.py
+index 481d93f830..53a7cbb0aa 100644
+--- a/tests/postgres_tests/test_array.py
++++ b/tests/postgres_tests/test_array.py
+@@ -1112,6 +1112,14 @@ class TestSplitFormWidget(PostgreSQLWidgetTestCase):
+             """
+         )
+ 
++    def test_get_context_does_not_mutate_attrs(self):
++        widget = SplitArrayWidget(forms.CheckboxInput(), size=3)
++        context = widget.get_context('name', [True, False, False])
++        subwidgets = context['widget']['subwidgets']
++        self.assertIs(subwidgets[0]['attrs']['checked'], True)
++        self.assertNotIn('checked', subwidgets[1]['attrs'])
++        self.assertNotIn('checked', subwidgets[2]['attrs'])
++
+     def test_render_attrs(self):
+         self.check_html(
+             SplitArrayWidget(forms.TextInput(), size=2),

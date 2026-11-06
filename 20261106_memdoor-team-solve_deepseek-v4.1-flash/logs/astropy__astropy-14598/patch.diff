@@ -1,0 +1,42 @@
+diff --git a/astropy/io/fits/card.py b/astropy/io/fits/card.py
+index 1b3285ddc..07672fcf8 100644
+--- a/astropy/io/fits/card.py
++++ b/astropy/io/fits/card.py
+@@ -859,7 +859,11 @@ class Card(_Verify):
+                     return kw, vc
+ 
+                 value = m.group("strg") or ""
+-                value = value.rstrip().replace("''", "'")
++                # Keep the escaped quotes ('' for a single quote) intact here;
++                # they are unescaped once when the joined value is parsed.
++                # Unescaping each subcard separately would corrupt values
++                # where a doubled quote is split across CONTINUE cards.
++                value = value.rstrip()
+                 if value and value[-1] == "&":
+                     value = value[:-1]
+                 values.append(value)
+diff --git a/astropy/io/fits/tests/test_header.py b/astropy/io/fits/tests/test_header.py
+index c573100c9..ab037825f 100644
+--- a/astropy/io/fits/tests/test_header.py
++++ b/astropy/io/fits/tests/test_header.py
+@@ -602,6 +602,20 @@ class TestHeaderFunctions(FitsTestCase):
+         )
+         assert c.comment == "pysyn expression"
+ 
++    def test_continue_card_with_escaped_quotes(self):
++        """
++        Regression test for https://github.com/astropy/astropy/issues/14577
++
++        Doubled single quotes (the FITS escape for a single quote) must not be
++        unescaped separately for each CONTINUE card, since a doubled quote can
++        be split across two cards.
++        """
++        for n in range(50, 80):
++            for value in ("x" * n + "''", "x" * n + "''" + "x" * 10):
++                card = fits.Card("CONFIG", value)
++                new_card = fits.Card.fromstring(str(card))
++                assert new_card.value == card.value
++
+     def test_final_continue_card_lacks_ampersand(self):
+         """
+         Regression test for https://github.com/astropy/astropy/issues/3282

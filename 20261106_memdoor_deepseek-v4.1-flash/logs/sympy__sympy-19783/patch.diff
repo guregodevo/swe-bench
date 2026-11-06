@@ -1,0 +1,49 @@
+diff --git a/sympy/physics/quantum/operator.py b/sympy/physics/quantum/operator.py
+index 306bfee64f..23a256273a 100644
+--- a/sympy/physics/quantum/operator.py
++++ b/sympy/physics/quantum/operator.py
+@@ -264,6 +264,11 @@ class IdentityOperator(Operator):
+     >>> IdentityOperator()
+     I
+     """
++    # Give the identity operator a higher priority so that its __mul__ and
++    # __rmul__ methods are used when it is combined with other expressions
++    # (e.g. ``Dagger(A)*IdentityOperator()``).
++    _op_priority = 20.0
++
+     @property
+     def dimension(self):
+         return self.N
+@@ -307,11 +312,18 @@ def _print_contents_latex(self, printer, *args):
+ 
+     def __mul__(self, other):
+ 
+-        if isinstance(other, Operator):
++        if isinstance(other, (Operator, Dagger)):
+             return other
+ 
+         return Mul(self, other)
+ 
++    def __rmul__(self, other):
++
++        if isinstance(other, (Operator, Dagger)):
++            return other
++
++        return Mul(other, self)
++
+     def _represent_default_basis(self, **options):
+         if not self.N or self.N == oo:
+             raise NotImplementedError('Cannot represent infinite dimensional' +
+diff --git a/sympy/physics/quantum/tests/test_operator.py b/sympy/physics/quantum/tests/test_operator.py
+index 7c8574fe14..a00bd8cf9f 100644
+--- a/sympy/physics/quantum/tests/test_operator.py
++++ b/sympy/physics/quantum/tests/test_operator.py
+@@ -94,6 +94,8 @@ def test_identity():
+ 
+     assert I * O == O
+     assert O * I == O
++    assert I * Dagger(O) == Dagger(O)
++    assert Dagger(O) * I == Dagger(O)
+     assert isinstance(I * I, IdentityOperator)
+     assert isinstance(3 * I, Mul)
+     assert isinstance(I * x, Mul)

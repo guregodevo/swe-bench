@@ -1,0 +1,45 @@
+diff --git a/sympy/printing/conventions.py b/sympy/printing/conventions.py
+index 9a3be6bbe9..525d709846 100644
+--- a/sympy/printing/conventions.py
++++ b/sympy/printing/conventions.py
+@@ -7,7 +7,10 @@
+ from collections.abc import Iterable
+ from sympy import Derivative
+ 
+-_name_with_digits_p = re.compile(r'^([a-zA-Z]+)([0-9]+)$')
++# Match a name consisting of letters followed by digits.  The letters are
++# matched with a Unicode-aware character class so that names such as
++# ``omega0`` and ``ω0`` are both split into a name and a subscript.
++_name_with_digits_p = re.compile(r'^([^\W\d_]+)([0-9]+)$', re.UNICODE)
+ 
+ 
+ def split_super_sub(text):
+diff --git a/sympy/printing/pretty/tests/test_pretty.py b/sympy/printing/pretty/tests/test_pretty.py
+index 42fae775d3..6cc2f8c5fd 100644
+--- a/sympy/printing/pretty/tests/test_pretty.py
++++ b/sympy/printing/pretty/tests/test_pretty.py
+@@ -277,6 +277,9 @@ def test_upretty_multiindex():
+     assert upretty( Symbol('Y00') ) == 'Y₀₀'
+     assert upretty( Symbol('Y_00') ) == 'Y₀₀'
+     assert upretty( Symbol('F^+-') ) == 'F⁺⁻'
++    # unicode greek letters followed by digits are also split
++    assert upretty( Symbol('ω0') ) == 'ω₀'
++    assert upretty( Symbol('β12') ) == 'β₁₂'
+ 
+ 
+ def test_upretty_sub_super():
+diff --git a/sympy/printing/tests/test_conventions.py b/sympy/printing/tests/test_conventions.py
+index 87689aa8fc..e6fe8f3fd7 100644
+--- a/sympy/printing/tests/test_conventions.py
++++ b/sympy/printing/tests/test_conventions.py
+@@ -29,6 +29,10 @@ def test_super_sub():
+     assert split_super_sub("x__a__b__c__d") == ("x", ["a", "b", "c", "d"], [])
+     assert split_super_sub("alpha_11") == ("alpha", [], ["11"])
+     assert split_super_sub("alpha_11_11") == ("alpha", [], ["11", "11"])
++    assert split_super_sub("omega0") == ("omega", [], ["0"])
++    assert split_super_sub("ω0") == ("ω", [], ["0"])
++    assert split_super_sub("β12") == ("β", [], ["12"])
++    assert split_super_sub("θ_1") == ("θ", [], ["1"])
+     assert split_super_sub("") == ("", [], [])
+ 
+ 

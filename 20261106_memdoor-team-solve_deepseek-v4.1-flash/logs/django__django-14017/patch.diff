@@ -1,0 +1,45 @@
+diff --git a/django/db/models/query_utils.py b/django/db/models/query_utils.py
+index c957ffa564..858467c072 100755
+--- a/django/db/models/query_utils.py
++++ b/django/db/models/query_utils.py
+@@ -40,7 +40,7 @@ class Q(tree.Node):
+         super().__init__(children=[*args, *sorted(kwargs.items())], connector=_connector, negated=_negated)
+ 
+     def _combine(self, other, conn):
+-        if not isinstance(other, Q):
++        if getattr(other, 'conditional', False) is False:
+             raise TypeError(other)
+ 
+         # If the other Q() is empty, ignore it and just use `self`.
+@@ -49,8 +49,10 @@ class Q(tree.Node):
+             return type(self)(*args, **kwargs)
+         # Or if this Q is empty, ignore it and just use `other`.
+         elif not self:
+-            _, args, kwargs = other.deconstruct()
+-            return type(other)(*args, **kwargs)
++            if isinstance(other, Q):
++                _, args, kwargs = other.deconstruct()
++                return type(other)(*args, **kwargs)
++            return other
+ 
+         obj = type(self)()
+         obj.connector = conn
+diff --git a/tests/expressions/tests.py b/tests/expressions/tests.py
+index 08ea0a51d3..fd8c0ec2e0 100755
+--- a/tests/expressions/tests.py
++++ b/tests/expressions/tests.py
+@@ -815,6 +815,14 @@ class BasicExpressionsTests(TestCase):
+             Employee.objects.filter(Exists(is_poc) | Q(salary__lt=15)),
+             [self.example_inc.ceo, self.max],
+         )
++        self.assertCountEqual(
++            Employee.objects.filter(Q(salary__gte=30) & Exists(is_ceo)),
++            [self.max],
++        )
++        self.assertCountEqual(
++            Employee.objects.filter(Q(salary__lt=15) | Exists(is_poc)),
++            [self.example_inc.ceo, self.max],
++        )
+ 
+ 
+ class IterableLookupInnerExpressionsTests(TestCase):

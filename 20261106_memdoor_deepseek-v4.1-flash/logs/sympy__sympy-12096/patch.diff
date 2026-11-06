@@ -1,0 +1,37 @@
+diff --git a/sympy/core/function.py b/sympy/core/function.py
+index 1b8005e1d..0cdaa5431 100644
+--- a/sympy/core/function.py
++++ b/sympy/core/function.py
+@@ -507,7 +507,11 @@ def _eval_evalf(self, prec):
+             func = getattr(mpmath, fname)
+         except (AttributeError, KeyError):
+             try:
+-                return Float(self._imp_(*self.args), prec)
++                result = self._imp_(*self.args)
++                if isinstance(result, Basic):
++                    return result.evalf(prec)
++                else:
++                    return Float(result, prec)
+             except (AttributeError, TypeError, ValueError):
+                 return
+ 
+diff --git a/sympy/utilities/tests/test_lambdify.py b/sympy/utilities/tests/test_lambdify.py
+index d8a1a68a2..13b4930fb 100644
+--- a/sympy/utilities/tests/test_lambdify.py
++++ b/sympy/utilities/tests/test_lambdify.py
+@@ -629,6 +629,15 @@ def myfunc(a):
+         assert expr == f(val)
+ 
+ 
++def test_imps_evalf():
++    # evalf should recursively evaluate the result of an implemented function
++    f = implemented_function('f', lambda x: x**2)
++    g = implemented_function('g', lambda x: 2*x)
++    assert f(2).evalf() == 4.0
++    assert g(2).evalf() == 4.0
++    assert f(g(2)).evalf() == 16.0
++
++
+ def test_imps_wrong_args():
+     raises(ValueError, lambda: implemented_function(sin, lambda x: x))
+ 

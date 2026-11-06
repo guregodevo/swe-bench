@@ -1,0 +1,38 @@
+diff --git a/sympy/sets/sets.py b/sympy/sets/sets.py
+index 917717bb7..6a0048514 100644
+--- a/sympy/sets/sets.py
++++ b/sympy/sets/sets.py
+@@ -217,7 +217,16 @@ def _complement(self, other):
+             return S.EmptySet
+ 
+         elif isinstance(other, FiniteSet):
+-            return FiniteSet(*[el for el in other if self.contains(el) != True])
++            contains = [(el, self.contains(el)) for el in other]
++            if any(c not in (S.true, S.false) for _, c in contains):
++                # Some elements may or may not be in self, so the result
++                # cannot be represented as a FiniteSet.  Keep the elements
++                # which are not known to be in self as an unevaluated
++                # Complement instead of silently dropping them.
++                return Complement(FiniteSet(
++                    *[el for el, c in contains if c != S.true]),
++                    self, evaluate=False)
++            return FiniteSet(*[el for el, c in contains if c != S.true])
+ 
+     def symmetric_difference(self, other):
+         """
+diff --git a/sympy/sets/tests/test_sets.py b/sympy/sets/tests/test_sets.py
+index 8c59d85b2..8c062514b 100644
+--- a/sympy/sets/tests/test_sets.py
++++ b/sympy/sets/tests/test_sets.py
+@@ -939,6 +939,11 @@ def test_issue_9808():
+         Complement(FiniteSet(1), FiniteSet(y), evaluate=False)
+ 
+ 
++def test_issue_13647():
++    assert Complement(FiniteSet(x, y, 2), Interval(-10, 10)) == \
++        Complement(FiniteSet(x, y), Interval(-10, 10), evaluate=False)
++
++
+ def test_issue_9956():
+     assert Union(Interval(-oo, oo), FiniteSet(1)) == Interval(-oo, oo)
+     assert Interval(-oo, oo).contains(1) is S.true

@@ -1,0 +1,44 @@
+diff --git a/CHANGES b/CHANGES
+index bc32362ae..0ed857915 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -1,6 +1,9 @@
+ Release 5.1.0 (in development)
+ ==============================
+ 
++* #9575: autodoc: ``autodoc_typehints = "description"`` no longer adds an
++  unwanted return type to class documentation.
++
+ Dependencies
+ ------------
+ 
+diff --git a/sphinx/ext/autodoc/typehints.py b/sphinx/ext/autodoc/typehints.py
+index 06768168e..406575b0e 100644
+--- a/sphinx/ext/autodoc/typehints.py
++++ b/sphinx/ext/autodoc/typehints.py
+@@ -28,7 +28,10 @@ def record_typehints(app: Sphinx, objtype: str, name: str, obj: Any,
+             for param in sig.parameters.values():
+                 if param.annotation is not param.empty:
+                     annotation[param.name] = typing.stringify(param.annotation, mode)
+-            if sig.return_annotation is not sig.empty:
++            # Don't record the return type of classes: it describes the
++            # constructor's return value, which is always the class itself and
++            # is not useful in the "description" mode.
++            if sig.return_annotation is not sig.empty and objtype not in ('class', 'exception'):
+                 annotation['return'] = typing.stringify(sig.return_annotation, mode)
+     except (TypeError, ValueError):
+         pass
+diff --git a/tests/test_ext_autodoc_configs.py b/tests/test_ext_autodoc_configs.py
+index fdb82b1b9..c075a8e2d 100644
+--- a/tests/test_ext_autodoc_configs.py
++++ b/tests/test_ext_autodoc_configs.py
+@@ -1041,9 +1041,6 @@ def test_autodoc_typehints_description_with_documented_init(app):
+             '   Parameters:\n'
+             '      **x** (*int*) --\n'
+             '\n'
+-            '   Return type:\n'
+-            '      None\n'
+-            '\n'
+             '   __init__(x)\n'
+             '\n'
+             '      Init docstring.\n'

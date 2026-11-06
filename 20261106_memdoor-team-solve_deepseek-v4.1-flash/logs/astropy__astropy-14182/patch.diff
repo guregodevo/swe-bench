@@ -1,0 +1,100 @@
+diff --git a/astropy/io/ascii/rst.py b/astropy/io/ascii/rst.py
+index abdeba8ef..6e7917c49 100755
+--- a/astropy/io/ascii/rst.py
++++ b/astropy/io/ascii/rst.py
+@@ -50,6 +50,9 @@ class RST(FixedWidth):
+     or for ones which define column spans through the use of an additional
+     line of dashes in the header.
+ 
++    Additional header rows (e.g. units) can be written or read using the
++    ``header_rows`` keyword argument, as for the fixed-width formats.
++
+     """
+ 
+     _format_name = "rst"
+@@ -57,10 +60,12 @@ class RST(FixedWidth):
+     data_class = SimpleRSTData
+     header_class = SimpleRSTHeader
+ 
+-    def __init__(self):
+-        super().__init__(delimiter_pad=None, bookend=False)
++    def __init__(self, header_rows=None):
++        super().__init__(delimiter_pad=None, bookend=False, header_rows=header_rows)
++        self.data.start_line = len(self.header.header_rows) + 2
+ 
+     def write(self, lines):
+         lines = super().write(lines)
+-        lines = [lines[1]] + lines + [lines[1]]
++        position_line = lines[len(self.header.header_rows)]
++        lines = [position_line] + lines + [position_line]
+         return lines
+diff --git a/astropy/io/ascii/tests/test_rst.py b/astropy/io/ascii/tests/test_rst.py
+index 84d6fed40..7f246e70f 100755
+--- a/astropy/io/ascii/tests/test_rst.py
++++ b/astropy/io/ascii/tests/test_rst.py
+@@ -185,3 +185,65 @@ Col1      Col2 Col3 Col4
+ ==== ========= ==== ====
+ """,
+     )
++
++
++def test_write_header_rows():
++    """Write a table with additional header rows (e.g. units)."""
++    from astropy.table import QTable
++    import astropy.units as u
++
++    tbl = QTable({"wave": [350, 950] * u.nm, "response": [0.7, 1.2] * u.count})
++    table = """\
++===== ========
++ wave response
++   nm       ct
++===== ========
++350.0      0.7
++950.0      1.2
++===== ========
++"""
++    out = StringIO()
++    ascii.write(tbl, out, Writer=ascii.RST, header_rows=["name", "unit"])
++    assert_equal_splitlines(out.getvalue(), table)
++
++    # The extra header rows should be read back as column attributes.
++    dat2 = ascii.read(table, Reader=ascii.RST, header_rows=["name", "unit"])
++    assert_equal(dat2.colnames, ["wave", "response"])
++    assert_equal(dat2["wave"].unit, "nm")
++    assert_equal(dat2["response"].unit, "ct")
++
++
++def test_write_header_rows_multiple():
++    """Write a table with three header rows."""
++    from astropy.table import QTable
++    import astropy.units as u
++
++    tbl = QTable({"wave": [350, 950] * u.nm, "response": [0.7, 1.2] * u.count})
++    tbl["wave"].info.format = ".1f"
++    tbl["response"].info.format = ".2f"
++    out = StringIO()
++    ascii.write(
++        tbl, out, Writer=ascii.RST, header_rows=["name", "unit", "format"]
++    )
++    assert_equal_splitlines(
++        out.getvalue(),
++        """\
++===== ========
++ wave response
++   nm       ct
++  .1f      .2f
++===== ========
++350.0     0.70
++950.0     1.20
++===== ========
++""",
++    )
++
++    # The additional header rows are read back as column attributes.
++    dat2 = ascii.read(
++        out.getvalue(), Reader=ascii.RST, header_rows=["name", "unit", "format"]
++    )
++    assert_equal(dat2["wave"].unit, "nm")
++    assert_equal(dat2["response"].unit, "ct")
++    assert_equal(dat2["wave"].info.format, ".1f")
++    assert_equal(dat2["response"].info.format, ".2f")

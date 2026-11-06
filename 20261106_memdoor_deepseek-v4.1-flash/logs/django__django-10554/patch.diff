@@ -1,0 +1,36 @@
+diff --git a/django/db/models/sql/compiler.py b/django/db/models/sql/compiler.py
+index a791908caf..008c259934 100644
+--- a/django/db/models/sql/compiler.py
++++ b/django/db/models/sql/compiler.py
+@@ -432,6 +432,7 @@ class SQLCompiler:
+                         *self.query.values_select,
+                         *self.query.annotation_select,
+                     ))
++                    compiler.query.clear_ordering(force_empty=True)
+                 part_sql, part_args = compiler.as_sql()
+                 if compiler.query.combinator:
+                     # Wrap in a subquery if wrapping in parentheses isn't
+diff --git a/tests/queries/test_qs_combinators.py b/tests/queries/test_qs_combinators.py
+index 227972e8c4..585ea83361 100644
+--- a/tests/queries/test_qs_combinators.py
++++ b/tests/queries/test_qs_combinators.py
+@@ -127,6 +127,19 @@ class QuerySetSetOperationTests(TestCase):
+         reserved_name = qs1.union(qs1).values_list('order').get()
+         self.assertEqual(reserved_name, (2,))
+ 
++    @skipUnlessDBFeature('supports_slicing_ordering_in_compound')
++    def test_union_with_values_list_and_ordering(self):
++        qs1 = Number.objects.filter(num__lte=1)
++        qs2 = Number.objects.filter(num__gte=8).order_by('num')
++        qs = qs1.union(qs2)
++        self.assertNumbersEqual(
++            qs.order_by().values_list('num', flat=True),
++            [0, 1, 8, 9],
++            ordered=False,
++        )
++        # The original queryset is still usable after deriving a new one.
++        self.assertNumbersEqual(qs, [0, 1, 8, 9], ordered=False)
++
+     def test_union_with_two_annotated_values_list(self):
+         qs1 = Number.objects.filter(num=1).annotate(
+             count=Value(0, IntegerField()),

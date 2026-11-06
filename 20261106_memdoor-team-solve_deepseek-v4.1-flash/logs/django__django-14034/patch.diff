@@ -1,0 +1,79 @@
+diff --git a/django/forms/fields.py b/django/forms/fields.py
+index 65d6a9ec82..368369897e 100644
+--- a/django/forms/fields.py
++++ b/django/forms/fields.py
+@@ -1025,10 +1025,12 @@ class MultiValueField(Field):
+             if not value or not [v for v in value if v not in self.empty_values]:
+                 if self.required:
+                     raise ValidationError(self.error_messages['required'], code='required')
+-                else:
++                elif not any(field.required for field in self.fields):
+                     return self.compress([])
+         else:
+             raise ValidationError(self.error_messages['invalid'], code='invalid')
++        if not isinstance(value, (list, tuple)):
++            value = []
+         for i, field in enumerate(self.fields):
+             try:
+                 field_value = value[i]
+diff --git a/docs/releases/4.0.txt b/docs/releases/4.0.txt
+index 6821378e3b..da02e335eb 100644
+--- a/docs/releases/4.0.txt
++++ b/docs/releases/4.0.txt
+@@ -219,6 +219,10 @@ File Uploads
+ Forms
+ ~~~~~
+ 
++* :class:`~django.forms.MultiValueField` now raises an ``incomplete``
++  validation error when a required subfield is empty and
++  ``require_all_fields=False``, even if all subfields are empty.
++
+ * :class:`~django.forms.ModelChoiceField` now includes the provided value in
+   the ``params`` argument of a raised
+   :exc:`~django.core.exceptions.ValidationError` for the ``invalid_choice``
+diff --git a/tests/forms_tests/tests/test_forms.py b/tests/forms_tests/tests/test_forms.py
+index 0fe0749294..a5c87a3570 100644
+--- a/tests/forms_tests/tests/test_forms.py
++++ b/tests/forms_tests/tests/test_forms.py
+@@ -3091,9 +3091,12 @@ Good luck picking a username that doesn&#x27;t already exist.</p>
+         # For an optional `MultiValueField` with `require_all_fields=False`, we
+         # don't get any `required` error but we still get `incomplete` errors.
+         f = PhoneField(required=False, require_all_fields=False)
+-        self.assertIsNone(f.clean(''))
+-        self.assertIsNone(f.clean(None))
+-        self.assertIsNone(f.clean([]))
++        with self.assertRaisesMessage(ValidationError, "'Enter a complete value.'"):
++            f.clean('')
++        with self.assertRaisesMessage(ValidationError, "'Enter a complete value.'"):
++            f.clean(None)
++        with self.assertRaisesMessage(ValidationError, "'Enter a complete value.'"):
++            f.clean([])
+         with self.assertRaisesMessage(ValidationError, "'Enter a complete value.'"):
+             f.clean(['+61'])
+         self.assertEqual('+61.287654321 ext. 123 (label: )', f.clean(['+61', '287654321', '123']))
+@@ -3102,6 +3105,25 @@ Good luck picking a username that doesn&#x27;t already exist.</p>
+         with self.assertRaisesMessage(ValidationError, "'Enter a valid country code.'"):
+             f.clean(['61', '287654321', '123', 'Home'])
+ 
++        # An optional `MultiValueField` with `require_all_fields=False` and
++        # only optional subfields doesn't raise an `incomplete` error when all
++        # values are empty.
++        class OptionalPhoneField(MultiValueField):
++            def __init__(self, *args, **kwargs):
++                fields = (
++                    CharField(label='Country Code', required=False),
++                    CharField(label='Phone Number', required=False),
++                )
++                super().__init__(fields, *args, **kwargs)
++
++            def compress(self, data_list):
++                return data_list or None
++
++        f = OptionalPhoneField(required=False, require_all_fields=False)
++        self.assertIsNone(f.clean(''))
++        self.assertIsNone(f.clean(None))
++        self.assertIsNone(f.clean([]))
++
+     def test_custom_empty_values(self):
+         """
+         Form fields can customize what is considered as an empty value

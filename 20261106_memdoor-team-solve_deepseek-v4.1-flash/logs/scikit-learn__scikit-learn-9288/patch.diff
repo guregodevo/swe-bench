@@ -1,0 +1,76 @@
+diff --git a/doc/whats_new/v0.21.rst b/doc/whats_new/v0.21.rst
+index 5f5d0e3d0..8ab89010b 100644
+--- a/doc/whats_new/v0.21.rst
++++ b/doc/whats_new/v0.21.rst
+@@ -33,6 +33,11 @@ Changelog
+   `init='random'` was single threaded for `n_jobs > 1` or `n_jobs = -1`.
+   :pr:`12955` by :user:`Prabakaran Kumaresshan <nixphix>`.
+ 
++- |Fix| Fixed a bug in :class:`cluster.KMeans` where the result could differ
++  slightly between `n_jobs=1` and `n_jobs > 1` because the random seeds used
++  for the different initializations were not drawn in the same way.
++  :issue:`12949` by :user:`Jérémie du Boisberranger <jeremiedbb>`.
++
+ - |Fix| Fixed a bug in :class:`cluster.OPTICS` where users were unable to pass
+   float `min_samples` and `min_cluster_size`. :pr:`14496` by
+   :user:`Fabian Klopfer <someusername1>`
+diff --git a/sklearn/cluster/k_means_.py b/sklearn/cluster/k_means_.py
+index b7fbdf7da..d98fdf470 100644
+--- a/sklearn/cluster/k_means_.py
++++ b/sklearn/cluster/k_means_.py
+@@ -360,16 +360,20 @@ def k_means(X, n_clusters, sample_weight=None, init='k-means++',
+     else:
+         raise ValueError("Algorithm must be 'auto', 'full' or 'elkan', got"
+                          " %s" % str(algorithm))
++    # For both the sequential and the parallel code paths, draw one seed per
++    # initialization from the same random state. This ensures that the result
++    # does not depend on the number of jobs used.
++    seeds = random_state.randint(np.iinfo(np.int32).max, size=n_init)
+     if effective_n_jobs(n_jobs) == 1:
+         # For a single thread, less memory is needed if we just store one set
+         # of the best results (as opposed to one set per run per thread).
+-        for it in range(n_init):
++        for seed in seeds:
+             # run a k-means once
+             labels, inertia, centers, n_iter_ = kmeans_single(
+                 X, sample_weight, n_clusters, max_iter=max_iter, init=init,
+                 verbose=verbose, precompute_distances=precompute_distances,
+                 tol=tol, x_squared_norms=x_squared_norms,
+-                random_state=random_state)
++                random_state=seed)
+             # determine if these results are the best so far
+             if best_inertia is None or inertia < best_inertia:
+                 best_labels = labels.copy()
+@@ -378,7 +382,6 @@ def k_means(X, n_clusters, sample_weight=None, init='k-means++',
+                 best_n_iter = n_iter_
+     else:
+         # parallelisation of k-means runs
+-        seeds = random_state.randint(np.iinfo(np.int32).max, size=n_init)
+         results = Parallel(n_jobs=n_jobs, verbose=0)(
+             delayed(kmeans_single)(X, sample_weight, n_clusters,
+                                    max_iter=max_iter, init=init,
+diff --git a/sklearn/cluster/tests/test_k_means.py b/sklearn/cluster/tests/test_k_means.py
+index 362b0a914..400b6022c 100644
+--- a/sklearn/cluster/tests/test_k_means.py
++++ b/sklearn/cluster/tests/test_k_means.py
+@@ -239,6 +239,20 @@ def test_k_means_plus_plus_init_2_jobs():
+     _check_fitted_model(km)
+ 
+ 
++@if_safe_multiprocessing_with_blas
++def test_k_means_n_jobs_consistency():
++    # Check that the result does not depend on the number of jobs used.
++    # Non-regression test for issue #12949.
++    km_single = KMeans(n_clusters=n_clusters, random_state=42,
++                       n_jobs=1).fit(X)
++    km_parallel = KMeans(n_clusters=n_clusters, random_state=42,
++                         n_jobs=2).fit(X)
++    assert_almost_equal(km_single.inertia_, km_parallel.inertia_)
++    assert_array_almost_equal(km_single.cluster_centers_,
++                              km_parallel.cluster_centers_)
++    assert_array_equal(km_single.labels_, km_parallel.labels_)
++
++
+ def test_k_means_precompute_distances_flag():
+     # check that a warning is raised if the precompute_distances flag is not
+     # supported

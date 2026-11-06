@@ -1,0 +1,148 @@
+diff --git a/CHANGES b/CHANGES
+index b4dbf1ef7..eff93a978 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -77,6 +77,7 @@ Bugs fixed
+   information of TypeVars
+ * #8493: autodoc: references to builtins not working in class aliases
+ * #8522: autodoc:  ``__bool__`` method could be called
++* #741: autodoc: inherited-members doesn't work for inherited attributes
+ * #8067: autodoc: A typehint for the instance variable having type_comment on
+   super class is not displayed
+ * #8545: autodoc: a __slots__ attribute is not documented even having docstring
+diff --git a/sphinx/ext/autodoc/__init__.py b/sphinx/ext/autodoc/__init__.py
+index ddfd2b365..92f5f1c08 100644
+--- a/sphinx/ext/autodoc/__init__.py
++++ b/sphinx/ext/autodoc/__init__.py
+@@ -606,6 +606,20 @@ class Documenter:
+ 
+                     for i, line in enumerate(self.process_doc(docstrings)):
+                         self.add_line(line, sourcename, i)
++                elif inspect.isclass(self.parent):
++                    # the attribute may be inherited from a base class
++                    for cls in inspect.getmro(self.parent):
++                        try:
++                            namespace = cls.__qualname__
++                        except AttributeError:
++                            continue
++                        key = (namespace, self.objpath[-1])
++                        if key in attr_docs:
++                            no_docstring = True
++                            docstrings = [list(attr_docs[key])]
++                            for i, line in enumerate(self.process_doc(docstrings)):
++                                self.add_line(line, sourcename, i)
++                            break
+ 
+         # add content from docstrings
+         if not no_docstring:
+@@ -666,6 +680,14 @@ class Documenter:
+         The user can override the skipping decision by connecting to the
+         ``autodoc-skip-member`` event.
+         """
++        # search for members in source code too
++        namespace = '.'.join(self.objpath)  # will be empty for modules
++
++        if self.analyzer:
++            attr_docs = self.analyzer.find_attr_docs()
++        else:
++            attr_docs = {}
++
+         def is_filtered_inherited_member(name: str) -> bool:
+             if inspect.isclass(self.object):
+                 for cls in self.object.__mro__:
+@@ -676,19 +698,13 @@ class Documenter:
+                         return False
+                     elif name in self.get_attr(cls, '__annotations__', {}):
+                         return False
++                    elif (getattr(cls, '__qualname__', None), name) in attr_docs:
++                        return False
+ 
+             return False
+ 
+         ret = []
+ 
+-        # search for members in source code too
+-        namespace = '.'.join(self.objpath)  # will be empty for modules
+-
+-        if self.analyzer:
+-            attr_docs = self.analyzer.find_attr_docs()
+-        else:
+-            attr_docs = {}
+-
+         # process members and determine which to skip
+         for obj in members:
+             membername, member = obj
+diff --git a/sphinx/ext/autodoc/importer.py b/sphinx/ext/autodoc/importer.py
+index d6e73d36a..96e3ae1db 100644
+--- a/sphinx/ext/autodoc/importer.py
++++ b/sphinx/ext/autodoc/importer.py
+@@ -309,11 +309,23 @@ def get_class_members(subject: Any, objpath: List[str], attrgetter: Callable,
+ 
+     if analyzer:
+         # append instance attributes (cf. self.attr1) if analyzer knows
+-        namespace = '.'.join(objpath)
+-        for (ns, name), docstring in analyzer.attr_docs.items():
+-            if namespace == ns and name not in members:
+-                members[name] = ClassAttribute(subject, name, INSTANCEATTR,
+-                                               '\n'.join(docstring))
++        for cls in getmro(subject):
++            try:
++                namespace = cls.__qualname__
++            except AttributeError:
++                continue
++
++            for (ns, name), docstring in analyzer.attr_docs.items():
++                if namespace == ns:
++                    if name not in members:
++                        members[name] = ClassAttribute(cls, name, INSTANCEATTR,
++                                                       '\n'.join(docstring))
++                    else:
++                        member = members[name]
++                        if member.class_ is None:
++                            # the member is inherited from a base class
++                            member.class_ = cls
++                            member.docstring = '\n'.join(docstring)
+ 
+     return members
+ 
+diff --git a/tests/roots/test-ext-autodoc/target/inherited_attributes.py b/tests/roots/test-ext-autodoc/target/inherited_attributes.py
+new file mode 100644
+index 000000000..3193a7c8c
+--- /dev/null
++++ b/tests/roots/test-ext-autodoc/target/inherited_attributes.py
+@@ -0,0 +1,12 @@
++class Base:
++    #: docstring of inherited attribute
++    attr = 1
++
++    def __init__(self):
++        #: docstring of inherited instance attribute
++        self.instattr = 0
++
++
++class Derived(Base):
++    #: docstring of own attribute
++    ownattr = 2
+diff --git a/tests/test_ext_autodoc.py b/tests/test_ext_autodoc.py
+index 392ad1a68..7cf36fd60 100644
+--- a/tests/test_ext_autodoc.py
++++ b/tests/test_ext_autodoc.py
+@@ -625,6 +625,18 @@ def test_autodoc_inherited_members(app):
+     ]
+ 
+ 
++@pytest.mark.sphinx('html', testroot='ext-autodoc')
++def test_autodoc_inherited_members_of_attributes(app):
++    options = {"members": None,
++               "inherited-members": None,
++               "undoc-members": None}
++    actual = do_autodoc(app, 'class', 'target.inherited_attributes.Derived', options)
++    assert '   .. py:attribute:: Derived.attr' in actual
++    assert '   .. py:attribute:: Derived.instattr' in actual
++    assert '      docstring of inherited attribute' in actual
++    assert '      docstring of inherited instance attribute' in actual
++
++
+ @pytest.mark.sphinx('html', testroot='ext-autodoc')
+ def test_autodoc_inherited_members_Base(app):
+     options = {"members": None,

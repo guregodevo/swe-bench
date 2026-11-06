@@ -1,0 +1,27 @@
+diff --git a/django/db/models/sql/query.py b/django/db/models/sql/query.py
+index ce18098fd2..65333b0676 100755
+--- a/django/db/models/sql/query.py
++++ b/django/db/models/sql/query.py
+@@ -1124,7 +1124,9 @@ class Query(BaseExpression):
+ 
+     def check_filterable(self, expression):
+         """Raise an error if expression cannot be used in a WHERE clause."""
+-        if not getattr(expression, 'filterable', True):
++        if hasattr(expression, 'resolve_expression') and not getattr(
++            expression, 'filterable', True
++        ):
+             raise NotSupportedError(
+                 expression.__class__.__name__ + ' is disallowed in the filter '
+                 'clause.'
+diff --git a/tests/lookup/tests.py b/tests/lookup/tests.py
+index 9ed91a6ee0..7da5ccbf51 100755
+--- a/tests/lookup/tests.py
++++ b/tests/lookup/tests.py
+@@ -1029,3 +1029,7 @@ class LookupTests(TestCase):
+             with self.subTest(qs=qs):
+                 with self.assertWarnsMessage(RemovedInDjango40Warning, msg):
+                     qs.exists()
++
++    def test_filter_by_model_instance_with_filterable_attribute(self):
++        self.au1.filterable = False
++        self.assertIn(self.a1, Article.objects.filter(author=self.au1))

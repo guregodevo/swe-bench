@@ -1,0 +1,88 @@
+diff --git a/sympy/polys/densetools.py b/sympy/polys/densetools.py
+index f057824642..2d1158e82e 100644
+--- a/sympy/polys/densetools.py
++++ b/sympy/polys/densetools.py
+@@ -1198,6 +1198,8 @@ def dup_clear_denoms(f, K0, K1=None, convert=False):
+     if not K1.is_one(common):
+         f = dup_mul_ground(f, common, K0)
+ 
++    f = dup_strip(f)
++
+     if not convert:
+         return common, f
+     else:
+@@ -1220,6 +1222,31 @@ def _rec_clear_denoms(g, v, K0, K1):
+     return common
+ 
+ 
++def _dmp_strip(f, u):
++    """Remove leading zero coefficients from ``f`` in ``K[X]``.
++
++    Unlike :func:`dmp_strip` this also recognizes coefficients that are
++    zero but not represented as an empty list (e.g. ``EX(0)``).
++    """
++    if not u:
++        return dup_strip(f)
++
++    v = u - 1
++    f = [_dmp_strip(c, v) for c in f]
++    zero = dmp_zero(v)
++
++    i = 0
++    for c in f:
++        if c != zero:
++            break
++        i += 1
++
++    if i == len(f):
++        return dmp_zero(u)
++    else:
++        return f[i:]
++
++
+ def dmp_clear_denoms(f, u, K0, K1=None, convert=False):
+     """
+     Clear denominators, i.e. transform ``K_0`` to ``K_1``.
+@@ -1252,6 +1279,8 @@ def dmp_clear_denoms(f, u, K0, K1=None, convert=False):
+     if not K1.is_one(common):
+         f = dmp_mul_ground(f, common, u, K0)
+ 
++    f = _dmp_strip(f, u)
++
+     if not convert:
+         return common, f
+     else:
+diff --git a/sympy/polys/tests/test_densetools.py b/sympy/polys/tests/test_densetools.py
+index ca78e1b0e1..389c57746a 100644
+--- a/sympy/polys/tests/test_densetools.py
++++ b/sympy/polys/tests/test_densetools.py
+@@ -634,6 +634,7 @@ def test_dup_clear_denoms():
+ 
+     assert dup_clear_denoms([EX(7)], EX) == (EX(1), [EX(7)])
+     assert dup_clear_denoms([EX(sin(x)/x), EX(0)], EX) == (EX(x), [EX(sin(x)), EX(0)])
++    assert dup_clear_denoms([EX(0)], EX) == (EX(1), [])
+ 
+ 
+ def test_dmp_clear_denoms():
+@@ -664,3 +665,4 @@ def test_dmp_clear_denoms():
+         [[EX(S(3)/2)], [EX(S(9)/4)]], 1, EX) == (EX(4), [[EX(6)], [EX(9)]])
+     assert dmp_clear_denoms([[EX(7)]], 1, EX) == (EX(1), [[EX(7)]])
+     assert dmp_clear_denoms([[EX(sin(x)/x), EX(0)]], 1, EX) == (EX(x), [[EX(sin(x)), EX(0)]])
++    assert dmp_clear_denoms([[EX(0)]], 1, EX) == (EX(1), [[]])
+diff --git a/sympy/polys/tests/test_polytools.py b/sympy/polys/tests/test_polytools.py
+index c774fc41e2..3d2fd96f46 100644
+--- a/sympy/polys/tests/test_polytools.py
++++ b/sympy/polys/tests/test_polytools.py
+@@ -1444,6 +1444,12 @@ def test_Poly_clear_denoms():
+     assert coeff == 3 and poly == Poly(
+         x + 3*sqrt(2), x, domain='EX') and poly.get_domain() == EX
+ 
++    # clear_denoms() should return a properly stripped zero polynomial
++    # even when the coefficients are expressions that simplify to zero.
++    coeff, poly = Poly(0, x, domain='EX').clear_denoms()
++    assert poly.rep == Poly(0, x, domain='EX').rep
++    assert poly.is_zero is True
++
+ 
+ def test_Poly_rat_clear_denoms():
+     f = Poly(x**2/y + 1, x)

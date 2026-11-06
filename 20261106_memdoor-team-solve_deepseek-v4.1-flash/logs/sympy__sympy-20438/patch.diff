@@ -1,0 +1,127 @@
+diff --git a/sympy/core/relational.py b/sympy/core/relational.py
+index e2e0b7fbcc..3e3963ebcc 100644
+--- a/sympy/core/relational.py
++++ b/sympy/core/relational.py
+@@ -311,7 +311,8 @@ def _eval_simplify(self, **kwargs):
+             v = None
+             if dif.is_comparable:
+                 v = dif.n(2)
+-            elif dif.equals(0):  # XXX this is expensive
++            elif getattr(dif, 'equals', None) is not None and dif.equals(0):
++                # XXX this is expensive
+                 v = S.Zero
+             if v is not None:
+                 r = r.func._eval_relation(v, S.Zero)
+diff --git a/sympy/sets/handlers/comparison.py b/sympy/sets/handlers/comparison.py
+index 6f7a19fccf..c6cf5106dd 100644
+--- a/sympy/sets/handlers/comparison.py
++++ b/sympy/sets/handlers/comparison.py
+@@ -1,9 +1,10 @@
+ from sympy.core.relational import Eq, is_eq
+ from sympy.core.basic import Basic
++from sympy.core.containers import Tuple
+ from sympy.core.logic import fuzzy_and, fuzzy_bool
+ from sympy.logic.boolalg import And
+ from sympy.multipledispatch import dispatch
+-from sympy.sets.sets import tfn, ProductSet, Interval, FiniteSet, Set
++from sympy.sets.sets import tfn, ProductSet, Interval, FiniteSet, Set, EmptySet
+ 
+ 
+ @dispatch(Interval, FiniteSet) # type:ignore
+@@ -49,6 +50,39 @@ def _eval_is_eq(lhs, rhs): # noqa: F811
+     return tfn[fuzzy_and(map(fuzzy_bool, eqs))]
+ 
+ 
++@dispatch(ProductSet, FiniteSet) # type:ignore
++def _eval_is_eq(lhs, rhs): # noqa: F811
++    if lhs.is_finite_set:
++        return tfn[fuzzy_and([
++            fuzzy_and(rhs._contains(Tuple(*e)) for e in lhs),
++            fuzzy_and(lhs._contains(e) for e in rhs)])]
++
++
++@dispatch(FiniteSet, ProductSet) # type:ignore
++def _eval_is_eq(lhs, rhs): # noqa: F811
++    if rhs.is_finite_set:
++        return tfn[fuzzy_and([
++            fuzzy_and(lhs._contains(e) for e in rhs),
++            fuzzy_and(rhs._contains(Tuple(*e)) for e in lhs)])]
++
++
++@dispatch(EmptySet, EmptySet) # type:ignore
++def _eval_is_eq(lhs, rhs): # noqa: F811
++    return True
++
++
++@dispatch(EmptySet, Set) # type:ignore
++def _eval_is_eq(lhs, rhs): # noqa: F811
++    if rhs.is_empty is not None:
++        return rhs.is_empty
++
++
++@dispatch(Set, EmptySet) # type:ignore
++def _eval_is_eq(lhs, rhs): # noqa: F811
++    if lhs.is_empty is not None:
++        return lhs.is_empty
++
++
+ @dispatch(Set, Basic) # type:ignore
+ def _eval_is_eq(lhs, rhs): # noqa: F811
+     return False
+diff --git a/sympy/sets/sets.py b/sympy/sets/sets.py
+index 3c4aa86e36..f8ada90231 100644
+--- a/sympy/sets/sets.py
++++ b/sympy/sets/sets.py
+@@ -801,6 +801,13 @@ def _contains(self, element):
+ 
+         return fuzzy_and(s._contains(e) for s, e in zip(self.sets, element))
+ 
++    def _eval_is_subset(self, other):
++        # A finite ProductSet can be checked element by element.  For an
++        # infinite ProductSet this would not terminate, so leave the answer
++        # to the other subset handlers (or to the intersection fallback).
++        if self.is_finite_set:
++            return fuzzy_and(other._contains(Tuple(*e)) for e in self)
++
+     def as_relational(self, *symbols):
+         symbols = [_sympify(s) for s in symbols]
+         if len(symbols) != len(self.sets) or not all(
+diff --git a/sympy/sets/tests/test_sets.py b/sympy/sets/tests/test_sets.py
+index d29a046072..e451e64ed0 100644
+--- a/sympy/sets/tests/test_sets.py
++++ b/sympy/sets/tests/test_sets.py
+@@ -725,6 +725,16 @@ def test_is_subset():
+     assert Range(n, n + 2).is_subset(FiniteSet(n, n + 1)) is True
+     assert Range(5).is_subset(Interval(0, 4, right_open=True)) is False
+ 
++    # finite ProductSets are checked element by element
++    a = FiniteSet(1, 2)
++    b = ProductSet(a, a)
++    c = FiniteSet((1, 1), (1, 2), (2, 1), (2, 2))
++    assert b.is_subset(c) is True
++    assert c.is_subset(b) is True
++    assert b.is_subset(FiniteSet((1, 1))) is False
++    assert ProductSet(FiniteSet(1), FiniteSet(2)).is_subset(
++        ProductSet(FiniteSet(1, 2), FiniteSet(2, 3))) is True
++
+ 
+ def test_is_proper_subset():
+     assert Interval(0, 1).is_proper_subset(Interval(0, 2)) is True
+@@ -1257,6 +1267,17 @@ def test_Eq():
+     assert Eq(FiniteSet(()), FiniteSet(1)) is S.false
+     assert Eq(ProductSet(), FiniteSet(1)) is S.false
+ 
++    # finite ProductSets compare equal to the corresponding FiniteSet
++    a = FiniteSet(1, 2)
++    b = ProductSet(a, a)
++    c = FiniteSet((1, 1), (1, 2), (2, 1), (2, 2))
++    assert Eq(b, c) is S.true
++    assert Eq(c, b) is S.true
++    assert Eq(b, c).simplify() is S.true
++    assert Eq(b, FiniteSet((1, 1))) is S.false
++    assert Eq(S.EmptySet, FiniteSet(1)) is S.false
++    assert Eq(FiniteSet(1), S.EmptySet) is S.false
++
+     i1 = Interval(0, 1)
+     i2 = Interval(x, y)
+     assert unchanged(Eq, ProductSet(i1, i1), ProductSet(i2, i2))

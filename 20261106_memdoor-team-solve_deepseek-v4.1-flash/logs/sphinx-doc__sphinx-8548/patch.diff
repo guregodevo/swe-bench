@@ -1,0 +1,188 @@
+diff --git a/CHANGES b/CHANGES
+index b4dbf1ef7..5b092cba1 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -80,6 +80,7 @@ Bugs fixed
+ * #8067: autodoc: A typehint for the instance variable having type_comment on
+   super class is not displayed
+ * #8545: autodoc: a __slots__ attribute is not documented even having docstring
++* #741: autodoc: inherited-members doesn't work for inherited attributes
+ * #8477: autosummary: non utf-8 reST files are generated when template contains
+   multibyte characters
+ * #8501: autosummary: summary extraction splits text after "el at." unexpectedly
+diff --git a/sphinx/ext/autodoc/__init__.py b/sphinx/ext/autodoc/__init__.py
+index ddfd2b365..4f2ee1903 100644
+--- a/sphinx/ext/autodoc/__init__.py
++++ b/sphinx/ext/autodoc/__init__.py
+@@ -606,6 +606,18 @@ class Documenter:
+ 
+                     for i, line in enumerate(self.process_doc(docstrings)):
+                         self.add_line(line, sourcename, i)
++                elif len(self.objpath) > 1:
++                    # an attribute inherited from a base class; search the
++                    # base class namespaces for its documentation
++                    docstrings = self.get_attr_comment(self.objpath[-1])
++                    if docstrings:
++                        no_docstring = True
++                        # make a copy of docstring for attributes to avoid cache
++                        # the change of autodoc-process-docstring event.
++                        docstrings = [list(docstrings)]
++
++                        for i, line in enumerate(self.process_doc(docstrings)):
++                            self.add_line(line, sourcename, i)
+ 
+         # add content from docstrings
+         if not no_docstring:
+@@ -623,6 +635,43 @@ class Documenter:
+             for line, src in zip(more_content.data, more_content.items):
+                 self.add_line(line, src[0], src[1])
+ 
++    def get_attr_comment(self, attrname: str) -> Optional[List[str]]:
++        """Get the comment for an attribute from the source code.
++
++        This searches the base classes of the current parent as well as the
++        parent itself.  It is used for attributes inherited from a base class,
++        whose documentation is stored under the namespace of the class that
++        defines them.
++        """
++        if not self.parent:
++            return None
++
++        try:
++            for cls in inspect.getmro(self.parent):
++                comment = self.get_class_attr_comment(cls, attrname)
++                if comment:
++                    return comment
++        except (AttributeError, PycodeError):
++            pass
++
++        return None
++
++    def get_class_attr_comment(self, cls: Any, attrname: str) -> Optional[List[str]]:
++        """Get the source code comment for an attribute of the given class."""
++        try:
++            module = safe_getattr(cls, '__module__')
++            qualname = safe_getattr(cls, '__qualname__')
++
++            analyzer = ModuleAnalyzer.for_module(module)
++            analyzer.analyze()
++            key = (qualname, attrname)
++            if key in analyzer.attr_docs:
++                return list(analyzer.attr_docs[key])
++        except (AttributeError, PycodeError):
++            pass
++
++        return None
++
+     def get_object_members(self, want_all: bool) -> Tuple[bool, ObjectMembers]:
+         """Return `(members_check_module, members)` where `members` is a
+         list of `(membername, member)` pairs of the members of *self.object*.
+@@ -676,6 +725,10 @@ class Documenter:
+                         return False
+                     elif name in self.get_attr(cls, '__annotations__', {}):
+                         return False
++                    elif self.get_class_attr_comment(cls, name):
++                        # an attribute documented by a comment in the source
++                        # code is a member of the class that defines it
++                        return False
+ 
+             return False
+ 
+diff --git a/sphinx/ext/autodoc/importer.py b/sphinx/ext/autodoc/importer.py
+index d6e73d36a..4412d87e6 100644
+--- a/sphinx/ext/autodoc/importer.py
++++ b/sphinx/ext/autodoc/importer.py
+@@ -14,7 +14,7 @@ import warnings
+ from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Tuple
+ 
+ from sphinx.deprecation import RemovedInSphinx40Warning, deprecated_alias
+-from sphinx.pycode import ModuleAnalyzer
++from sphinx.pycode import ModuleAnalyzer, PycodeError
+ from sphinx.util import logging
+ from sphinx.util.inspect import (getannotations, getmro, getslots, isclass, isenumclass,
+                                  safe_getattr)
+@@ -309,11 +309,30 @@ def get_class_members(subject: Any, objpath: List[str], attrgetter: Callable,
+ 
+     if analyzer:
+         # append instance attributes (cf. self.attr1) if analyzer knows
+-        namespace = '.'.join(objpath)
+-        for (ns, name), docstring in analyzer.attr_docs.items():
+-            if namespace == ns and name not in members:
+-                members[name] = ClassAttribute(subject, name, INSTANCEATTR,
+-                                               '\n'.join(docstring))
++        for cls in getmro(subject):
++            try:
++                if cls is subject:
++                    cls_analyzer = analyzer
++                    namespace = '.'.join(objpath)
++                else:
++                    module = safe_getattr(cls, '__module__')
++                    cls_analyzer = ModuleAnalyzer.for_module(module)
++                    cls_analyzer.analyze()
++                    namespace = safe_getattr(cls, '__qualname__')
++            except (AttributeError, PycodeError):
++                continue
++
++            for (ns, name), docstring in cls_analyzer.attr_docs.items():
++                if namespace != ns:
++                    continue
++
++                if name not in members:
++                    members[name] = ClassAttribute(cls, name, INSTANCEATTR,
++                                                   '\n'.join(docstring))
++                elif members[name].docstring is None and members[name].class_ is not subject:
++                    # an inherited member; adopt the documentation of the class
++                    # that actually defines it
++                    members[name].docstring = '\n'.join(docstring)
+ 
+     return members
+ 
+diff --git a/tests/roots/test-ext-autodoc/target/inherited_attr.py b/tests/roots/test-ext-autodoc/target/inherited_attr.py
+new file mode 100644
+index 000000000..1772cbf0f
+--- /dev/null
++++ b/tests/roots/test-ext-autodoc/target/inherited_attr.py
+@@ -0,0 +1,15 @@
++class Base:
++    #: docstring for attr
++    attr = 1
++
++    def __init__(self):
++        #: docstring for inst_attr
++        self.inst_attr = 1
++
++
++class Middle(Base):
++    pass
++
++
++class Derived(Middle):
++    pass
+diff --git a/tests/test_ext_autodoc.py b/tests/test_ext_autodoc.py
+index 392ad1a68..3527afa2b 100644
+--- a/tests/test_ext_autodoc.py
++++ b/tests/test_ext_autodoc.py
+@@ -2234,3 +2234,23 @@ def test_name_mangling(app):
+         '      name of Foo',
+         '',
+     ]
++
++
++@pytest.mark.sphinx('html', testroot='ext-autodoc')
++def test_autodoc_inherited_members_attributes(app):
++    options = {"members": None,
++               "inherited-members": None}
++    actual = do_autodoc(app, 'class', 'target.inherited_attr.Derived', options)
++    assert list(filter(lambda l: 'attribute::' in l, actual)) == [
++        '   .. py:attribute:: Derived.attr',
++        '   .. py:attribute:: Derived.inst_attr',
++    ]
++    assert '      docstring for attr' in actual
++    assert '      docstring for inst_attr' in actual
++
++    # explicit autoattribute directives also work for inherited attributes
++    actual = do_autodoc(app, 'attribute', 'target.inherited_attr.Derived.attr')
++    assert '   docstring for attr' in actual
++
++    actual = do_autodoc(app, 'attribute', 'target.inherited_attr.Derived.inst_attr')
++    assert '   docstring for inst_attr' in actual

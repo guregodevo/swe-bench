@@ -1,0 +1,42 @@
+diff --git a/sympy/printing/mathematica.py b/sympy/printing/mathematica.py
+index ea7e3a2d9..5f248c3aa 100755
+--- a/sympy/printing/mathematica.py
++++ b/sympy/printing/mathematica.py
+@@ -101,6 +101,12 @@ def _print_Function(self, expr):
+                     return "%s[%s]" % (mfunc, self.stringify(expr.args, ", "))
+         return expr.func.__name__ + "[%s]" % self.stringify(expr.args, ", ")
+ 
++    def _print_Max(self, expr):
++        return "Max[%s]" % self.stringify(expr.args, ", ")
++
++    def _print_Min(self, expr):
++        return "Min[%s]" % self.stringify(expr.args, ", ")
++
+     def _print_Integral(self, expr):
+         if len(expr.variables) == 1 and not expr.limits[0][1:]:
+             args = [expr.args[0], expr.variables[0]]
+diff --git a/sympy/printing/tests/test_mathematica.py b/sympy/printing/tests/test_mathematica.py
+index dd636d062..d04cbad1e 100755
+--- a/sympy/printing/tests/test_mathematica.py
++++ b/sympy/printing/tests/test_mathematica.py
+@@ -1,5 +1,6 @@
+ from sympy.core import (S, pi, oo, symbols, Function,
+                         Rational, Integer, Tuple, Derivative)
++from sympy.functions import Max, Min
+ from sympy.integrals import Integral
+ from sympy.concrete import Sum
+ from sympy.functions import exp, sin, cos, conjugate
+@@ -30,6 +31,13 @@ def test_Function():
+     assert mcode(conjugate(x)) == "Conjugate[x]"
+ 
+ 
++def test_Max_Min():
++    assert mcode(Max(x, 2)) == "Max[2, x]"
++    assert mcode(Min(x, 2)) == "Min[2, x]"
++    assert mcode(Max(x, y, 2)) == "Max[2, x, y]"
++    assert mcode(Min(x, y, 2)) == "Min[2, x, y]"
++
++
+ def test_Pow():
+     assert mcode(x**3) == "x^3"
+     assert mcode(x**(y**3)) == "x^(y^3)"

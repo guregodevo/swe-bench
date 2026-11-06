@@ -1,0 +1,78 @@
+diff --git a/django/utils/functional.py b/django/utils/functional.py
+index 6d38f932f9..009ff4d43f 100644
+--- a/django/utils/functional.py
++++ b/django/utils/functional.py
+@@ -176,6 +176,16 @@ def lazy(func, *resultclasses):
+                 return str(self) % rhs
+             return self.__cast() % rhs
+ 
++        def __add__(self, other):
++            if self._delegate_text:
++                return str(self) + other
++            return self.__cast() + other
++
++        def __radd__(self, other):
++            if self._delegate_text:
++                return other + str(self)
++            return other + self.__cast__()
++
+         def __deepcopy__(self, memo):
+             # Instances of this class are effectively immutable. It's just a
+             # collection of functions. So we don't need to do anything
+diff --git a/tests/template_tests/filter_tests/test_add.py b/tests/template_tests/filter_tests/test_add.py
+index 0fcc661f4a..292c52f8d7 100644
+--- a/tests/template_tests/filter_tests/test_add.py
++++ b/tests/template_tests/filter_tests/test_add.py
+@@ -2,6 +2,7 @@ from datetime import date, timedelta
+ 
+ from django.template.defaultfilters import add
+ from django.test import SimpleTestCase
++from django.utils.functional import lazystr
+ 
+ from ..utils import setup
+ 
+@@ -46,6 +47,16 @@ class AddTests(SimpleTestCase):
+         output = self.engine.render_to_string('add07', {'d': date(2000, 1, 1), 't': timedelta(10)})
+         self.assertEqual(output, 'Jan. 11, 2000')
+ 
++    @setup({'add08': '{{ s1|add:s2 }}'})
++    def test_add08(self):
++        output = self.engine.render_to_string('add08', {'s1': 'strings', 's2': lazystr(' and lazy')})
++        self.assertEqual(output, 'strings and lazy')
++
++    @setup({'add09': '{{ s1|add:s2 }}'})
++    def test_add09(self):
++        output = self.engine.render_to_string('add09', {'s1': lazystr('lazy and '), 's2': 'strings'})
++        self.assertEqual(output, 'lazy and strings')
++
+ 
+ class FunctionTests(SimpleTestCase):
+ 
+diff --git a/tests/utils_tests/test_functional.py b/tests/utils_tests/test_functional.py
+index 6e454cfef3..836af7d34e 100644
+--- a/tests/utils_tests/test_functional.py
++++ b/tests/utils_tests/test_functional.py
+@@ -1,7 +1,7 @@
+ from unittest import mock
+ 
+ from django.test import SimpleTestCase
+-from django.utils.functional import cached_property, classproperty, lazy
++from django.utils.functional import cached_property, classproperty, lazy, lazystr
+ 
+ 
+ class FunctionalTests(SimpleTestCase):
+@@ -210,6 +210,14 @@ class FunctionalTests(SimpleTestCase):
+         lazy_obj = lazy(lambda: original_object, bytes)
+         self.assertEqual(repr(original_object), repr(lazy_obj()))
+ 
++    def test_lazy_str_add(self):
++        lazy_obj = lazystr('lazy')
++        self.assertEqual(lazy_obj + ' string', 'lazy string')
++
++    def test_lazy_str_radd(self):
++        lazy_obj = lazystr('lazy')
++        self.assertEqual('string ' + lazy_obj, 'string lazy')
++
+     def test_lazy_class_preparation_caching(self):
+         # lazy() should prepare the proxy class only once i.e. the first time
+         # it's used.

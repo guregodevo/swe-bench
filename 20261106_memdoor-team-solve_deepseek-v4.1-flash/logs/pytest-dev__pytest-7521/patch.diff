@@ -1,0 +1,41 @@
+diff --git a/changelog/7478.bugfix.rst b/changelog/7478.bugfix.rst
+new file mode 100644
+index 000000000..75e4a21af
+--- /dev/null
++++ b/changelog/7478.bugfix.rst
+@@ -0,0 +1,2 @@
++Fixed ``capfd`` and ``capfdbinary`` translating ``\n`` and ``\r\n`` in the captured
++output, which caused carriage returns to be lost or converted to newlines.
+diff --git a/src/_pytest/capture.py b/src/_pytest/capture.py
+index 3f9c60fb9..f538b67ec 100644
+--- a/src/_pytest/capture.py
++++ b/src/_pytest/capture.py
+@@ -388,6 +388,7 @@ class FDCaptureBinary:
+                 TemporaryFile(buffering=0),  # type: ignore[arg-type]
+                 encoding="utf-8",
+                 errors="replace",
++                newline="",
+                 write_through=True,
+             )
+             if targetfd in patchsysdict:
+diff --git a/testing/test_capture.py b/testing/test_capture.py
+index a3bd4b623..6ba36b898 100644
+--- a/testing/test_capture.py
++++ b/testing/test_capture.py
+@@ -970,6 +970,16 @@ class TestFDCapture:
+     def test_capfd_sys_stdout_mode(self, capfd):
+         assert "b" not in sys.stdout.mode
+ 
++    def test_capfd_crlf(self, tmpfile):
++        """Test that carriage returns are not translated to newlines (#7478)."""
++        fd = tmpfile.fileno()
++        cap = capture.FDCapture(fd)
++        cap.start()
++        os.write(fd, b"hello\r\nworld\r")
++        s = cap.snap()
++        cap.done()
++        assert s == "hello\r\nworld\r"
++
+ 
+ @contextlib.contextmanager
+ def saved_fd(fd):

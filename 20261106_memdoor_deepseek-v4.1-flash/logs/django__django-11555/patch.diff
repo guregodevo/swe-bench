@@ -1,0 +1,50 @@
+diff --git a/django/db/models/sql/compiler.py b/django/db/models/sql/compiler.py
+index eaccc96d7d..52ea717ca6 100644
+--- a/django/db/models/sql/compiler.py
++++ b/django/db/models/sql/compiler.py
+@@ -722,6 +722,11 @@ class SQLCompiler:
+ 
+             results = []
+             for item in opts.ordering:
++                if hasattr(item, 'resolve_expression') and not isinstance(item, OrderBy):
++                    item = item.desc() if descending else item.asc()
++                if isinstance(item, OrderBy):
++                    results.append((item, False))
++                    continue
+                 results.extend(self.find_ordering_name(item, opts, alias,
+                                                        order, already_seen))
+             return results
+diff --git a/tests/ordering/models.py b/tests/ordering/models.py
+index 8b71983c44..f30a0b78b4 100644
+--- a/tests/ordering/models.py
++++ b/tests/ordering/models.py
+@@ -59,3 +59,7 @@ class Reference(models.Model):
+ 
+     class Meta:
+         ordering = ('article',)
++
++
++class ChildArticle(Article):
++    pass
+diff --git a/tests/ordering/tests.py b/tests/ordering/tests.py
+index 18c32d6d5f..55d715c96d 100644
+--- a/tests/ordering/tests.py
++++ b/tests/ordering/tests.py
+@@ -9,7 +9,7 @@ from django.db.models.functions import Upper
+ from django.test import TestCase
+ from django.utils.deprecation import RemovedInDjango31Warning
+ 
+-from .models import Article, Author, OrderedByFArticle, Reference
++from .models import Article, Author, ChildArticle, OrderedByFArticle, Reference
+ 
+ 
+ class OrderingTests(TestCase):
+@@ -459,7 +459,7 @@ class OrderingTests(TestCase):
+         articles.filter(headline='Article 3').update(author=self.author_1)
+         self.assertQuerysetEqual(
+             articles, ['Article 1', 'Article 4', 'Article 3', 'Article 2'],
+-            attrgetter('headline')
++            attrgetter('headline'),
+         )
+ 
+     def test_deprecated_values_annotate(self):

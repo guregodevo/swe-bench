@@ -1,0 +1,78 @@
+diff --git a/doc/whats_new/v0.20.rst b/doc/whats_new/v0.20.rst
+index 32b4ef309..622608bb6 100644
+--- a/doc/whats_new/v0.20.rst
++++ b/doc/whats_new/v0.20.rst
+@@ -253,6 +253,11 @@ Model evaluation and meta-estimators
+   return estimators fitted on each split. :issue:`9686` by :user:`Aurélien Bellet
+   <bellet>`.
+ 
++- Add ``refit_time_`` attribute to :class:`model_selection.GridSearchCV` and
++  :class:`model_selection.RandomizedSearchCV` to record the time spent
++  refitting the best estimator on the whole dataset. :issue:`11310` by
++  :user:`Joris Van den Bossche <jorisvandenbossche>`.
++
+ Decomposition and manifold learning
+ 
+ - Speed improvements for both 'exact' and 'barnes_hut' methods in
+diff --git a/sklearn/model_selection/_search.py b/sklearn/model_selection/_search.py
+index 99d6096af..e74592788 100644
+--- a/sklearn/model_selection/_search.py
++++ b/sklearn/model_selection/_search.py
+@@ -17,6 +17,7 @@ from collections import Mapping, namedtuple, defaultdict, Sequence, Iterable
+ from functools import partial, reduce
+ from itertools import product
+ import operator
++import time
+ import warnings
+ 
+ import numpy as np
+@@ -766,10 +767,12 @@ class BaseSearchCV(six.with_metaclass(ABCMeta, BaseEstimator,
+         if self.refit:
+             self.best_estimator_ = clone(base_estimator).set_params(
+                 **self.best_params_)
++            refit_start_time = time.time()
+             if y is not None:
+                 self.best_estimator_.fit(X, y, **fit_params)
+             else:
+                 self.best_estimator_.fit(X, **fit_params)
++            self.refit_time_ = time.time() - refit_start_time
+ 
+         # Store the only scorer not as a dict for single metric evaluation
+         self.scorer_ = scorers if self.multimetric_ else scorers['score']
+@@ -1066,6 +1069,11 @@ class GridSearchCV(BaseSearchCV):
+         For multi-metric evaluation, this is present only if ``refit`` is
+         specified.
+ 
++    refit_time_ : float
++        Seconds used for refitting the best model on the whole dataset.
++
++        This is present only if ``refit`` is not False.
++
+     scorer_ : function or a dict
+         Scorer function used on the held out data to choose the best
+         parameters for the model.
+diff --git a/sklearn/model_selection/tests/test_search.py b/sklearn/model_selection/tests/test_search.py
+index f436c7b55..a24f46f2a 100644
+--- a/sklearn/model_selection/tests/test_search.py
++++ b/sklearn/model_selection/tests/test_search.py
+@@ -420,10 +420,12 @@ def test_trivial_cv_results_attr():
+     grid_search = GridSearchCV(clf, {'foo_param': [1]})
+     grid_search.fit(X, y)
+     assert_true(hasattr(grid_search, "cv_results_"))
++    assert_true(hasattr(grid_search, "refit_time_"))
+ 
+     random_search = RandomizedSearchCV(clf, {'foo_param': [0]}, n_iter=1)
+     random_search.fit(X, y)
+     assert_true(hasattr(grid_search, "cv_results_"))
++    assert_true(hasattr(random_search, "refit_time_"))
+ 
+ 
+ def test_no_refit():
+@@ -435,6 +437,7 @@ def test_no_refit():
+         assert_true(not hasattr(grid_search, "best_estimator_") and
+                     hasattr(grid_search, "best_index_") and
+                     hasattr(grid_search, "best_params_"))
++        assert_true(not hasattr(grid_search, "refit_time_"))
+ 
+         # Make sure the functions predict/transform etc raise meaningful
+         # error messages

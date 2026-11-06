@@ -1,0 +1,148 @@
+diff --git a/django/db/models/sql/query.py b/django/db/models/sql/query.py
+index 9735ce10c8..81bbdb2b3f 100644
+--- a/django/db/models/sql/query.py
++++ b/django/db/models/sql/query.py
+@@ -550,9 +550,95 @@ class Query(BaseExpression):
+         Perform a COUNT() query using the current filter constraints.
+         """
+         obj = self.clone()
++        selected_annotations = set(self.annotation_select)
++        used_annotations = self._get_used_annotation_aliases()
++        retained_aliases = set(obj._gen_col_aliases([obj.where]))
++        retained_aliases.update(obj._gen_col_aliases(obj.order_by))
++        retained_aliases.update(obj._gen_col_aliases(obj.select))
++        if isinstance(obj.group_by, tuple):
++            retained_aliases.update(obj._gen_col_aliases(obj.group_by))
++        for alias in used_annotations:
++            retained_aliases.update(obj._gen_col_aliases([obj.annotations[alias]]))
++        initial_alias = obj.get_initial_alias()
++        removed_col_aliases = Counter()
++        for alias, annotation in list(obj.annotations.items()):
++            if alias in used_annotations:
++                continue
++            removed_col_aliases.update(set(obj._gen_col_aliases([annotation])))
++            del obj.annotations[alias]
++        for col_alias, references in removed_col_aliases.items():
++            if col_alias != initial_alias and col_alias not in retained_aliases:
++                obj.unref_alias(
++                    col_alias, min(references, obj.alias_refcount.get(col_alias, 0))
++                )
++        if obj.group_by is True and not used_annotations:
++            obj.group_by = None
+         obj.add_annotation(Count("*"), alias="__count", is_summary=True)
++        obj.set_annotation_mask((selected_annotations & used_annotations) | {"__count"})
+         return obj.get_aggregation(using, ["__count"])["__count"]
+ 
++    def _get_used_annotation_aliases(self):
++        """
++        Return the annotation aliases referenced by filters, ordering, or by
++        other annotations that are themselves used.
++        """
++        annotations = self.annotations
++        if not annotations:
++            return set()
++
++        def collect(expression, used):
++            if expression is None:
++                return
++            if isinstance(expression, str):
++                name = expression.lstrip("-?")
++                if name in annotations:
++                    used.add(name)
++                return
++            if isinstance(expression, Ref) and expression.refs in annotations:
++                used.add(expression.refs)
++            if isinstance(expression, F) and expression.name in annotations:
++                used.add(expression.name)
++            for alias, annotation in annotations.items():
++                if expression is annotation:
++                    used.add(alias)
++                    break
++            if isinstance(expression, Node):
++                for child in expression.children:
++                    collect(child, used)
++            if isinstance(expression, BaseExpression):
++                for source in expression.get_source_expressions():
++                    collect(source, used)
++
++        used = set()
++        collect(self.where, used)
++        for expression in self.order_by:
++            collect(expression, used)
++        for expression in self.distinct_fields:
++            collect(expression, used)
++        if isinstance(self.group_by, tuple):
++            for expression in self.group_by:
++                collect(expression, used)
++        elif self.group_by is True:
++            # Selecting a non-aggregate annotation alongside an aggregate
++            # makes the query group by the model's fields. Keep such
++            # annotations so count() counts the groups.
++            used.update(
++                alias
++                for alias, annotation in self.annotation_select.items()
++                if not annotation.contains_aggregate
++            )
++
++        # An annotation is also needed if a used annotation refers to it.
++        pending = list(used)
++        while pending:
++            alias = pending.pop()
++            referenced = set()
++            collect(annotations[alias], referenced)
++            for referenced_alias in referenced - used:
++                used.add(referenced_alias)
++                pending.append(referenced_alias)
++        return used
++
+     def has_filters(self):
+         return self.where
+ 
+diff --git a/tests/aggregation/tests.py b/tests/aggregation/tests.py
+index 39c8a45707..ba0aede506 100644
+--- a/tests/aggregation/tests.py
++++ b/tests/aggregation/tests.py
+@@ -535,6 +535,43 @@ class AggregateTestCase(TestCase):
+         vals = Book.objects.aggregate(Count("rating"))
+         self.assertEqual(vals, {"rating__count": 6})
+ 
++    def test_count_unused_annotation_not_in_query(self):
++        with CaptureQueriesContext(connection) as ctx:
++            count = Book.objects.annotate(Count("authors")).count()
++        self.assertEqual(count, Book.objects.count())
++        sql = ctx[0]["sql"]
++        self.assertEqual(sql.upper().count("COUNT("), 1)
++        self.assertIn("COUNT(*)", sql)
++
++    def test_count_annotation_used_by_filter_is_kept(self):
++        qs = Book.objects.annotate(authors_count=Count("authors")).filter(
++            authors_count__gt=1
++        )
++        with CaptureQueriesContext(connection) as ctx:
++            count = qs.count()
++        self.assertEqual(count, 3)
++        self.assertIn('COUNT("aggregation_book_authors"."author_id")', ctx[0]["sql"])
++
++    def test_count_annotation_used_by_annotation_is_kept(self):
++        qs = (
++            Book.objects.annotate(authors_count=Count("authors"))
++            .annotate(double_authors=F("authors_count") * 2)
++            .filter(double_authors__gt=2)
++        )
++        with CaptureQueriesContext(connection) as ctx:
++            count = qs.count()
++        self.assertEqual(count, 3)
++        self.assertIn('COUNT("aggregation_book_authors"."author_id")', ctx[0]["sql"])
++
++    def test_count_annotation_used_by_ordering_is_kept(self):
++        qs = Book.objects.annotate(authors_count=Count("authors")).order_by(
++            "authors_count"
++        )
++        with CaptureQueriesContext(connection) as ctx:
++            count = qs.count()
++        self.assertEqual(count, Book.objects.count())
++        self.assertIn('COUNT("aggregation_book_authors"."author_id")', ctx[0]["sql"])
++
+     def test_count_star(self):
+         with self.assertNumQueries(1) as ctx:
+             Book.objects.aggregate(n=Count("*"))

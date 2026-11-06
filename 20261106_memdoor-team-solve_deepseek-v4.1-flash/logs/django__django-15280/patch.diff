@@ -1,0 +1,76 @@
+diff --git a/django/db/models/fields/related_descriptors.py b/django/db/models/fields/related_descriptors.py
+index d5aa968400..4661c887b1 100644
+--- a/django/db/models/fields/related_descriptors.py
++++ b/django/db/models/fields/related_descriptors.py
+@@ -377,7 +377,8 @@ class ReverseOneToOneDescriptor:
+         # we must manage the reverse relation cache manually.
+         for rel_obj in queryset:
+             instance = instances_dict[rel_obj_attr(rel_obj)]
+-            self.related.field.set_cached_value(rel_obj, instance)
++            if not self.related.field.is_cached(rel_obj):
++                self.related.field.set_cached_value(rel_obj, instance)
+         return queryset, rel_obj_attr, instance_attr, True, self.related.get_cache_name(), False
+ 
+     def __get__(self, instance, cls=None):
+@@ -647,7 +648,8 @@ def create_reverse_many_to_one_manager(superclass, rel):
+             # the reverse relation manually.
+             for rel_obj in queryset:
+                 instance = instances_dict[rel_obj_attr(rel_obj)]
+-                setattr(rel_obj, self.field.name, instance)
++                if not self.field.is_cached(rel_obj):
++                    setattr(rel_obj, self.field.name, instance)
+             cache_name = self.field.remote_field.get_cache_name()
+             return queryset, rel_obj_attr, instance_attr, False, cache_name, False
+ 
+diff --git a/tests/prefetch_related/test_repro.py b/tests/prefetch_related/test_repro.py
+new file mode 100644
+index 0000000000..b5f52fabff
+--- /dev/null
++++ b/tests/prefetch_related/test_repro.py
+@@ -0,0 +1,46 @@
++from django.db.models import Prefetch
++from django.test import TestCase
++
++from .models import House, Room
++
++
++class NestedPrefetchDeferredFieldsTests(TestCase):
++    @classmethod
++    def setUpTestData(cls):
++        cls.house = House.objects.create(name="h", address="a")
++        cls.room = Room.objects.create(name="r", house=cls.house)
++        cls.house.main_room = cls.room
++        cls.house.save()
++
++    def test_reverse_one_to_one_nested_prefetch(self):
++        queryset = Room.objects.only("name").prefetch_related(
++            Prefetch(
++                "main_room_of",
++                queryset=House.objects.prefetch_related(
++                    Prefetch("main_room", queryset=Room.objects.only("house_id"))
++                ),
++            )
++        )
++        with self.assertNumQueries(3):
++            room = queryset.first()
++        with self.assertNumQueries(0):
++            self.assertEqual(room.main_room_of.main_room.house_id, self.house.pk)
++        self.assertEqual(room.main_room_of.main_room.get_deferred_fields(), {"name"})
++
++    def test_reverse_foreign_key_nested_prefetch(self):
++        queryset = House.objects.only("name").prefetch_related(
++            Prefetch(
++                "rooms",
++                queryset=Room.objects.prefetch_related(
++                    Prefetch("house", queryset=House.objects.only("address"))
++                ),
++            )
++        )
++        with self.assertNumQueries(3):
++            house = queryset.first()
++        with self.assertNumQueries(0):
++            self.assertEqual(house.rooms.all()[0].house.address, "a")
++        self.assertEqual(
++            house.rooms.all()[0].house.get_deferred_fields(),
++            {"name", "owner_id", "main_room_id"},
++        )

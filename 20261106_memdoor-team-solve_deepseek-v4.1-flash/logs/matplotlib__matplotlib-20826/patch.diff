@@ -1,0 +1,49 @@
+diff --git a/lib/matplotlib/axis.py b/lib/matplotlib/axis.py
+index 887cf97ef1..deea2e2c55 100644
+--- a/lib/matplotlib/axis.py
++++ b/lib/matplotlib/axis.py
+@@ -806,8 +806,16 @@ class Axis(martist.Artist):
+         # Clear the callback registry for this axis, or it may "leak"
+         self.callbacks = cbook.CallbackRegistry()
+ 
+-        self._reset_major_tick_kw()
+-        self._reset_minor_tick_kw()
++        # Whether the grids are on.  Only the grid state is reset here; other
++        # tick parameters (e.g. tick/label visibility) are left untouched so
++        # that clearing an Axes does not undo settings such as the ones used
++        # to hide redundant labels on shared axes.
++        self._major_tick_kw['gridOn'] = (
++                mpl.rcParams['axes.grid'] and
++                mpl.rcParams['axes.grid.which'] in ('both', 'major'))
++        self._minor_tick_kw['gridOn'] = (
++                mpl.rcParams['axes.grid'] and
++                mpl.rcParams['axes.grid.which'] in ('both', 'minor'))
+         self.reset_ticks()
+ 
+         self.converter = None
+diff --git a/lib/matplotlib/tests/test_axes.py b/lib/matplotlib/tests/test_axes.py
+index db7050f732..107239ea5d 100644
+--- a/lib/matplotlib/tests/test_axes.py
++++ b/lib/matplotlib/tests/test_axes.py
+@@ -6976,6 +6976,21 @@ def test_shared_axes_retick():
+         assert ax.get_ylim() == axs[0, 0].get_ylim()
+ 
+ 
++@check_figures_equal(extensions=['png'])
++def test_shared_axes_clear(fig_test, fig_ref):
++    x = np.arange(0.0, 2*np.pi, 0.01)
++    y = np.sin(x)
++
++    axs = fig_ref.subplots(2, 2, sharex=True, sharey=True)
++    for ax in axs.flat:
++        ax.plot(x, y)
++
++    axs = fig_test.subplots(2, 2, sharex=True, sharey=True)
++    for ax in axs.flat:
++        ax.clear()
++        ax.plot(x, y)
++
++
+ @pytest.mark.parametrize('ha', ['left', 'center', 'right'])
+ def test_ylabel_ha_with_position(ha):
+     fig = Figure()

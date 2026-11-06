@@ -1,0 +1,146 @@
+diff --git a/seaborn/_core/plot.py b/seaborn/_core/plot.py
+index 4f0290a4..c66c5f87 100644
+--- a/seaborn/_core/plot.py
++++ b/seaborn/_core/plot.py
+@@ -14,6 +14,7 @@ from collections.abc import Callable, Generator
+ from typing import Any, List, Optional, cast
+ 
+ from cycler import cycler
++import numpy as np
+ import pandas as pd
+ from pandas import DataFrame, Series, Index
+ import matplotlib as mpl
+@@ -25,7 +26,7 @@ from seaborn._marks.base import Mark
+ from seaborn._stats.base import Stat
+ from seaborn._core.data import PlotData
+ from seaborn._core.moves import Move
+-from seaborn._core.scales import Scale
++from seaborn._core.scales import Scale, Nominal
+ from seaborn._core.subplots import Subplots
+ from seaborn._core.groupby import GroupBy
+ from seaborn._core.properties import PROPERTIES, Property
+@@ -1238,7 +1239,6 @@ class Plotter:
+             # This only affects us when sharing *paired* axes. This is a novel/niche
+             # behavior, so we will raise rather than hack together a workaround.
+             if axis is not None and Version(mpl.__version__) < Version("3.4.0"):
+-                from seaborn._core.scales import Nominal
+                 paired_axis = axis in p._pair_spec.get("structure", {})
+                 cat_scale = isinstance(scale, Nominal)
+                 ok_dim = {"x": "col", "y": "row"}[axis]
+@@ -1475,21 +1475,23 @@ class Plotter:
+ 
+                 axes_df = self._filter_subplot_data(df, view)
+ 
+-                with pd.option_context("mode.use_inf_as_null", True):
+-                    if keep_na:
+-                        # The simpler thing to do would be x.dropna().reindex(x.index).
+-                        # But that doesn't work with the way that the subset iteration
+-                        # is written below, which assumes data for grouping vars.
+-                        # Matplotlib (usually?) masks nan data, so this should "work".
+-                        # Downstream code can also drop these rows, at some speed cost.
+-                        present = axes_df.notna().all(axis=1)
+-                        nulled = {}
+-                        for axis in "xy":
+-                            if axis in axes_df:
+-                                nulled[axis] = axes_df[axis].where(present)
+-                        axes_df = axes_df.assign(**nulled)
+-                    else:
+-                        axes_df = axes_df.dropna()
++                # Treat infinities as missing (this was the behavior of the removed
++                # pandas "mode.use_inf_as_null" option, which no longer exists).
++                axes_df = axes_df.replace([np.inf, -np.inf], np.nan)
++                if keep_na:
++                    # The simpler thing to do would be x.dropna().reindex(x.index).
++                    # But that doesn't work with the way that the subset iteration
++                    # is written below, which assumes data for grouping vars.
++                    # Matplotlib (usually?) masks nan data, so this should "work".
++                    # Downstream code can also drop these rows, at some speed cost.
++                    present = axes_df.notna().all(axis=1)
++                    nulled = {}
++                    for axis in "xy":
++                        if axis in axes_df:
++                            nulled[axis] = axes_df[axis].where(present)
++                    axes_df = axes_df.assign(**nulled)
++                else:
++                    axes_df = axes_df.dropna()
+ 
+                 subplot_keys = {}
+                 for dim in ["col", "row"]:
+@@ -1631,6 +1633,7 @@ class Plotter:
+             ax = sub["ax"]
+             for axis in "xy":
+                 axis_key = sub[axis]
++                axis_obj = getattr(ax, f"{axis}axis")
+ 
+                 # Axis limits
+                 if axis_key in p._limits:
+@@ -1644,6 +1647,18 @@ class Plotter:
+                         hi = cast(float, hi) + 0.5
+                     ax.set(**{f"{axis}lim": (lo, hi)})
+ 
++                # Nominal scale special-casing
++                if isinstance(self._scales.get(axis_key), Nominal):
++                    axis_obj.grid(False)
++                    if axis == "y":
++                        ax.invert_yaxis()
++                    if axis_key not in p._limits:
++                        nticks = len(axis_obj.get_major_ticks())
++                        lo, hi = -.5, nticks - .5
++                        if axis == "y":
++                            lo, hi = hi, lo
++                        ax.set(**{f"{axis}lim": (lo, hi)})
++
+         engine_default = None if p._target is not None else "tight"
+         layout_engine = p._layout_spec.get("engine", engine_default)
+         set_layout_engine(self._figure, layout_engine)
+diff --git a/tests/_core/test_plot.py b/tests/_core/test_plot.py
+index 03a64917..82a55b0c 100644
+--- a/tests/_core/test_plot.py
++++ b/tests/_core/test_plot.py
+@@ -365,6 +365,46 @@ class TestScaling:
+         ax = p._figure.axes[0]
+         assert ax.yaxis.convert_units("3") == 2
+ 
++    def test_nominal_scale_limits(self):
++
++        p = Plot(x=["a", "b", "c"], y=[1, 2, 3]).add(MockMark()).plot()
++        ax = p._figure.axes[0]
++        assert ax.get_xlim() == (-.5, 2.5)
++
++    def test_nominal_scale_limits_with_order(self):
++
++        p = (
++            Plot(x=["a", "b", "c"], y=[1, 2, 3])
++            .scale(x=Nominal(order=["c", "a", "b"]))
++            .add(MockMark())
++            .plot()
++        )
++        ax = p._figure.axes[0]
++        assert ax.get_xlim() == (-.5, 2.5)
++
++    def test_nominal_scale_limits_with_limit(self):
++
++        p = (
++            Plot(x=["a", "b", "c", "d"], y=[1, 2, 3, 4])
++            .limit(x=("b", "c"))
++            .add(MockMark())
++            .plot()
++        )
++        ax = p._figure.axes[0]
++        assert ax.get_xlim() == (0.5, 2.5)
++
++    def test_nominal_scale_grid_suppressed(self):
++
++        p = Plot(x=["a", "b", "c"], y=[1, 2, 3]).add(MockMark()).plot()
++        ax = p._figure.axes[0]
++        assert not any(line.get_visible() for line in ax.xaxis.get_gridlines())
++
++    def test_nominal_scale_y_inverted(self):
++
++        p = Plot(x=[1, 2, 3], y=["a", "b", "c"]).add(MockMark()).plot()
++        ax = p._figure.axes[0]
++        assert ax.get_ylim() == (2.5, -.5)
++
+     @pytest.mark.xfail(reason="Temporal auto-conversion not implemented")
+     def test_categorical_as_datetime(self):
+ 

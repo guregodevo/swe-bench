@@ -1,0 +1,40 @@
+diff --git a/sympy/simplify/fu.py b/sympy/simplify/fu.py
+index ad1130ef9..b4d5dee7f 100755
+--- a/sympy/simplify/fu.py
++++ b/sympy/simplify/fu.py
+@@ -501,9 +501,11 @@ def _f(rv):
+         if not (rv.is_Pow and rv.base.func == f):
+             return rv
+ 
+-        if (rv.exp < 0) == True:
++        if rv.exp.is_extended_real is False:
+             return rv
+-        if (rv.exp > max) == True:
++        if rv.exp.is_negative:
++            return rv
++        if (rv.exp - max).is_positive:
+             return rv
+         if rv.exp == 2:
+             return h(g(rv.base.args[0])**2)
+diff --git a/sympy/simplify/tests/test_fu.py b/sympy/simplify/tests/test_fu.py
+index 54be6e1dc..60895b79b 100755
+--- a/sympy/simplify/tests/test_fu.py
++++ b/sympy/simplify/tests/test_fu.py
+@@ -75,6 +75,9 @@ def test__TR56():
+     assert T(sin(x)**6, sin, cos, h, 6, False) == (-cos(x)**2 + 1)**3
+     assert T(sin(x)**6, sin, cos, h, 6, True) == sin(x)**6
+     assert T(sin(x)**8, sin, cos, h, 10, True) == (-cos(x)**2 + 1)**4
++    # non-real exponents should not raise
++    assert T(sin(x)**I, sin, cos, h, 4, False) == sin(x)**I
++    assert T(sin(x)**(1 + I), sin, cos, h, 4, False) == sin(x)**(1 + I)
+ 
+ 
+ def test_TR5():
+@@ -87,6 +90,7 @@ def test_TR6():
+     assert TR6(cos(x)**2) == -sin(x)**2 + 1
+     assert TR6(cos(x)**-2) == cos(x)**(-2)
+     assert TR6(cos(x)**4) == (-sin(x)**2 + 1)**2
++    assert TR6(cos(x)**I) == cos(x)**I
+ 
+ 
+ def test_TR7():

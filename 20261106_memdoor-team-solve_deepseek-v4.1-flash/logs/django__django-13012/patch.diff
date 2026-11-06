@@ -1,0 +1,39 @@
+diff --git a/django/db/models/expressions.py b/django/db/models/expressions.py
+index c1a76584f0..14d6a1e525 100644
+--- a/django/db/models/expressions.py
++++ b/django/db/models/expressions.py
+@@ -866,6 +866,9 @@ class ExpressionWrapper(Expression):
+     def as_sql(self, compiler, connection):
+         return self.expression.as_sql(compiler, connection)
+ 
++    def get_group_by_cols(self, alias=None):
++        return self.expression.get_group_by_cols(alias=alias)
++
+     def __repr__(self):
+         return "{}({})".format(self.__class__.__name__, self.expression)
+ 
+diff --git a/tests/expressions/tests.py b/tests/expressions/tests.py
+index 72bca4f205..66a6cc20bb 100644
+--- a/tests/expressions/tests.py
++++ b/tests/expressions/tests.py
+@@ -61,6 +61,20 @@ class BasicExpressionsTests(TestCase):
+         )
+         self.assertEqual(companies['result'], 2395)
+ 
++    def test_annotate_values_aggregate_expression_wrapper(self):
++        companies = Company.objects.annotate(
++            expr_res=ExpressionWrapper(Value(3), output_field=IntegerField()),
++        ).values('expr_res', 'num_employees').annotate(
++            sum=Sum('num_chairs'),
++        ).order_by('num_employees')
++        self.assertEqual(
++            [(c['expr_res'], c['num_employees'], c['sum']) for c in companies],
++            [(3, 3, 4), (3, 32, 1), (3, 2300, 5)],
++        )
++        sql = str(companies.query)
++        self.assertIn('GROUP BY', sql)
++        self.assertNotIn('GROUP BY "expressions_company"."num_employees", 3', sql)
++
+     def test_annotate_values_filter(self):
+         companies = Company.objects.annotate(
+             foo=RawSQL('%s', ['value']),

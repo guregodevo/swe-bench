@@ -1,0 +1,53 @@
+diff --git a/django/db/backends/base/schema.py b/django/db/backends/base/schema.py
+index f2ca8c8df9..594b155c93 100644
+--- a/django/db/backends/base/schema.py
++++ b/django/db/backends/base/schema.py
+@@ -528,7 +528,10 @@ class BaseDatabaseSchemaEditor:
+         # Deleted uniques
+         for fields in olds.difference(news):
+             self._delete_composed_index(
+-                model, fields, {"unique": True}, self.sql_delete_unique
++                model,
++                fields,
++                {"unique": True, "primary_key": False},
++                self.sql_delete_unique,
+             )
+         # Created uniques
+         for field_names in news.difference(olds):
+diff --git a/tests/schema/tests.py b/tests/schema/tests.py
+index fe717f8841..91425783eb 100644
+--- a/tests/schema/tests.py
++++ b/tests/schema/tests.py
+@@ -2548,6 +2548,32 @@ class SchemaTests(TransactionTestCase):
+         with connection.schema_editor() as editor:
+             editor.alter_unique_together(Book, [["author", "title"]], [])
+ 
++    @isolate_apps("schema")
++    def test_remove_unique_together_on_primary_key(self):
++        class Foo(Model):
++            id = AutoField(primary_key=True)
++
++            class Meta:
++                app_label = "schema"
++                unique_together = (("id",),)
++
++        with connection.schema_editor() as editor:
++            editor.create_model(Foo)
++        self.isolated_local_models = [Foo]
++        with connection.schema_editor() as editor:
++            editor.alter_unique_together(Foo, Foo._meta.unique_together, [])
++        constraints = self.get_constraints(Foo._meta.db_table)
++        self.assertEqual(
++            [
++                name
++                for name, details in constraints.items()
++                if details["columns"] == ["id"]
++                and details["unique"]
++                and not details["primary_key"]
++            ],
++            [],
++        )
++
+     def test_unique_together_with_fk_with_existing_index(self):
+         """
+         Tests removing and adding unique_together constraints that include

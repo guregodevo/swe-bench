@@ -1,0 +1,72 @@
+diff --git a/django/db/models/sql/compiler.py b/django/db/models/sql/compiler.py
+index eaccc96d7d..52ea717ca6 100644
+--- a/django/db/models/sql/compiler.py
++++ b/django/db/models/sql/compiler.py
+@@ -722,6 +722,11 @@ class SQLCompiler:
+ 
+             results = []
+             for item in opts.ordering:
++                if hasattr(item, 'resolve_expression') and not isinstance(item, OrderBy):
++                    item = item.desc() if descending else item.asc()
++                if isinstance(item, OrderBy):
++                    results.append((item, False))
++                    continue
+                 results.extend(self.find_ordering_name(item, opts, alias,
+                                                        order, already_seen))
+             return results
+diff --git a/tests/ordering/models.py b/tests/ordering/models.py
+index 8b71983c44..35949a88c4 100644
+--- a/tests/ordering/models.py
++++ b/tests/ordering/models.py
+@@ -54,8 +54,21 @@ class OrderedByFArticle(Article):
+         ordering = (models.F('author').asc(nulls_first=True), 'id')
+ 
+ 
++class OrderedByExpressionArticle(Article):
++    class Meta:
++        proxy = True
++        ordering = (models.F('headline').asc(),)
++
++
+ class Reference(models.Model):
+     article = models.ForeignKey(OrderedByAuthorArticle, models.CASCADE)
+ 
+     class Meta:
+         ordering = ('article',)
++
++
++class ArticleReference(models.Model):
++    article = models.ForeignKey(OrderedByExpressionArticle, models.CASCADE)
++
++    class Meta:
++        ordering = ('article',)
+diff --git a/tests/ordering/tests.py b/tests/ordering/tests.py
+index 18c32d6d5f..8ede713047 100644
+--- a/tests/ordering/tests.py
++++ b/tests/ordering/tests.py
+@@ -9,7 +9,10 @@ from django.db.models.functions import Upper
+ from django.test import TestCase
+ from django.utils.deprecation import RemovedInDjango31Warning
+ 
+-from .models import Article, Author, OrderedByFArticle, Reference
++from .models import (
++    Article, ArticleReference, Author, OrderedByExpressionArticle,
++    OrderedByFArticle, Reference,
++)
+ 
+ 
+ class OrderingTests(TestCase):
+@@ -435,6 +438,13 @@ class OrderingTests(TestCase):
+             with self.subTest(ordered_qs=ordered_qs), self.assertRaisesMessage(FieldError, msg):
+                 ordered_qs.first()
+ 
++    def test_related_ordering_by_expression(self):
++        article = OrderedByExpressionArticle.objects.create(
++            headline='Article 5', pub_date=datetime(2005, 7, 29),
++        )
++        reference = ArticleReference.objects.create(article=article)
++        self.assertSequenceEqual(ArticleReference.objects.all(), [reference])
++
+     def test_related_ordering_duplicate_table_reference(self):
+         """
+         An ordering referencing a model with an ordering referencing a model

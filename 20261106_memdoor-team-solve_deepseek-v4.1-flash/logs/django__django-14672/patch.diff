@@ -1,0 +1,43 @@
+diff --git a/django/db/models/fields/reverse_related.py b/django/db/models/fields/reverse_related.py
+index ccc2223a5f..65950590e2 100755
+--- a/django/db/models/fields/reverse_related.py
++++ b/django/db/models/fields/reverse_related.py
+@@ -310,7 +310,7 @@ class ManyToManyRel(ForeignObjectRel):
+     def identity(self):
+         return super().identity + (
+             self.through,
+-            self.through_fields,
++            make_hashable(self.through_fields),
+             self.db_constraint,
+         )
+ 
+diff --git a/tests/model_fields/test_manytomanyfield.py b/tests/model_fields/test_manytomanyfield.py
+index 0ddf57ceaf..8c5e184783 100755
+--- a/tests/model_fields/test_manytomanyfield.py
++++ b/tests/model_fields/test_manytomanyfield.py
+@@ -99,3 +99,25 @@ class ManyToManyFieldDBTests(TestCase):
+         related_obj = ManyToMany.objects.create()
+         obj.m2m.add(related_obj)
+         self.assertEqual(obj._meta.get_field('m2m').value_from_object(obj), [related_obj])
++
++
++class ManyToManyFieldIdentityTests(SimpleTestCase):
++    @isolate_apps('model_fields')
++    def test_through_fields_hashable(self):
++        class Parent(models.Model):
++            pass
++
++        class Child(models.Model):
++            parent = models.ForeignKey(Parent, on_delete=models.CASCADE)
++            m2m = models.ManyToManyField(
++                Parent,
++                through='Through',
++                through_fields=['child', 'parent'],
++            )
++
++        class Through(models.Model):
++            parent = models.ForeignKey(Parent, on_delete=models.CASCADE)
++            child = models.ForeignKey(Child, on_delete=models.CASCADE)
++
++        field = Child._meta.get_field('m2m')
++        self.assertEqual(hash(field.remote_field), hash(field.remote_field))

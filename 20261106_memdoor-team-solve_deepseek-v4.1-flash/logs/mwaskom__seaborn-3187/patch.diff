@@ -1,0 +1,48 @@
+diff --git a/seaborn/_core/scales.py b/seaborn/_core/scales.py
+index 55874bf2..c91f6fdc 100644
+--- a/seaborn/_core/scales.py
++++ b/seaborn/_core/scales.py
+@@ -378,6 +378,14 @@ class ContinuousBase(Scale):
+             axis.set_view_interval(vmin, vmax)
+             locs = axis.major.locator()
+             locs = locs[(vmin <= locs) & (locs <= vmax)]
++            # Avoid having an offset / scientific notation in a legend
++            # as we don't represent that anywhere so it ends up incorrect.
++            # This could become an option (e.g. Continuous.label(offset=True))
++            # in which case we would need to figure out how to show it.
++            if hasattr(axis.major.formatter, "set_useOffset"):
++                axis.major.formatter.set_useOffset(False)
++            if hasattr(axis.major.formatter, "set_scientific"):
++                axis.major.formatter.set_scientific(False)
+             labels = axis.major.formatter.format_ticks(locs)
+             new._legend = list(locs), list(labels)
+ 
+diff --git a/tests/_core/test_scales.py b/tests/_core/test_scales.py
+index c4b39f5d..ce33a120 100644
+--- a/tests/_core/test_scales.py
++++ b/tests/_core/test_scales.py
+@@ -303,6 +303,24 @@ class TestContinuous:
+         label, = a.major.formatter.format_ticks([100])
+         assert r"10^{2}" in label
+ 
++    def test_legend_labels_have_no_offset(self, x):
++
++        # https://github.com/mwaskom/seaborn/issues/3179
++        x = pd.Series([1e6 + i for i in range(3)], name="x", dtype=float)
++        s = Continuous()._setup(x, Color())
++        _, labels = s._legend
++        for label in labels:
++            assert "e" not in label.lower()
++            assert "+" not in label
++
++    def test_legend_labels_have_no_scientific_notation(self, x):
++
++        x = pd.Series([1e6, 2e6, 3e6], name="x", dtype=float)
++        s = Continuous()._setup(x, Color())
++        _, labels = s._legend
++        for label in labels:
++            assert "e" not in label.lower()
++
+     def test_label_type_checks(self):
+ 
+         s = Continuous()

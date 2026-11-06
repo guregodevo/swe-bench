@@ -1,0 +1,47 @@
+diff --git a/xarray/core/common.py b/xarray/core/common.py
+index 3c328f42..ee604f96 100644
+--- a/xarray/core/common.py
++++ b/xarray/core/common.py
+@@ -2023,7 +2023,9 @@ def get_chunksizes(
+ 
+     chunks: dict[Any, tuple[int, ...]] = {}
+     for v in variables:
+-        if hasattr(v.data, "chunks"):
++        # use the private _data attribute to avoid loading lazy arrays (e.g.
++        # arrays backed by a file or a remote store) just to inspect chunks
++        if hasattr(v._data, "chunks"):
+             for dim, c in v.chunksizes.items():
+                 if dim in chunks and c != chunks[dim]:
+                     raise ValueError(
+diff --git a/xarray/core/variable.py b/xarray/core/variable.py
+index 2d115ff0..cfb07166 100644
+--- a/xarray/core/variable.py
++++ b/xarray/core/variable.py
+@@ -1015,7 +1015,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
+         xarray.unify_chunks
+         """
+         if hasattr(self._data, "chunks"):
+-            return Frozen({dim: c for dim, c in zip(self.dims, self.data.chunks)})
++            return Frozen({dim: c for dim, c in zip(self.dims, self._data.chunks)})
+         else:
+             return {}
+ 
+diff --git a/xarray/tests/test_backends.py b/xarray/tests/test_backends.py
+index bbfae73e..04b7b663 100644
+--- a/xarray/tests/test_backends.py
++++ b/xarray/tests/test_backends.py
+@@ -796,6 +796,14 @@ class DatasetIOBase:
+             repr(on_disk)
+             assert not on_disk["var1"]._in_memory
+ 
++    def test_chunks_does_not_load(self):
++        """Make sure accessing chunks does not load file into memory"""
++        in_memory = create_test_data()
++        with self.roundtrip(in_memory) as on_disk:
++            assert not on_disk["var1"]._in_memory
++            on_disk.chunks
++            assert not on_disk["var1"]._in_memory
++
+ 
+ class CFEncodedBase(DatasetIOBase):
+     def test_roundtrip_bytes_with_fill_value(self):

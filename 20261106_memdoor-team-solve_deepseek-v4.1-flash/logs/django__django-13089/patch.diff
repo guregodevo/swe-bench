@@ -1,0 +1,39 @@
+diff --git a/django/core/cache/backends/db.py b/django/core/cache/backends/db.py
+index 33c79c5a14..bfda94eeda 100644
+--- a/django/core/cache/backends/db.py
++++ b/django/core/cache/backends/db.py
+@@ -267,9 +267,12 @@ class DatabaseCache(BaseDatabaseCache):
+                 cursor.execute(
+                     connection.ops.cache_key_culling_sql() % table,
+                     [cull_num])
+-                cursor.execute("DELETE FROM %s "
+-                               "WHERE cache_key < %%s" % table,
+-                               [cursor.fetchone()[0]])
++                last_cache_key = cursor.fetchone()
++                if last_cache_key:
++                    cursor.execute(
++                        "DELETE FROM %s WHERE cache_key < %%s" % table,
++                        [last_cache_key[0]],
++                    )
+ 
+     def clear(self):
+         db = router.db_for_write(self.cache_model_class)
+diff --git a/tests/cache/tests.py b/tests/cache/tests.py
+index d404475e16..0d8a507370 100644
+--- a/tests/cache/tests.py
++++ b/tests/cache/tests.py
+@@ -1040,6 +1040,14 @@ class DBCacheTests(BaseCacheTests, TransactionTestCase):
+     def test_zero_cull(self):
+         self._perform_cull_test('zero_cull', 50, 18)
+ 
++    def test_cull_when_no_keys_are_found(self):
++        cache = caches['default']
++        with connection.cursor() as cursor:
++            # Simulate a concurrent deletion between counting the entries and
++            # selecting the key at which to start culling.
++            with mock.patch.object(cursor, 'fetchone', side_effect=[(1000,), None]):
++                cache._cull(connection.alias, cursor, timezone.now())
++
+     def test_second_call_doesnt_crash(self):
+         out = io.StringIO()
+         management.call_command('createcachetable', stdout=out)

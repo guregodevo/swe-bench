@@ -1,0 +1,42 @@
+diff --git a/sympy/core/function.py b/sympy/core/function.py
+index 1b8005e1d..4475a084f 100644
+--- a/sympy/core/function.py
++++ b/sympy/core/function.py
+@@ -507,7 +507,16 @@ def _eval_evalf(self, prec):
+             func = getattr(mpmath, fname)
+         except (AttributeError, KeyError):
+             try:
+-                return Float(self._imp_(*self.args), prec)
++                result = self._imp_(*self.args)
++                if isinstance(result, Basic):
++                    # The implementation may return an expression containing
++                    # other functions (e.g. implemented functions), so evalf
++                    # it recursively instead of only handling plain numbers.
++                    result = result.evalf(mlib.libmpf.prec_to_dps(prec))
++                    if result.is_number:
++                        return result
++                    return
++                return Float(result, prec)
+             except (AttributeError, TypeError, ValueError):
+                 return
+ 
+diff --git a/sympy/core/tests/test_evalf.py b/sympy/core/tests/test_evalf.py
+index 1d63f9ea9..c1376cfb5 100644
+--- a/sympy/core/tests/test_evalf.py
++++ b/sympy/core/tests/test_evalf.py
+@@ -328,6 +328,15 @@ def test_implemented_function_evalf():
+     del f._imp_     # XXX: due to caching _imp_ would influence all other tests
+ 
+ 
++def test_implemented_function_evalf_nested():
++    from sympy.utilities.lambdify import implemented_function
++    f = implemented_function('f', lambda x: x**2)
++    g = implemented_function('g', lambda x: 2*x)
++    assert f(g(2)).evalf() == 16
++    assert str(f(g(2)).evalf(30)) == '16.0000000000000000000000000000'
++    del f._imp_, g._imp_
++
++
+ def test_evaluate_false():
+     for no in [0, False]:
+         assert Add(3, 2, evaluate=no).is_Add

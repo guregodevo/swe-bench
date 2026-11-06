@@ -1,0 +1,77 @@
+diff --git a/sphinx/extension.py b/sphinx/extension.py
+index 7ec6c8518..ed5cbf4cd 100644
+--- a/sphinx/extension.py
++++ b/sphinx/extension.py
+@@ -10,6 +10,8 @@
+ 
+ from typing import TYPE_CHECKING, Any, Dict
+ 
++from packaging.version import InvalidVersion, Version
++
+ from sphinx.config import Config
+ from sphinx.errors import VersionRequirementError
+ from sphinx.locale import __
+@@ -51,12 +53,22 @@ def verify_needs_extensions(app: "Sphinx", config: Config) -> None:
+                               'but it is not loaded.'), extname)
+             continue
+ 
+-        if extension.version == 'unknown version' or reqversion > extension.version:
++        if extension.version == 'unknown version':
+             raise VersionRequirementError(__('This project needs the extension %s at least in '
+                                              'version %s and therefore cannot be built with '
+                                              'the loaded version (%s).') %
+                                           (extname, reqversion, extension.version))
+ 
++        try:
++            if Version(reqversion) > Version(extension.version):
++                raise VersionRequirementError(
++                    __('This project needs the extension %s at least in version %s and '
++                       'therefore cannot be built with the loaded version (%s).') %
++                    (extname, reqversion, extension.version))
++        except InvalidVersion:
++            logger.warning(__('The %s extension is required by needs_extensions settings, '
++                              'but the version is invalid: %s'), extname, reqversion)
++
+ 
+ def setup(app: "Sphinx") -> Dict[str, Any]:
+     app.connect('config-inited', verify_needs_extensions, priority=800)
+diff --git a/tests/test_config.py b/tests/test_config.py
+index 717e8658d..2c123887c 100644
+--- a/tests/test_config.py
++++ b/tests/test_config.py
+@@ -194,6 +194,35 @@ def test_needs_sphinx(make_app_with_empty_project):
+         make_app(confoverrides={'needs_sphinx': '2'})  # NG: greater
+ 
+ 
++@pytest.mark.sphinx('html', testroot='basic',
++                    confoverrides={'extensions': ['sphinx.ext.todo'],
++                                   'needs_extensions': {'sphinx.ext.todo': '1.0'}})
++def test_needs_extensions(app):
++    assert app.config.needs_extensions == {'sphinx.ext.todo': '1.0'}
++
++
++@pytest.mark.sphinx('html', testroot='basic',
++                    confoverrides={'extensions': ['sphinx.ext.todo'],
++                                   'needs_extensions': {'sphinx.ext.todo': '1.0.0'}})
++def test_needs_extensions_with_invalid_version(app, warning):
++    assert 'version is invalid' in warning.getvalue()
++
++
++def test_needs_extensions_compares_versions_numerically():
++    from sphinx.extension import verify_needs_extensions
++
++    app = mock.Mock()
++    app.extensions = {'dummy': mock.Mock(version='0.10.0')}
++    config = mock.Mock(needs_extensions={'dummy': '0.6.0'})
++
++    # 0.10.0 is newer than 0.6.0, even though it sorts before it as a string
++    verify_needs_extensions(app, config)
++
++    config.needs_extensions = {'dummy': '0.11.0'}
++    with pytest.raises(VersionRequirementError):
++        verify_needs_extensions(app, config)
++
++
+ @mock.patch("sphinx.config.logger")
+ def test_config_eol(logger, tempdir):
+     # test config file's eol patterns: LF, CRLF

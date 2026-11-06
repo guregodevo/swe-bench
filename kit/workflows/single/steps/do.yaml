@@ -1,0 +1,10 @@
+type: agent
+agent: coder
+# A single pass: one agent turn on the run's prompt, nothing else. The
+# baseline team-solve is measured against (#71).
+prompt: |
+  {{ file (printf ".memdoor/runs/single-%s/prompt.md" .partition) }}
+target:
+  command: test -n "$(git status --porcelain -- . ':(exclude).memdoor')"
+timeout: 60m
+max_retries: 0

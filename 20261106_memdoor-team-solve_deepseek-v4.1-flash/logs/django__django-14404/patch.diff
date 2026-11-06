@@ -1,0 +1,60 @@
+diff --git a/django/contrib/admin/sites.py b/django/contrib/admin/sites.py
+index 59a4a0364d..62c5c8a782 100644
+--- a/django/contrib/admin/sites.py
++++ b/django/contrib/admin/sites.py
+@@ -420,14 +420,13 @@ class AdminSite:
+     def catch_all_view(self, request, url):
+         if settings.APPEND_SLASH and not url.endswith('/'):
+             urlconf = getattr(request, 'urlconf', None)
+-            path = '%s/' % request.path_info
+             try:
+-                match = resolve(path, urlconf)
++                match = resolve('%s/' % request.path_info, urlconf)
+             except Resolver404:
+                 pass
+             else:
+                 if getattr(match.func, 'should_append_slash', True):
+-                    return HttpResponsePermanentRedirect(path)
++                    return HttpResponsePermanentRedirect('%s/' % request.path)
+         raise Http404
+ 
+     def _build_app_dict(self, request, label=None):
+diff --git a/tests/admin_views/tests.py b/tests/admin_views/tests.py
+index b1658941ee..050f67464c 100644
+--- a/tests/admin_views/tests.py
++++ b/tests/admin_views/tests.py
+@@ -33,7 +33,8 @@ from django.core.files import temp as tempfile
+ from django.forms.utils import ErrorList
+ from django.template.response import TemplateResponse
+ from django.test import (
+-    TestCase, modify_settings, override_settings, skipUnlessDBFeature,
++    RequestFactory, TestCase, modify_settings, override_settings,
++    skipUnlessDBFeature,
+ )
+ from django.test.utils import override_script_prefix
+ from django.urls import NoReverseMatch, resolve, reverse
+@@ -6602,6 +6603,24 @@ class AdminSiteFinalCatchAllPatternTests(TestCase):
+         response = self.client.get(known_url[:-1])
+         self.assertRedirects(response, known_url, status_code=301, target_status_code=403)
+ 
++    @override_settings(APPEND_SLASH=True)
++    def test_missing_slash_append_slash_with_force_script_name(self):
++        # The script name is stripped from path_info but kept in path, as
++        # happens when FORCE_SCRIPT_NAME is set.
++        request = RequestFactory().get(
++            '/admin/admin_views/article', SCRIPT_NAME='/test_admin',
++        )
++        with mock.patch('django.contrib.admin.sites.resolve') as mocked_resolve:
++            mocked_resolve.return_value.func.should_append_slash = True
++            response = admin.site.catch_all_view(request, 'admin_views/article')
++        mocked_resolve.assert_called_once_with(
++            '/admin/admin_views/article/', None
++        )
++        self.assertEqual(
++            response.url,
++            '/test_admin/admin/admin_views/article/',
++        )
++
+     @override_settings(APPEND_SLASH=True)
+     def test_missing_slash_append_slash_true_non_staff_user(self):
+         user = User.objects.create_user(

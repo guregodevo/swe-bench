@@ -1,0 +1,53 @@
+diff --git a/changelog/7241.bugfix.rst b/changelog/7241.bugfix.rst
+new file mode 100644
+index 000000000..0e0649e37
+--- /dev/null
++++ b/changelog/7241.bugfix.rst
+@@ -0,0 +1,2 @@
++Fixed a regression where the postponed ``tearDown()`` (used with ``--pdb``) was
++called for tests skipped with ``unittest.skip``.
+diff --git a/src/_pytest/unittest.py b/src/_pytest/unittest.py
+index 773f545af..2201dfc59 100644
+--- a/src/_pytest/unittest.py
++++ b/src/_pytest/unittest.py
+@@ -180,6 +180,9 @@ class TestCaseFunction(Function):
+         except skip.Exception:
+             self._store[skipped_by_mark_key] = True
+             self._addexcinfo(sys.exc_info())
++            # A skipped test does not run tearDown(), so make sure the
++            # postponed tearDown() (used with --pdb) is not called either.
++            self._explicit_tearDown = None
+ 
+     def addExpectedFailure(self, testcase, rawexcinfo, reason=""):
+         try:
+diff --git a/testing/test_unittest.py b/testing/test_unittest.py
+index 83f1b6b2a..2ee275256 100644
+--- a/testing/test_unittest.py
++++ b/testing/test_unittest.py
+@@ -1193,6 +1193,26 @@ def test_pdb_teardown_called(testdir, monkeypatch):
+     ]
+ 
+ 
++def test_pdb_teardown_not_called_for_skipped_test(testdir):
++    """Ensure tearDown() is not called for skipped tests when --pdb is given (#7241)."""
++    testdir.makepyfile(
++        """
++        import unittest
++
++        class MyTestCase(unittest.TestCase):
++            @unittest.skip("hello")
++            def test_1(self):
++                pass
++
++            def tearDown(self):
++                raise AssertionError("tearDown should not be called")
++    """
++    )
++    result = testdir.runpytest_inprocess("--pdb")
++    result.stdout.fnmatch_lines("* 1 skipped in *")
++    assert result.ret == 0
++
++
+ def test_async_support(testdir):
+     pytest.importorskip("unittest.async_case")
+ 

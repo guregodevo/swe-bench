@@ -1,0 +1,57 @@
+diff --git a/CHANGES b/CHANGES
+index ed47709e5..d7f854c41 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -16,6 +16,8 @@ Features added
+ Bugs fixed
+ ----------
+ 
++* #10071: gettext: Duplicate locations are emitted for a message if the same
++  message appears multiple times at the same location
+ * #9575: autodoc: The annotation of return value should not be shown when
+   ``autodoc_typehints="description"``
+ * #9648: autodoc: ``*args`` and ``**kwargs`` entries are duplicated when
+diff --git a/sphinx/builders/gettext.py b/sphinx/builders/gettext.py
+index e8bc547b7..322199304 100644
+--- a/sphinx/builders/gettext.py
++++ b/sphinx/builders/gettext.py
+@@ -53,6 +53,9 @@ class Catalog:
+         if msg not in self.metadata:  # faster lookup in hash
+             self.messages.append(msg)
+             self.metadata[msg] = []
++        for source, line, _uuid in self.metadata[msg]:
++            if source == origin.source and line == origin.line:
++                return
+         self.metadata[msg].append((origin.source, origin.line, origin.uid))  # type: ignore
+ 
+     def __iter__(self) -> Generator[Message, None, None]:
+diff --git a/tests/test_build_gettext.py b/tests/test_build_gettext.py
+index 3c4617e84..d89f8cbdd 100644
+--- a/tests/test_build_gettext.py
++++ b/tests/test_build_gettext.py
+@@ -8,6 +8,7 @@ from subprocess import PIPE, CalledProcessError
+ 
+ import pytest
+ 
++from sphinx.builders.gettext import Catalog, MsgOrigin
+ from sphinx.util.osutil import cd
+ 
+ 
+@@ -27,6 +28,17 @@ def test_build_gettext(app):
+     assert 'msgid "something, something else, something more"' in catalog
+ 
+ 
++def test_gettext_message_locations_are_unique():
++    catalog = Catalog()
++    for _i in range(3):
++        catalog.add('Type', MsgOrigin('doc.rst', 0))
++    catalog.add('Type', MsgOrigin('doc.rst', 10))
++
++    messages = list(catalog)
++    assert len(messages) == 1
++    assert messages[0].locations == [('doc.rst', 0), ('doc.rst', 10)]
++
++
+ @pytest.mark.sphinx('gettext', srcdir='root-gettext')
+ def test_msgfmt(app):
+     app.builder.build_all()

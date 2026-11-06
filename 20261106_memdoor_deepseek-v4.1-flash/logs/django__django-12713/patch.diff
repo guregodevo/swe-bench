@@ -1,0 +1,63 @@
+diff --git a/django/contrib/admin/options.py b/django/contrib/admin/options.py
+index 69a5fbf389..db7df891e3 100644
+--- a/django/contrib/admin/options.py
++++ b/django/contrib/admin/options.py
+@@ -249,16 +249,17 @@ class BaseModelAdmin(metaclass=forms.MediaDefiningClass):
+             return None
+         db = kwargs.get('using')
+ 
+-        autocomplete_fields = self.get_autocomplete_fields(request)
+-        if db_field.name in autocomplete_fields:
+-            kwargs['widget'] = AutocompleteSelectMultiple(db_field.remote_field, self.admin_site, using=db)
+-        elif db_field.name in self.raw_id_fields:
+-            kwargs['widget'] = widgets.ManyToManyRawIdWidget(db_field.remote_field, self.admin_site, using=db)
+-        elif db_field.name in [*self.filter_vertical, *self.filter_horizontal]:
+-            kwargs['widget'] = widgets.FilteredSelectMultiple(
+-                db_field.verbose_name,
+-                db_field.name in self.filter_vertical
+-            )
++        if 'widget' not in kwargs:
++            autocomplete_fields = self.get_autocomplete_fields(request)
++            if db_field.name in autocomplete_fields:
++                kwargs['widget'] = AutocompleteSelectMultiple(db_field.remote_field, self.admin_site, using=db)
++            elif db_field.name in self.raw_id_fields:
++                kwargs['widget'] = widgets.ManyToManyRawIdWidget(db_field.remote_field, self.admin_site, using=db)
++            elif db_field.name in [*self.filter_vertical, *self.filter_horizontal]:
++                kwargs['widget'] = widgets.FilteredSelectMultiple(
++                    db_field.verbose_name,
++                    db_field.name in self.filter_vertical
++                )
+ 
+         if 'queryset' not in kwargs:
+             queryset = self.get_field_queryset(db, db_field, request)
+diff --git a/tests/admin_ordering/tests.py b/tests/admin_ordering/tests.py
+index f68b64ae70..8cf6dc273c 100644
+--- a/tests/admin_ordering/tests.py
++++ b/tests/admin_ordering/tests.py
+@@ -1,3 +1,4 @@
++from django import forms
+ from django.contrib import admin
+ from django.contrib.admin.options import ModelAdmin
+ from django.contrib.auth.models import User
+@@ -187,3 +188,21 @@ class TestRelatedFieldsAdminOrdering(TestCase):
+         site.register(Band, StaticOrderingBandAdmin)
+ 
+         self.check_ordering_of_field_choices([self.b2])
++
++    def test_custom_widget_still_wins(self):
++        """Custom widget has precedence over admin widgets."""
++        class SongAdmin(admin.ModelAdmin):
++            raw_id_fields = ('other_interpreters',)
++
++            def formfield_for_manytomany(self, db_field, request, **kwargs):
++                if db_field.name == 'other_interpreters':
++                    kwargs['widget'] = forms.SelectMultiple
++                return super().formfield_for_manytomany(db_field, request, **kwargs)
++
++        site.unregister(Song)
++        site.register(Song, SongAdmin)
++
++        field = site._registry[Song].formfield_for_manytomany(
++            Song.other_interpreters.field, request=None,
++        )
++        self.assertIsInstance(field.widget, forms.SelectMultiple)

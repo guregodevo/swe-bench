@@ -1,0 +1,2 @@
+django__django-16938	single	wf=0	349s	95 lines	cost=0.010341	in=1145487	cached=1075712	out=11258	calls=47
+django__django-16938	team	wf=0	272s	73 lines	cost=0.007815	in=361317	cached=316416	out=13905	calls=29

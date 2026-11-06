@@ -1,0 +1,35 @@
+diff --git a/sympy/polys/polytools.py b/sympy/polys/polytools.py
+index d5ac051f6..32b7027a2 100644
+--- a/sympy/polys/polytools.py
++++ b/sympy/polys/polytools.py
+@@ -106,6 +106,7 @@ class Poly(Expr):
+ 
+     is_commutative = True
+     is_Poly = True
++    _op_priority = 10.001
+ 
+     def __new__(cls, rep, *gens, **args):
+         """Create a new polynomial instance out of something useful. """
+diff --git a/sympy/polys/tests/test_polytools.py b/sympy/polys/tests/test_polytools.py
+index 1f889e9f1..05eed474e 100644
+--- a/sympy/polys/tests/test_polytools.py
++++ b/sympy/polys/tests/test_polytools.py
+@@ -3195,12 +3195,17 @@ def test_keep_coeff():
+     assert _keep_coeff(x + 1, S(2)) == u
+ 
+ 
+-@XFAIL
+ def test_poly_matching_consistency():
+     # Test for this issue:
+     # https://github.com/sympy/sympy/issues/5514
+     assert I * Poly(x, x) == Poly(I*x, x)
+     assert Poly(x, x) * I == Poly(I*x, x)
++    # Test for this issue:
++    # https://github.com/sympy/sympy/issues/13748
++    assert x * Poly(x, x) == Poly(x**2, x)
++    assert -2 * Poly(x, x) == Poly(-2*x, x)
++    assert S(-2) * Poly(x, x) == Poly(-2*x, x)
++    assert Poly(x, x) * S(-2) == Poly(-2*x, x)
+ 
+ 
+ @XFAIL

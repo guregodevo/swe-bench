@@ -1,0 +1,34 @@
+diff --git a/sklearn/pipeline.py b/sklearn/pipeline.py
+index 7eaf9a46f..3a11a8268 100755
+--- a/sklearn/pipeline.py
++++ b/sklearn/pipeline.py
+@@ -219,6 +219,10 @@ class Pipeline(_BaseComposition):
+             return self.named_steps[ind]
+         return est
+ 
++    def __len__(self):
++        """Returns the length of the Pipeline"""
++        return len(self.steps)
++
+     @property
+     def _estimator_type(self):
+         return self.steps[-1][1]._estimator_type
+diff --git a/sklearn/tests/test_pipeline.py b/sklearn/tests/test_pipeline.py
+index 8d6fe8f70..a42b0bd22 100755
+--- a/sklearn/tests/test_pipeline.py
++++ b/sklearn/tests/test_pipeline.py
+@@ -548,6 +548,14 @@ def test_pipeline_index():
+     assert pipe['transf'] == transf
+     assert pipe[-1] == clf
+     assert pipe['clf'] == clf
++
++
++def test_pipeline_len():
++    transf = Transf()
++    clf = FitParamT()
++    pipe = Pipeline([('transf', transf), ('clf', clf)])
++    assert len(pipe) == 2
++    assert len(pipe[:len(pipe)]) == len(pipe)
+     assert_raises(IndexError, lambda: pipe[3])
+     assert_raises(KeyError, lambda: pipe['foobar'])
+ 

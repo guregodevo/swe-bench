@@ -1,0 +1,59 @@
+diff --git a/django/db/models/fields/files.py b/django/db/models/fields/files.py
+index 7f8eb128e1..95985684ee 100644
+--- a/django/db/models/fields/files.py
++++ b/django/db/models/fields/files.py
+@@ -441,7 +441,8 @@ class ImageField(FileField):
+         # after their corresponding image field don't stay cleared by
+         # Model.__init__, see bug #11196.
+         # Only run post-initialization dimension update on non-abstract models
+-        if not cls._meta.abstract:
++        # with width_field/height_field.
++        if not cls._meta.abstract and (self.width_field or self.height_field):
+             signals.post_init.connect(self.update_dimension_fields, sender=cls)
+ 
+     def update_dimension_fields(self, instance, force=False, *args, **kwargs):
+diff --git a/tests/model_fields/test_imagefield.py b/tests/model_fields/test_imagefield.py
+index 6ef46ef200..941761b11e 100644
+--- a/tests/model_fields/test_imagefield.py
++++ b/tests/model_fields/test_imagefield.py
+@@ -5,6 +5,7 @@ from unittest import skipIf
+ from django.core.exceptions import ImproperlyConfigured
+ from django.core.files import File
+ from django.core.files.images import ImageFile
++from django.db.models.signals import post_init
+ from django.test import TestCase
+ from django.test.testcases import SerializeMixin
+ 
+@@ -134,6 +135,32 @@ class ImageFieldTests(ImageFieldTestMixin, TestCase):
+         self.assertEqual(hash(p1_db.mugshot), hash(p1.mugshot))
+         self.assertIs(p1_db.mugshot != p1.mugshot, False)
+ 
++    def test_no_post_init_signal_without_dimension_fields(self):
++        """
++        ImageField without width_field/height_field doesn't connect a
++        post_init signal handler.
++        """
++        field = Person._meta.get_field("mugshot")
++        sync_receivers, async_receivers = post_init._live_receivers(Person)
++        self.assertNotIn(
++            field.update_dimension_fields,
++            sync_receivers + async_receivers,
++        )
++
++    def test_post_init_signal_with_dimension_fields(self):
++        """
++        ImageField with width_field/height_field connects a post_init signal
++        handler.
++        """
++        field = PersonWithHeightAndWidth._meta.get_field("mugshot")
++        sync_receivers, async_receivers = post_init._live_receivers(
++            PersonWithHeightAndWidth
++        )
++        self.assertIn(
++            field.update_dimension_fields,
++            sync_receivers + async_receivers,
++        )
++
+     def test_instantiate_missing(self):
+         """
+         If the underlying file is unavailable, still create instantiate the

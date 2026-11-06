@@ -1,0 +1,63 @@
+diff --git a/django/db/models/fields/json.py b/django/db/models/fields/json.py
+index fafc1beee8..f7f7f260b5 100644
+--- a/django/db/models/fields/json.py
++++ b/django/db/models/fields/json.py
+@@ -423,6 +423,27 @@ class KeyTransformExact(JSONExact):
+         return super().as_sql(compiler, connection)
+ 
+ 
++class KeyTransformIn(lookups.In):
++    def resolve_expression_parameter(self, compiler, connection, sql, param):
++        sql, params = super().resolve_expression_parameter(
++            compiler, connection, sql, param,
++        )
++        if (
++            not hasattr(param, 'as_sql') and
++            not connection.features.has_native_json_field
++        ):
++            if connection.vendor == 'oracle':
++                value = json.loads(param)
++                sql = "%s(JSON_QUERY('%s', '$.value'), '$.value')" % (
++                    'JSON_VALUE' if isinstance(value, (list, dict)) else 'JSON_QUERY',
++                    json.dumps({'value': value}),
++                )
++                params = []
++            elif connection.vendor == 'mysql' or connection.vendor == 'sqlite':
++                sql = "JSON_EXTRACT(%s, '$')" % sql
++        return sql, params
++
++
+ class KeyTransformIExact(CaseInsensitiveMixin, KeyTransformTextLookupMixin, lookups.IExact):
+     pass
+ 
+@@ -480,6 +501,7 @@ class KeyTransformGte(KeyTransformNumericLookupMixin, lookups.GreaterThanOrEqual
+ 
+ 
+ KeyTransform.register_lookup(KeyTransformExact)
++KeyTransform.register_lookup(KeyTransformIn)
+ KeyTransform.register_lookup(KeyTransformIExact)
+ KeyTransform.register_lookup(KeyTransformIsNull)
+ KeyTransform.register_lookup(KeyTransformIContains)
+diff --git a/tests/model_fields/test_jsonfield.py b/tests/model_fields/test_jsonfield.py
+index a7648711ac..07fd5860c6 100644
+--- a/tests/model_fields/test_jsonfield.py
++++ b/tests/model_fields/test_jsonfield.py
+@@ -306,6 +306,18 @@ class TestQuerying(TestCase):
+             [self.objs[3]],
+         )
+ 
++    def test_key_transform_in(self):
++        self.assertSequenceEqual(
++            NullableJSONModel.objects.filter(value__c__in=[14]),
++            [self.objs[3], self.objs[4]],
++        )
++
++    def test_nested_key_transform_in(self):
++        self.assertSequenceEqual(
++            NullableJSONModel.objects.filter(value__d__0__in=['e']),
++            [self.objs[4]],
++        )
++
+     def test_isnull(self):
+         self.assertSequenceEqual(
+             NullableJSONModel.objects.filter(value__isnull=True),

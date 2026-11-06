@@ -1,0 +1,39 @@
+diff --git a/sklearn/metrics/cluster/supervised.py b/sklearn/metrics/cluster/supervised.py
+index a987778ae..ed0263b5e 100644
+--- a/sklearn/metrics/cluster/supervised.py
++++ b/sklearn/metrics/cluster/supervised.py
+@@ -854,9 +854,12 @@ def fowlkes_mallows_score(labels_true, labels_pred, sparse=False):
+ 
+     c = contingency_matrix(labels_true, labels_pred, sparse=True)
+     tk = np.dot(c.data, c.data) - n_samples
+-    pk = np.sum(np.asarray(c.sum(axis=0)).ravel() ** 2) - n_samples
+-    qk = np.sum(np.asarray(c.sum(axis=1)).ravel() ** 2) - n_samples
+-    return tk / np.sqrt(pk * qk) if tk != 0. else 0.
++    pk = np.sum(np.asarray(c.sum(axis=0)).ravel().astype(np.float64) ** 2)
++    pk -= n_samples
++    qk = np.sum(np.asarray(c.sum(axis=1)).ravel().astype(np.float64) ** 2)
++    qk -= n_samples
++    # Avoid overflowing the integer multiplication pk * qk for large inputs.
++    return tk / np.sqrt(pk) / np.sqrt(qk) if tk != 0. else 0.
+ 
+ 
+ def entropy(labels):
+diff --git a/sklearn/metrics/cluster/tests/test_supervised.py b/sklearn/metrics/cluster/tests/test_supervised.py
+index 8da03d1e1..37f5aeb6c 100644
+--- a/sklearn/metrics/cluster/tests/test_supervised.py
++++ b/sklearn/metrics/cluster/tests/test_supervised.py
+@@ -274,3 +274,14 @@ def test_fowlkes_mallows_score_properties():
+     # symmetric and permutation(both together)
+     score_both = fowlkes_mallows_score(labels_b, (labels_a + 2) % 3)
+     assert_almost_equal(score_both, expected)
++
++
++def test_fowlkes_mallows_score_large_labels():
++    # Non-regression test for integer overflow in pk * qk. For these
++    # labelings pk * qk is larger than the maximum int64 value.
++    labels_a = np.array([0] * 50000 + [1] * 50000)
++    labels_b = np.array([0] * 60000 + [1] * 40000)
++
++    score = fowlkes_mallows_score(labels_a, labels_b)
++    expected = 4199900000. / np.sqrt(5199900000. * 4999900000.)
++    assert_almost_equal(score, expected)

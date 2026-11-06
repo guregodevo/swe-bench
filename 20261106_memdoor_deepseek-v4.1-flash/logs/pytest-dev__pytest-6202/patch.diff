@@ -1,0 +1,48 @@
+diff --git a/changelog/6645.bugfix.rst b/changelog/6645.bugfix.rst
+new file mode 100644
+index 000000000..59ec34405
+--- /dev/null
++++ b/changelog/6645.bugfix.rst
+@@ -0,0 +1,2 @@
++Fixed test IDs containing ``.[`` being incorrectly rewritten in the test
++report headline and in ``--collect-only`` output.
+diff --git a/src/_pytest/python.py b/src/_pytest/python.py
+index b8b365ad3..734a92f9b 100644
+--- a/src/_pytest/python.py
++++ b/src/_pytest/python.py
+@@ -285,8 +285,7 @@ class PyobjMixin(PyobjContext):
+                     break
+             parts.append(name)
+         parts.reverse()
+-        s = ".".join(parts)
+-        return s.replace(".[", "[")
++        return ".".join(parts)
+ 
+     def reportinfo(self):
+         # XXX caching?
+diff --git a/testing/test_collection.py b/testing/test_collection.py
+index 8050e80f9..c84ee04a8 100644
+--- a/testing/test_collection.py
++++ b/testing/test_collection.py
+@@ -738,6 +738,21 @@ class Test_genitems:
+         ids = [x.getmodpath() for x in items]
+         assert ids == ["MyTestSuite.x_test", "TestCase.test_y"]
+ 
++    def test_parametrized_id_with_brackets_is_not_changed(self, testdir):
++        p = testdir.makepyfile(
++            """
++            import pytest
++
++            @pytest.mark.parametrize("a", ["..["])
++            def test_boo(a):
++                pass
++            """
++        )
++        items, reprec = testdir.inline_genitems(p)
++        assert len(items) == 1
++        assert items[0].getmodpath() == "test_boo[..[]"
++        assert items[0].nodeid.endswith("::test_boo[..[]")
++
+ 
+ def test_matchnodes_two_collections_same_file(testdir):
+     testdir.makeconftest(

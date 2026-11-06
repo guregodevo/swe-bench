@@ -1,0 +1,39 @@
+diff --git a/CHANGES b/CHANGES
+index b94531b73..54f8efcfe 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -27,6 +27,8 @@ Bugs fixed
+   is not 'py'
+ * #9644: autodoc: Crashed on getting source info from problematic object
+ * #9655: autodoc: mocked object having doc comment is warned unexpectedly
++* #9674: autodoc: The base class of a class inheriting a mocked class is
++  displayed incorrectly (ex. ``torch.nn.`` instead of ``torch.nn.Module``)
+ * #9651: autodoc: return type field is not generated even if
+   :confval:`autodoc_typehints_description_target` is set to "documented" when
+   its info-field-list contains ``:returns:`` field
+diff --git a/sphinx/ext/autodoc/mock.py b/sphinx/ext/autodoc/mock.py
+index b562f47fd..89f82b8c7 100644
+--- a/sphinx/ext/autodoc/mock.py
++++ b/sphinx/ext/autodoc/mock.py
+@@ -40,7 +40,7 @@ class _MockObject:
+         return super().__new__(cls)
+ 
+     def __init__(self, *args: Any, **kwargs: Any) -> None:
+-        self.__qualname__ = ''
++        self.__qualname__ = self.__class__.__name__
+ 
+     def __len__(self) -> int:
+         return 0
+diff --git a/tests/test_ext_autodoc_automodule.py b/tests/test_ext_autodoc_automodule.py
+index 59296a981..a046b4c0c 100644
+--- a/tests/test_ext_autodoc_automodule.py
++++ b/tests/test_ext_autodoc_automodule.py
+@@ -128,6 +128,7 @@ def test_automodule_special_members(app):
+ def test_subclass_of_mocked_object(app):
+     sys.modules.pop('target', None)  # unload target module to clear the module cache
+ 
+-    options = {'members': None}
++    options = {'members': None, 'show-inheritance': None}
+     actual = do_autodoc(app, 'module', 'target.need_mocks', options)
+     assert '.. py:class:: Inherited(*args: Any, **kwargs: Any)' in actual
++    assert '   Bases: :py:class:`missing_module.Class`' in actual

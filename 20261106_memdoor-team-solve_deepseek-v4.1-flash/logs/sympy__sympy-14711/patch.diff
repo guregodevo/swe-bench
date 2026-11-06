@@ -1,0 +1,65 @@
+diff --git a/sympy/physics/vector/tests/test_vector.py b/sympy/physics/vector/tests/test_vector.py
+index 828a25f3c..b6383f48f 100644
+--- a/sympy/physics/vector/tests/test_vector.py
++++ b/sympy/physics/vector/tests/test_vector.py
+@@ -13,6 +13,16 @@ def test_Vector():
+     assert A.y != A.z
+     assert A.z != A.x
+ 
++    # Adding the scalar 0 (as done by ``sum``) works and returns the vector
++    assert A.x + 0 == A.x
++    assert 0 + A.x == A.x
++    assert A.x - 0 == A.x
++    assert 0 - A.x == -A.x
++    assert sum([A.x, 0 * A.x]) == A.x
++    assert sum([A.x, A.y]) == A.x + A.y
++    assert sum([A.x, A.y], Vector(0)) == A.x + A.y
++    raises(TypeError, lambda: A.x + 1)
++
+     v1 = x*A.x + y*A.y + z*A.z
+     v2 = x**2*A.x + y**2*A.y + z**2*A.z
+     v3 = v1 + v2
+diff --git a/sympy/physics/vector/vector.py b/sympy/physics/vector/vector.py
+index a048ee57f..7037a95d3 100644
+--- a/sympy/physics/vector/vector.py
++++ b/sympy/physics/vector/vector.py
+@@ -57,9 +57,13 @@ def __hash__(self):
+ 
+     def __add__(self, other):
+         """The add operator for Vector. """
++        if other == 0:
++            return self
+         other = _check_vector(other)
+         return Vector(self.args + other.args)
+ 
++    __radd__ = __add__
++
+     def __and__(self, other):
+         """Dot product of two vectors.
+ 
+@@ -338,6 +342,8 @@ def __ror__(self, other):
+         return ol
+ 
+     def __rsub__(self, other):
++        if other == 0:
++            return -self
+         return (-1 * self) + other
+ 
+     def __str__(self, printer=None, order=True):
+@@ -384,6 +390,8 @@ def __str__(self, printer=None, order=True):
+ 
+     def __sub__(self, other):
+         """The subraction operator. """
++        if other == 0:
++            return self
+         return self.__add__(other * -1)
+ 
+     def __xor__(self, other):
+@@ -449,7 +457,6 @@ def _det(mat):
+     _sympystr = __str__
+     _sympyrepr = _sympystr
+     __repr__ = __str__
+-    __radd__ = __add__
+     __rand__ = __and__
+     __rmul__ = __mul__
+ 

@@ -1,0 +1,111 @@
+diff --git a/CHANGES.rst b/CHANGES.rst
+index c2f5024fe..b500183d5 100755
+--- a/CHANGES.rst
++++ b/CHANGES.rst
+@@ -40,6 +40,9 @@ astropy.io.ascii
+   description. This is available in the ``fixed_width`` and
+   ``fixed_width_two_line`` formats via the new ``header_rows`` keyword argument. [#13734]
+ 
++- Add support for the ``header_rows`` keyword argument in the ``rst`` ASCII
++  format, allowing additional header rows such as units to be written and read.
++
+ astropy.io.fits
+ ^^^^^^^^^^^^^^^
+ 
+diff --git a/astropy/io/ascii/rst.py b/astropy/io/ascii/rst.py
+index abdeba8ef..e7ad6923c 100755
+--- a/astropy/io/ascii/rst.py
++++ b/astropy/io/ascii/rst.py
+@@ -50,6 +50,10 @@ class RST(FixedWidth):
+     or for ones which define column spans through the use of an additional
+     line of dashes in the header.
+ 
++    Additional header rows (e.g. units) can be written and read using the
++    ``header_rows`` keyword argument, in the same way as for the
++    ``fixed_width`` formats.
++
+     """
+ 
+     _format_name = "rst"
+@@ -57,10 +61,17 @@ class RST(FixedWidth):
+     data_class = SimpleRSTData
+     header_class = SimpleRSTHeader
+ 
+-    def __init__(self):
+-        super().__init__(delimiter_pad=None, bookend=False)
++    def __init__(self, header_rows=None):
++        super().__init__(delimiter_pad=None, bookend=False, header_rows=header_rows)
++        # The first line is a position line (separator) and the header rows
++        # follow it.  The data begins after another position line.
++        self.data.start_line = len(self.header.header_rows) + 2
+ 
+     def write(self, lines):
+         lines = super().write(lines)
+-        lines = [lines[1]] + lines + [lines[1]]
++        # The line of "=" characters that separates the header from the data
++        # follows all of the header rows (which may include rows such as
++        # "unit" in addition to the column "name").
++        position_line = lines[len(self.header.header_rows)]
++        lines = [position_line] + lines + [position_line]
+         return lines
+diff --git a/astropy/io/ascii/tests/test_rst.py b/astropy/io/ascii/tests/test_rst.py
+index 84d6fed40..b1da01ee9 100755
+--- a/astropy/io/ascii/tests/test_rst.py
++++ b/astropy/io/ascii/tests/test_rst.py
+@@ -185,3 +185,56 @@ Col1      Col2 Col3 Col4
+ ==== ========= ==== ====
+ """,
+     )
++
++
++def test_write_header_rows():
++    """Write a SimpleRST table with additional header rows"""
++    out = StringIO()
++    ascii.write(
++        dat, out, Writer=ascii.RST, header_rows=["name", "unit", "format"]
++    )
++    expected = "\n".join(
++        [
++            "==== ========= ==== ====",
++            "Col1      Col2 Col3 Col4",
++            " " * 24,
++            " " * 24,
++            "==== ========= ==== ====",
++            ' 1.2   "hello"    1    a',
++            " 2.4 's worlds    2    2",
++            "==== ========= ==== ====",
++            "",
++        ]
++    )
++    assert_equal_splitlines(out.getvalue(), expected)
++
++
++def test_read_write_header_rows():
++    """Round-trip a SimpleRST table with name and unit header rows"""
++    from astropy.table import QTable
++
++    table = QTable()
++    table["wave"] = [350.0, 950.0]
++    table["wave"].unit = "nm"
++    table["response"] = [0.7, 1.2]
++    table["response"].unit = "ct"
++
++    out = StringIO()
++    table.write(out, format="ascii.rst", header_rows=["name", "unit"])
++    assert_equal_splitlines(
++        out.getvalue(),
++        """\
++===== ========
++ wave response
++   nm       ct
++===== ========
++350.0      0.7
++950.0      1.2
++===== ========
++""",
++    )
++
++    dat = ascii.read(out.getvalue(), Reader=ascii.RST, header_rows=["name", "unit"])
++    assert_equal(dat.colnames, ["wave", "response"])
++    assert_equal(dat["wave"].unit, "nm")
++    assert_equal(dat["response"].unit, "ct")

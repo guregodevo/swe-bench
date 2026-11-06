@@ -1,0 +1,52 @@
+diff --git a/sympy/combinatorics/perm_groups.py b/sympy/combinatorics/perm_groups.py
+index de94ddabb4..c2e6541071 100644
+--- a/sympy/combinatorics/perm_groups.py
++++ b/sympy/combinatorics/perm_groups.py
+@@ -2198,14 +2198,15 @@ def _number_blocks(blocks):
+                 for i, r in enumerate(rep_blocks):
+                     if len(r) > len(rep) and rep.issubset(r):
+                         # i-th block system is not minimal
+-                        del num_blocks[i], blocks[i]
+-                        to_remove.append(rep_blocks[i])
++                        to_remove.append(i)
+                     elif len(r) < len(rep) and r.issubset(rep):
+                         # the system being checked is not minimal
+                         minimal = False
+                         break
+                 # remove non-minimal representative blocks
+-                rep_blocks = [r for r in rep_blocks if r not in to_remove]
++                # (delete in reverse so the earlier indices stay valid)
++                for i in reversed(to_remove):
++                    del num_blocks[i], blocks[i], rep_blocks[i]
+ 
+                 if minimal and num_block not in num_blocks:
+                     blocks.append(block)
+diff --git a/sympy/combinatorics/tests/test_perm_groups.py b/sympy/combinatorics/tests/test_perm_groups.py
+index 7ab0993654..69b0bf7927 100644
+--- a/sympy/combinatorics/tests/test_perm_groups.py
++++ b/sympy/combinatorics/tests/test_perm_groups.py
+@@ -521,6 +521,13 @@ def test_minimal_blocks():
+     P = PermutationGroup(Permutation(0, 3))
+     assert P.minimal_blocks() == False
+ 
++    # DihedralGroup(18) has two minimal block systems; deleting a
++    # non-minimal one used to desynchronise the parallel lists (issue #20007)
++    P = DihedralGroup(18)
++    assert P.minimal_blocks() == [
++        [0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5],
++        [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8]]
++
+ 
+ def test_max_div():
+     S = SymmetricGroup(10)
+@@ -859,6 +866,10 @@ def test_sylow_subgroup():
+     S = P.sylow_subgroup(2)
+     assert S.order() == 4
+ 
++    # minimal_blocks used to raise IndexError for these groups (issue #20007)
++    assert DihedralGroup(18).sylow_subgroup(2).order() == 4
++    assert DihedralGroup(50).sylow_subgroup(2).order() == 4
++
+     P = DihedralGroup(12)
+     S = P.sylow_subgroup(3)
+     assert S.order() == 3

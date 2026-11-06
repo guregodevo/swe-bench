@@ -1,0 +1,46 @@
+diff --git a/lib/matplotlib/offsetbox.py b/lib/matplotlib/offsetbox.py
+index efa34dd078..c295c42634 100644
+--- a/lib/matplotlib/offsetbox.py
++++ b/lib/matplotlib/offsetbox.py
+@@ -1452,6 +1452,7 @@ or callable, default: value of *xycoords*
+             self._renderer = renderer
+         if not self.get_visible() or not self._check_xy(renderer):
+             return
++        renderer.open_group(self.__class__.__name__, gid=self.get_gid())
+         self.update_positions(renderer)
+         if self.arrow_patch is not None:
+             if self.arrow_patch.figure is None and self.figure is not None:
+@@ -1459,6 +1460,7 @@ or callable, default: value of *xycoords*
+             self.arrow_patch.draw(renderer)
+         self.patch.draw(renderer)
+         self.offsetbox.draw(renderer)
++        renderer.close_group(self.__class__.__name__)
+         self.stale = False
+ 
+ 
+diff --git a/lib/matplotlib/tests/test_offsetbox.py b/lib/matplotlib/tests/test_offsetbox.py
+index 5785cf5aff..ccea0d5e0f 100644
+--- a/lib/matplotlib/tests/test_offsetbox.py
++++ b/lib/matplotlib/tests/test_offsetbox.py
+@@ -337,6 +337,21 @@ def test_arrowprops_copied():
+     assert arrowprops["relpos"] == (.3, .7)
+ 
+ 
++def test_annotationbbox_gid():
++    # Test that AnnotationBbox's gid is passed to the renderer (and hence
++    # appears in the output svg).
++    fig, ax = plt.subplots()
++    im = OffsetImage(np.random.rand(10, 10), zoom=1)
++    im.image.axes = ax
++    ab = AnnotationBbox(im, (0.5, 0.5))
++    ab.set_gid("test_annotationbbox_gid")
++    ax.add_artist(ab)
++
++    buf = io.BytesIO()
++    fig.savefig(buf, format="svg")
++    assert b'id="test_annotationbbox_gid"' in buf.getvalue()
++
++
+ @pytest.mark.parametrize("align", ["baseline", "bottom", "top",
+                                    "left", "right", "center"])
+ def test_packers(align):

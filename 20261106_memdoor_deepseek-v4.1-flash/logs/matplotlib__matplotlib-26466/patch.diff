@@ -1,0 +1,37 @@
+diff --git a/lib/matplotlib/tests/test_text.py b/lib/matplotlib/tests/test_text.py
+index 47121b7a22..0cc3bd73b2 100644
+--- a/lib/matplotlib/tests/test_text.py
++++ b/lib/matplotlib/tests/test_text.py
+@@ -251,6 +251,17 @@ def test_annotation_contains():
+     assert ann.contains(event) == (False, {})
+ 
+ 
++def test_annotation_xy_copy():
++    # The annotation must not keep a reference to the *xy* array, as in-place
++    # changes to that array would otherwise move the annotation.
++    fig, ax = plt.subplots()
++    xy = np.array((1, 1))
++    ann = ax.annotate("", xy=xy, xytext=(4, 1),
++                      arrowprops={"arrowstyle": "<->"})
++    xy[1] = 3
++    assert ann.xy == (1, 1)
++
++
+ @pytest.mark.parametrize('err, xycoords, match', (
+     (TypeError, print, "xycoords callable must return a BboxBase or Transform, not a"),
+     (TypeError, [0, 0], r"'xycoords' must be an instance of str, tuple"),
+diff --git a/lib/matplotlib/text.py b/lib/matplotlib/text.py
+index d4922fc517..40722d1817 100644
+--- a/lib/matplotlib/text.py
++++ b/lib/matplotlib/text.py
+@@ -1456,7 +1456,9 @@ class _AnnotationBase:
+                  xycoords='data',
+                  annotation_clip=None):
+ 
+-        self.xy = xy
++        # Copy the position to avoid the annotation being modified by later
++        # in-place changes to the array passed in by the user.
++        self.xy = tuple(xy)
+         self.xycoords = xycoords
+         self.set_annotation_clip(annotation_clip)
+ 

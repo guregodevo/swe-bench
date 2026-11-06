@@ -1,0 +1,67 @@
+diff --git a/django/forms/models.py b/django/forms/models.py
+index 192d9fad94..4db0346488 100644
+--- a/django/forms/models.py
++++ b/django/forms/models.py
+@@ -263,7 +263,10 @@ class ModelFormMetaclass(DeclarativeFieldsMetaclass):
+                 base_formfield_callback = b.Meta.formfield_callback
+                 break
+ 
+-        formfield_callback = attrs.pop("formfield_callback", base_formfield_callback)
++        formfield_callback = attrs.pop(
++            "formfield_callback",
++            getattr(attrs.get("Meta"), "formfield_callback", base_formfield_callback),
++        )
+ 
+         new_class = super().__new__(mcs, name, bases, attrs)
+ 
+@@ -630,13 +633,19 @@ def modelform_factory(
+     # creating needs to inherit from the parent's inner meta.
+     bases = (form.Meta,) if hasattr(form, "Meta") else ()
+     Meta = type("Meta", bases, attrs)
++    if formfield_callback is None:
++        formfield_callback = getattr(
++            getattr(form, "Meta", None), "formfield_callback", None
++        )
+     if formfield_callback:
+         Meta.formfield_callback = staticmethod(formfield_callback)
+     # Give this new form class a reasonable name.
+     class_name = model.__name__ + "Form"
+ 
+     # Class attributes for the new form class.
+-    form_class_attrs = {"Meta": Meta, "formfield_callback": formfield_callback}
++    form_class_attrs = {"Meta": Meta}
++    if formfield_callback:
++        form_class_attrs["formfield_callback"] = formfield_callback
+ 
+     if getattr(Meta, "fields", None) is None and getattr(Meta, "exclude", None) is None:
+         raise ImproperlyConfigured(
+diff --git a/tests/model_forms/tests.py b/tests/model_forms/tests.py
+index d2ce3348c5..54d27f916f 100644
+--- a/tests/model_forms/tests.py
++++ b/tests/model_forms/tests.py
+@@ -3465,6 +3465,25 @@ class FormFieldCallbackTests(SimpleTestCase):
+             callback_args, [(id_field, {}), (name_field, {"widget": widget})]
+         )
+ 
++    def test_custom_callback_in_meta(self):
++        callback_args = []
++
++        def callback(db_field, **kwargs):
++            callback_args.append((db_field, kwargs))
++            return db_field.formfield(**kwargs)
++
++        class BaseForm(forms.ModelForm):
++            class Meta:
++                model = Person
++                fields = "__all__"
++                formfield_callback = callback
++
++        callback_args.clear()
++        NewForm = modelform_factory(Person, form=BaseForm)
++        id_field, name_field = Person._meta.fields
++        self.assertEqual(callback_args, [(id_field, {}), (name_field, {})])
++        self.assertIs(NewForm.Meta.formfield_callback, callback)
++
+     def test_bad_callback(self):
+         # A bad callback provided by user still gives an error
+         with self.assertRaises(TypeError):

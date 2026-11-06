@@ -1,0 +1,46 @@
+diff --git a/django/db/models/base.py b/django/db/models/base.py
+index 8ea6c05ef9..1f5ab46a16 100644
+--- a/django/db/models/base.py
++++ b/django/db/models/base.py
+@@ -204,7 +204,12 @@ class ModelBase(type):
+             for field in base._meta.local_fields:
+                 if isinstance(field, OneToOneField):
+                     related = resolve_relation(new_class, field.remote_field.model)
+-                    parent_links[make_model_tuple(related)] = field
++                    related_key = make_model_tuple(related)
++                    # Prefer fields explicitly marked as parent links over
++                    # other OneToOneFields pointing to the same model.
++                    if (field.remote_field.parent_link or
++                            related_key not in parent_links):
++                        parent_links[related_key] = field
+ 
+         # Track fields inherited from base models.
+         inherited_attributes = set()
+diff --git a/tests/model_inheritance/tests.py b/tests/model_inheritance/tests.py
+index 5eef0f5bfa..5f26da6046 100644
+--- a/tests/model_inheritance/tests.py
++++ b/tests/model_inheritance/tests.py
+@@ -174,6 +174,23 @@ class ModelInheritanceTests(TestCase):
+ 
+         self.assertIs(C._meta.parents[A], C._meta.get_field('a'))
+ 
++    @isolate_apps('model_inheritance')
++    def test_parent_link_before_other_one_to_one_field(self):
++        class A(models.Model):
++            pass
++
++        class B(A):
++            a_ptr = models.OneToOneField(
++                A, on_delete=models.CASCADE, parent_link=True,
++                related_name='+',
++            )
++            other = models.OneToOneField(
++                A, on_delete=models.CASCADE, related_name='other',
++            )
++
++        self.assertIs(B._meta.parents[A], B._meta.get_field('a_ptr'))
++        self.assertIs(B._meta.pk, B._meta.get_field('a_ptr'))
++
+     @isolate_apps('model_inheritance')
+     def test_init_subclass(self):
+         saved_kwargs = {}

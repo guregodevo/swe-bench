@@ -1,0 +1,131 @@
+diff --git a/xarray/core/computation.py b/xarray/core/computation.py
+index 3f7e8f74..a4426f25 100644
+--- a/xarray/core/computation.py
++++ b/xarray/core/computation.py
+@@ -1858,9 +1858,26 @@ def where(cond, x, y, keep_attrs=None):
+     if keep_attrs is None:
+         keep_attrs = _get_keep_attrs(default=False)
+     if keep_attrs is True:
+-        # keep the attributes of x, the second parameter, by default to
+-        # be consistent with the `where` method of `DataArray` and `Dataset`
+-        keep_attrs = lambda attrs, context: getattr(x, "attrs", {})
++        # Keep the attributes of x, the second parameter, by default to
++        # be consistent with the `where` method of `DataArray` and `Dataset`.
++        #
++        # We cannot pass a callable to ``apply_ufunc`` here: it would be used
++        # for merging coordinates as well, where the attributes of x's data
++        # variable would incorrectly override the coordinate attributes (see
++        # GH7222). Instead, merge with "override" and restore x's attributes
++        # below. This also handles scalar arguments, for which there may be no
++        # attributes to merge.
++        result = apply_ufunc(
++            duck_array_ops.where,
++            cond,
++            x,
++            y,
++            join="exact",
++            dataset_join="exact",
++            dask="allowed",
++            keep_attrs="override",
++        )
++        return _restore_where_attrs(result, x)
+ 
+     # alignment for three arguments is complicated, so don't support it yet
+     return apply_ufunc(
+@@ -1875,6 +1892,51 @@ def where(cond, x, y, keep_attrs=None):
+     )
+ 
+ 
++def _restore_where_attrs(result, x):
++    """Restore the attributes of ``x`` on the result of ``where``.
++
++    ``keep_attrs=True`` for :py:func:`where` means "keep the attributes of
++    x". This includes the attributes of its data variables and coordinates;
++    applying the attrs of x's data variable to every coordinate would be
++    wrong.
++    """
++    from .dataarray import DataArray
++    from .dataset import Dataset
++
++    x_attrs = dict(getattr(x, "attrs", {}))
++    x_coords = getattr(x, "coords", {})
++
++    def restore_coord_attrs(variables, names):
++        for name in names:
++            if name in x_coords:
++                # Copy the variable before changing its attrs, since the
++                # variable may be shared with an input object.
++                variable = variables[name].copy(deep=False)
++                variable.attrs = dict(x_coords[name].attrs)
++                variables[name] = variable
++
++    if isinstance(result, Dataset):
++        result.attrs = x_attrs
++        if isinstance(x, Dataset):
++            for name in result.data_vars:
++                if name in x:
++                    variable = result._variables[name].copy(deep=False)
++                    variable.attrs = dict(x[name].attrs)
++                    result._variables[name] = variable
++        elif isinstance(x, DataArray) and x.name in result.data_vars:
++            variable = result._variables[x.name].copy(deep=False)
++            variable.attrs = x_attrs
++            result._variables[x.name] = variable
++        restore_coord_attrs(result._variables, result._coord_names)
++    elif isinstance(result, DataArray):
++        result.attrs = x_attrs
++        restore_coord_attrs(result._coords, result._coords)
++    elif hasattr(result, "attrs"):
++        result.attrs = x_attrs
++
++    return result
++
++
+ @overload
+ def polyval(
+     coord: DataArray, coeffs: DataArray, degree_dim: Hashable = "degree"
+diff --git a/xarray/tests/test_computation.py b/xarray/tests/test_computation.py
+index da1bd014..b8f3ba8a 100644
+--- a/xarray/tests/test_computation.py
++++ b/xarray/tests/test_computation.py
+@@ -1937,6 +1937,40 @@ def test_where_attrs() -> None:
+     assert actual.attrs == {}
+ 
+ 
++def test_where_keep_attrs_preserves_coord_attrs() -> None:
++    # regression test for GH7222: the attrs of x's data variable must not
++    # overwrite the attrs of its coordinates
++    coord = xr.DataArray([0, 1], dims="x", attrs={"standard_name": "time"})
++    cond = xr.DataArray([True, False], dims="x", coords={"x": coord})
++    x = xr.DataArray(
++        [1, 1], dims="x", coords={"x": coord}, attrs={"long_name": "air"}
++    )
++    y = xr.DataArray(
++        [0, 0], dims="x", coords={"x": coord}, attrs={"long_name": "other"}
++    )
++
++    actual = xr.where(cond, x, y, keep_attrs=True)
++    assert actual.attrs == {"long_name": "air"}
++    assert actual.x.attrs == {"standard_name": "time"}
++
++    # scalar condition
++    actual = xr.where(True, x, y, keep_attrs=True)
++    assert actual.attrs == {"long_name": "air"}
++    assert actual.x.attrs == {"standard_name": "time"}
++
++    # Dataset inputs: data variable and coordinate attrs are both preserved
++    ds_x = xr.Dataset({"air": x}, attrs={"title": "x"})
++    ds_y = xr.Dataset({"air": y}, attrs={"title": "y"})
++    actual = xr.where(cond, ds_x, ds_y, keep_attrs=True)
++    assert actual.attrs == {"title": "x"}
++    assert actual.air.attrs == {"long_name": "air"}
++    assert actual.x.attrs == {"standard_name": "time"}
++
++    # the inputs are not modified
++    assert x.x.attrs == {"standard_name": "time"}
++    assert ds_x.x.attrs == {"standard_name": "time"}
++
++
+ @pytest.mark.parametrize(
+     "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
+ )

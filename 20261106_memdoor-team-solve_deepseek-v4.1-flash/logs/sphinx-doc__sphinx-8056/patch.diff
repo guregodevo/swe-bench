@@ -1,0 +1,105 @@
+diff --git a/CHANGES b/CHANGES
+index 235e34852..461f7a36c 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -75,6 +75,7 @@ Bugs fixed
+ * #7865: autosummary: Failed to extract summary line when abbreviations found
+ * #7866: autosummary: Failed to extract correct summary line when docstring
+   contains a hyperlink target
++* #7823: napoleon: Multiple parameters are not rendered correctly
+ * #7469: autosummary: "Module attributes" header is not translatable
+ * #7940: apidoc: An extra newline is generated at the end of the rst file if a
+   module has submodules 
+diff --git a/sphinx/ext/napoleon/docstring.py b/sphinx/ext/napoleon/docstring.py
+index b3daa06f1..3fc093f5b 100644
+--- a/sphinx/ext/napoleon/docstring.py
++++ b/sphinx/ext/napoleon/docstring.py
+@@ -266,13 +266,16 @@ class GoogleDocstring:
+         _descs = self.__class__(_descs, self._config).lines()
+         return _name, _type, _descs
+ 
+-    def _consume_fields(self, parse_type: bool = True, prefer_type: bool = False
+-                        ) -> List[Tuple[str, str, List[str]]]:
++    def _consume_fields(self, parse_type: bool = True, prefer_type: bool = False,
++                        multiple: bool = False) -> List[Tuple[str, str, List[str]]]:
+         self._consume_empty()
+         fields = []
+         while not self._is_section_break():
+             _name, _type, _desc = self._consume_field(parse_type, prefer_type)
+-            if _name or _type or _desc:
++            if multiple and _name:
++                for name in _name.split(","):
++                    fields.append((name.strip(), _type, _desc,))
++            elif _name or _type or _desc:
+                 fields.append((_name, _type, _desc,))
+         return fields
+ 
+@@ -596,7 +599,7 @@ class GoogleDocstring:
+ 
+     def _parse_attributes_section(self, section: str) -> List[str]:
+         lines = []
+-        for _name, _type, _desc in self._consume_fields():
++        for _name, _type, _desc in self._consume_fields(multiple=True):
+             if self._config.napoleon_use_ivar:
+                 _name = self._qualify_name(_name, self._obj)
+                 field = ':ivar %s: ' % _name
+@@ -653,7 +656,7 @@ class GoogleDocstring:
+             return [header, '']
+ 
+     def _parse_keyword_arguments_section(self, section: str) -> List[str]:
+-        fields = self._consume_fields()
++        fields = self._consume_fields(multiple=True)
+         if self._config.napoleon_use_keyword:
+             return self._format_docutils_params(
+                 fields,
+@@ -678,10 +681,10 @@ class GoogleDocstring:
+         return self._parse_generic_section(_('Notes'), use_admonition)
+ 
+     def _parse_other_parameters_section(self, section: str) -> List[str]:
+-        return self._format_fields(_('Other Parameters'), self._consume_fields())
++        return self._format_fields(_('Other Parameters'), self._consume_fields(multiple=True))
+ 
+     def _parse_parameters_section(self, section: str) -> List[str]:
+-        fields = self._consume_fields()
++        fields = self._consume_fields(multiple=True)
+         if self._config.napoleon_use_param:
+             return self._format_docutils_params(fields)
+         else:
+diff --git a/tests/test_ext_napoleon_docstring.py b/tests/test_ext_napoleon_docstring.py
+index bf3c878a8..e01ea612a 100644
+--- a/tests/test_ext_napoleon_docstring.py
++++ b/tests/test_ext_napoleon_docstring.py
+@@ -1231,7 +1231,8 @@ class NumpyDocstringTest(BaseDocstringTest):
+         Single line summary
+ 
+         :Parameters: * **arg1** (*str*) -- Extended description of arg1
+-                     * **\\*args, \\*\\*kwargs** -- Variable length argument list and arbitrary keyword arguments.
++                     * **\\*args** -- Variable length argument list and arbitrary keyword arguments.
++                     * **\\*\\*kwargs** -- Variable length argument list and arbitrary keyword arguments.
+         """
+     ), (
+         """
+@@ -2201,6 +2202,23 @@ definition_after_normal_text : int
+         actual = str(NumpyDocstring(docstring, config))
+         self.assertEqual(expected, actual)
+ 
++    def test_multiple_parameters(self):
++        docstring = dedent("""\
++            Parameters
++            ----------
++            x1, x2 : array_like, optional
++                Input arrays, description of `x1`, `x2`.
++        """)
++        expected = dedent("""\
++            :param x1: Input arrays, description of `x1`, `x2`.
++            :type x1: :class:`array_like`, *optional*
++            :param x2: Input arrays, description of `x1`, `x2`.
++            :type x2: :class:`array_like`, *optional*
++        """)
++        config = Config(napoleon_use_param=True)
++        actual = str(NumpyDocstring(docstring, config))
++        self.assertEqual(expected, actual)
++
+ 
+ @contextmanager
+ def warns(warning, match):

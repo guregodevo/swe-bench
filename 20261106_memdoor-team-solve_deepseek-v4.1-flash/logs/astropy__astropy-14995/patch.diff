@@ -1,0 +1,47 @@
+diff --git a/astropy/nddata/mixins/ndarithmetic.py b/astropy/nddata/mixins/ndarithmetic.py
+index 4153dfccb..36f2d1e8a 100755
+--- a/astropy/nddata/mixins/ndarithmetic.py
++++ b/astropy/nddata/mixins/ndarithmetic.py
+@@ -522,6 +522,10 @@ class NDArithmeticMixin:
+             return deepcopy(operand.mask)
+         elif operand is None:
+             return deepcopy(self.mask)
++        elif operand.mask is None:
++            # Only self has a mask, so return a copy of it without calling
++            # handle_mask (which may not accept None as an operand).
++            return deepcopy(self.mask)
+         else:
+             # Now lets calculate the resulting mask (operation enforces copy)
+             return handle_mask(self.mask, operand.mask, **kwds)
+diff --git a/astropy/nddata/mixins/tests/test_ndarithmetic.py b/astropy/nddata/mixins/tests/test_ndarithmetic.py
+index 8c461155a..2a7b1b19e 100755
+--- a/astropy/nddata/mixins/tests/test_ndarithmetic.py
++++ b/astropy/nddata/mixins/tests/test_ndarithmetic.py
+@@ -314,6 +314,27 @@ def test_arithmetics_data_masks_invalid():
+         nd1.divide(nd2)
+ 
+ 
++def test_arithmetics_mask_with_only_one_operand_mask():
++    # Regression test for masks being propagated when only one of the operands
++    # has a mask.  ``handle_mask`` must not be called with ``None`` in that
++    # case, because e.g. ``np.bitwise_or`` cannot operate on ``None``.
++    mask = np.array([[0, 1, 64], [8, 0, 1], [2, 1, 0]])
++    nd_nomask = NDDataArithmetic(1)
++    nd_mask = NDDataArithmetic(1, mask=mask)
++
++    for nd in [
++        nd_mask.multiply(1.0, handle_mask=np.bitwise_or),
++        nd_mask.multiply(nd_nomask, handle_mask=np.bitwise_or),
++        nd_nomask.multiply(nd_mask, handle_mask=np.bitwise_or),
++    ]:
++        assert_array_equal(nd.mask, mask)
++        # The returned mask must be a copy, not a reference to the input.
++        assert nd.mask is not mask
++
++    assert nd_nomask.multiply(1.0, handle_mask=np.bitwise_or).mask is None
++    assert nd_nomask.multiply(nd_nomask, handle_mask=np.bitwise_or).mask is None
++
++
+ # Covering:
+ # both have uncertainties (data and uncertainty without unit)
+ # tested against manually determined resulting uncertainties to verify the

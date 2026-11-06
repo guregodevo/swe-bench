@@ -1,0 +1,50 @@
+diff --git a/lib/matplotlib/colorbar.py b/lib/matplotlib/colorbar.py
+index c59b0ac815..3bde9740f3 100644
+--- a/lib/matplotlib/colorbar.py
++++ b/lib/matplotlib/colorbar.py
+@@ -651,8 +651,15 @@ class Colorbar:
+             if not self.drawedges:
+                 if len(self._y) >= self.n_rasterize:
+                     self.solids.set_rasterized(True)
+-        self.dividers.set_segments(
+-            np.dstack([X, Y])[1:-1] if self.drawedges else [])
++        if self.drawedges:
++            # The interior dividers are at the boundaries between the color
++            # blocks.  If the colorbar has extensions, also draw a divider at
++            # the boundary between each extension and the first/last block.
++            start = 0 if self._extend_lower() else 1
++            end = None if self._extend_upper() else -1
++            self.dividers.set_segments(np.dstack([X, Y])[start:end])
++        else:
++            self.dividers.set_segments([])
+ 
+     def _add_solids_patches(self, X, Y, C, mappable):
+         hatches = mappable.hatches * len(C)  # Have enough hatches.
+diff --git a/lib/matplotlib/tests/test_colorbar.py b/lib/matplotlib/tests/test_colorbar.py
+index ae3ab92c0d..ce2a5f3005 100644
+--- a/lib/matplotlib/tests/test_colorbar.py
++++ b/lib/matplotlib/tests/test_colorbar.py
+@@ -148,6 +148,23 @@ def test_colorbar_extension_inverted_axis(orientation, extend, expected):
+         assert len(cbar._extend_patches) == 1
+ 
+ 
++@pytest.mark.parametrize("orientation", ["horizontal", "vertical"])
++@pytest.mark.parametrize("extend", ["neither", "min", "max", "both"])
++def test_colorbar_drawedges_extension(orientation, extend):
++    """Test that dividers are drawn at the extension boundaries."""
++    fig, ax = plt.subplots()
++    cmap = plt.get_cmap("viridis", 8)
++    norm = BoundaryNorm(np.arange(9), 8)
++    cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap),
++                        orientation=orientation, extend=extend,
++                        drawedges=True)
++    # The colorbar has 8 color blocks (7 interior boundaries), plus one
++    # boundary at each extension.
++    n_dividers = 7 + (extend in ("min", "both")) + (
++        extend in ("max", "both"))
++    assert len(cbar.dividers.get_segments()) == n_dividers
++
++
+ @pytest.mark.parametrize('use_gridspec', [True, False])
+ @image_comparison(['cbar_with_orientation',
+                    'cbar_locationing',

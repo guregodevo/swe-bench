@@ -1,0 +1,101 @@
+diff --git a/astropy/wcs/wcsapi/wrappers/sliced_wcs.py b/astropy/wcs/wcsapi/wrappers/sliced_wcs.py
+index d7605b078..439012d83 100644
+--- a/astropy/wcs/wcsapi/wrappers/sliced_wcs.py
++++ b/astropy/wcs/wcsapi/wrappers/sliced_wcs.py
+@@ -246,12 +246,28 @@ class SlicedLowLevelWCS(BaseWCSWrapper):
+         world_arrays = tuple(map(np.asanyarray, world_arrays))
+         world_arrays_new = []
+         iworld_curr = -1
++
++        # For world dimensions that have been dropped by the slice, we need to
++        # use the world coordinate value at the position of the slice rather
++        # than an arbitrary value.  Otherwise, for WCSes where the dropped
++        # world dimension is coupled to the remaining pixel dimensions, the
++        # inverse transformation will be evaluated at the wrong location.
++        # Note that a dropped world dimension is by definition not correlated
++        # with any of the kept pixel dimensions, so its value is constant over
++        # the kept dimensions and can be evaluated at pixel 0.
++        if len(self._world_keep) < self._wcs.world_n_dim:
++            dropped_world = self._pixel_to_world_values_all(
++                *[0] * len(self._pixel_keep))
++
+         for iworld in range(self._wcs.world_n_dim):
+             if iworld in self._world_keep:
+                 iworld_curr += 1
+                 world_arrays_new.append(world_arrays[iworld_curr])
+             else:
+-                world_arrays_new.append(1.)
++                value = dropped_world[iworld]
++                if isinstance(value, np.ndarray) and value.size == 1:
++                    value = value.item()
++                world_arrays_new.append(value)
+ 
+         world_arrays_new = np.broadcast_arrays(*world_arrays_new)
+         pixel_arrays = list(self._wcs.world_to_pixel_values(*world_arrays_new))
+diff --git a/astropy/wcs/wcsapi/wrappers/tests/test_sliced_wcs.py b/astropy/wcs/wcsapi/wrappers/tests/test_sliced_wcs.py
+index a35411496..f22938b0f 100644
+--- a/astropy/wcs/wcsapi/wrappers/tests/test_sliced_wcs.py
++++ b/astropy/wcs/wcsapi/wrappers/tests/test_sliced_wcs.py
+@@ -899,3 +899,51 @@ def test_pixel_to_world_values_different_int_types():
+     for int_coord, np64_coord in zip(int_sliced.pixel_to_world_values(*pixel_arrays),
+                                      np64_sliced.pixel_to_world_values(*pixel_arrays)):
+         assert all(int_coord == np64_coord)
++
++
++def test_world_to_pixel_values_coupled_dropped_dimension():
++    # Regression test for an issue where dropping a coupled world dimension
++    # (here the spectral dimension) and using an arbitrary placeholder value
++    # for the dropped dimension resulted in incorrect pixel coordinates for
++    # the remaining dimensions.
++    wcs = WCS(header={
++        'WCSAXES': 3,
++        'CRPIX1': 50.5,
++        'CRPIX2': 13.,
++        'CRPIX3': 1.0,
++        'PC1_1': 0.0,
++        'PC1_2': -1.0,
++        'PC1_3': 0.0,
++        'PC2_1': 1.0,
++        'PC2_2': 0.0,
++        'PC2_3': -1.0,
++        'CDELT1': 5,
++        'CDELT2': 5,
++        'CDELT3': 0.055,
++        'CUNIT1': 'arcsec',
++        'CUNIT2': 'arcsec',
++        'CUNIT3': 'Angstrom',
++        'CTYPE1': 'HPLN-TAN',
++        'CTYPE2': 'HPLT-TAN',
++        'CTYPE3': 'WAVE',
++        'CRVAL1': 0.0,
++        'CRVAL2': 0.0,
++        'CRVAL3': 1.05,
++    })
++
++    pixel = wcs.world_to_pixel_values(0., 0., 1.05e-10)
++    assert_allclose(pixel, (49.5, 12., 0.), atol=1e-10)
++
++    for index in (0, 1):
++        sliced = SlicedLowLevelWCS(wcs, index)
++        # The spectral world coordinate at the slice is the value that should
++        # be used for the dropped dimension, so the spatial pixel coordinates
++        # should match those from the full WCS at that spectral pixel.
++        expected = wcs.world_to_pixel_values(0., 0., 1.05e-10 + index * 5.5e-12)
++        assert_allclose(sliced.world_to_pixel_values(0., 0.),
++                        expected[:2], atol=1e-10)
++
++    sliced = SlicedLowLevelWCS(wcs, 0)
++    for pixel in [(49.5, 12.), (30., 5.), (10., 20.)]:
++        world = sliced.pixel_to_world_values(*pixel)
++        assert_allclose(sliced.world_to_pixel_values(*world), pixel, atol=1e-8)
+diff --git a/docs/changes/wcs/13586.bugfix.rst b/docs/changes/wcs/13586.bugfix.rst
+new file mode 100644
+index 000000000..be04753bb
+--- /dev/null
++++ b/docs/changes/wcs/13586.bugfix.rst
+@@ -0,0 +1,5 @@
++Fixed ``SlicedLowLevelWCS.world_to_pixel_values`` so that dropped world
++dimensions are set to the world coordinate value at the slice position rather
++than an arbitrary value. This ensures the inverse transformation gives correct
++results when the dropped world dimension is coupled to the remaining pixel
++dimensions.

@@ -1,0 +1,193 @@
+diff --git a/CHANGES b/CHANGES
+index e05488388..aee73a647 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -40,6 +40,8 @@ Features added
+ Bugs fixed
+ ----------
+ 
++* #10656: inheritance_diagram: Fix links in SVG inheritance diagrams
++  generated in nested documents.
+ * #11077: graphviz: Fix relative links from within the graph.
+   Patch by Ralf Grubenmann.
+ * #11529: Line Block in LaTeX builder outputs spurious empty token.
+diff --git a/sphinx/ext/graphviz.py b/sphinx/ext/graphviz.py
+index 8b21d9e3b..e40311f63 100644
+--- a/sphinx/ext/graphviz.py
++++ b/sphinx/ext/graphviz.py
+@@ -217,13 +217,23 @@ class GraphvizSimple(SphinxDirective):
+             return [figure]
+ 
+ 
+-def fix_svg_relative_paths(self: SphinxTranslator, filepath: str) -> None:
++def fix_svg_relative_paths(self: SphinxTranslator, filepath: str,
++                           docname: str | None = None) -> None:
+     """Change relative links in generated svg files to be relative to imgpath."""
+     tree = ET.parse(filepath)  # NoQA: S314
+     root = tree.getroot()
+     ns = {'svg': 'http://www.w3.org/2000/svg', 'xlink': 'http://www.w3.org/1999/xlink'}
+     href_name = '{http://www.w3.org/1999/xlink}href'
+     modified = False
++    if docname is None:
++        docname = self.builder.current_docname
++
++    # Links in the SVG are relative to the document that generated it, whereas
++    # the SVG itself is written to the image directory.  Resolve each link
++    # against the document's output directory before making it relative to the
++    # image directory.
++    doc_dir = path.dirname(self.builder.get_target_uri(docname).split('#')[0])
++    image_dir = path.join(self.builder.outdir, self.builder.imagedir)
+ 
+     for element in chain(
+         root.findall('.//svg:image[@xlink:href]', ns),
+@@ -234,11 +244,8 @@ def fix_svg_relative_paths(self: SphinxTranslator, filepath: str) -> None:
+             # not a relative link
+             continue
+ 
+-        old_path = path.join(self.builder.outdir, url)
+-        new_path = path.relpath(
+-            old_path,
+-            start=path.join(self.builder.outdir, self.builder.imgpath),
+-        )
++        old_path = path.join(self.builder.outdir, doc_dir, url)
++        new_path = path.relpath(old_path, start=image_dir)
+         modified_url = urlunsplit((scheme, hostname, new_path, query, fragment))
+ 
+         element.set(href_name, modified_url)
+@@ -300,7 +307,7 @@ def render_dot(self: SphinxTranslator, code: str, options: dict, format: str,
+                                '[stdout]\n%r') % (ret.stderr, ret.stdout))
+ 
+     if format == 'svg':
+-        fix_svg_relative_paths(self, outfn)
++        fix_svg_relative_paths(self, outfn, options.get('docname'))
+ 
+     return relfn, outfn
+ 
+diff --git a/sphinx/ext/inheritance_diagram.py b/sphinx/ext/inheritance_diagram.py
+index 6e3985512..f2dce5d37 100644
+--- a/sphinx/ext/inheritance_diagram.py
++++ b/sphinx/ext/inheritance_diagram.py
+@@ -33,6 +33,7 @@ from __future__ import annotations
+ import builtins
+ import hashlib
+ import inspect
++import posixpath
+ import re
+ from collections.abc import Iterable
+ from importlib import import_module
+@@ -407,18 +408,19 @@ def html_visit_inheritance_diagram(self: HTML5Translator, node: inheritance_diag
+ 
+     # Create a mapping from fully-qualified class names to URLs.
+     graphviz_output_format = self.builder.env.config.graphviz_output_format.upper()
+-    current_filename = self.builder.current_docname + self.builder.out_suffix
+     urls = {}
+     pending_xrefs = cast(Iterable[addnodes.pending_xref], node)
+     for child in pending_xrefs:
+         if child.get('refuri') is not None:
+-            if graphviz_output_format == 'SVG':
+-                urls[child['reftitle']] = "../" + child.get('refuri')
+-            else:
+-                urls[child['reftitle']] = child.get('refuri')
++            urls[child['reftitle']] = child.get('refuri')
+         elif child.get('refid') is not None:
+             if graphviz_output_format == 'SVG':
+-                urls[child['reftitle']] = '../' + current_filename + '#' + child.get('refid')
++                # Relative links in SVGs are made relative to the image
++                # directory by fix_svg_relative_paths().
++                current_filename = (posixpath.basename(
++                    self.builder.get_target_uri(self.builder.current_docname).split('#')[0])
++                    + '#' + child.get('refid'))
++                urls[child['reftitle']] = current_filename
+             else:
+                 urls[child['reftitle']] = '#' + child.get('refid')
+ 
+diff --git a/tests/roots/test-ext-inheritance_diagram-nested/conf.py b/tests/roots/test-ext-inheritance_diagram-nested/conf.py
+new file mode 100644
+index 000000000..b44e78319
+--- /dev/null
++++ b/tests/roots/test-ext-inheritance_diagram-nested/conf.py
+@@ -0,0 +1,7 @@
++import os
++import sys
++
++sys.path.insert(0, os.path.abspath('.'))
++
++extensions = ['sphinx.ext.inheritance_diagram']
++graphviz_output_format = 'svg'
+diff --git a/tests/roots/test-ext-inheritance_diagram-nested/index.rst b/tests/roots/test-ext-inheritance_diagram-nested/index.rst
+new file mode 100644
+index 000000000..d206ca84e
+--- /dev/null
++++ b/tests/roots/test-ext-inheritance_diagram-nested/index.rst
+@@ -0,0 +1,7 @@
++============================
++test-ext-inheritance_diagram
++============================
++
++.. toctree::
++
++   nested/index
+diff --git a/tests/roots/test-ext-inheritance_diagram-nested/nested/index.rst b/tests/roots/test-ext-inheritance_diagram-nested/nested/index.rst
+new file mode 100644
+index 000000000..7da7f556a
+--- /dev/null
++++ b/tests/roots/test-ext-inheritance_diagram-nested/nested/index.rst
+@@ -0,0 +1,12 @@
++Nested
++======
++
++.. py:module:: test
++
++.. py:class:: Foo
++
++.. py:class:: Bar
++
++.. py:class:: Baz
++
++.. inheritance-diagram:: test.Baz
+diff --git a/tests/roots/test-ext-inheritance_diagram-nested/test.py b/tests/roots/test-ext-inheritance_diagram-nested/test.py
+new file mode 100644
+index 000000000..20824540e
+--- /dev/null
++++ b/tests/roots/test-ext-inheritance_diagram-nested/test.py
+@@ -0,0 +1,10 @@
++class Foo:
++    pass
++
++
++class Bar(Foo):
++    pass
++
++
++class Baz(Bar):
++    pass
+diff --git a/tests/test_ext_inheritance_diagram.py b/tests/test_ext_inheritance_diagram.py
+index 16581b075..7bcdaa2d6 100644
+--- a/tests/test_ext_inheritance_diagram.py
++++ b/tests/test_ext_inheritance_diagram.py
+@@ -171,6 +171,25 @@ def test_inheritance_diagram_svg_html(app, status, warning):
+     assert re.search(pattern, content, re.M)
+ 
+ 
++@pytest.mark.sphinx('html', testroot='ext-inheritance_diagram-nested')
++@pytest.mark.usefixtures('if_graphviz_found')
++def test_inheritance_diagram_svg_html_nested(app, status, warning):
++    app.builder.build_all()
++
++    content = (app.outdir / 'nested' / 'index.html').read_text(encoding='utf8')
++
++    image_path_match = re.search(r'<object data="([^"]+)"', content)
++    assert image_path_match
++
++    image_path = image_path_match.group(1)
++    image_content = (app.outdir / 'nested' / image_path).read_text(encoding='utf8')
++    # Links in the SVG must be relative to the image directory, not to the
++    # document that embeds the SVG (refs: #10656).
++    assert 'href="../nested/index.html#test.Baz"' in image_content
++    assert 'href="../nested/index.html#test.Bar"' in image_content
++    assert 'href="../nested/index.html#test.Foo"' in image_content
++
++
+ @pytest.mark.sphinx('latex', testroot='ext-inheritance_diagram')
+ @pytest.mark.usefixtures('if_graphviz_found')
+ def test_inheritance_diagram_latex(app, status, warning):

@@ -1,0 +1,32 @@
+diff --git a/django/forms/fields.py b/django/forms/fields.py
+index 03cd8af8d7..36ec634929 100644
+--- a/django/forms/fields.py
++++ b/django/forms/fields.py
+@@ -199,6 +199,7 @@ class Field:
+         result = copy.copy(self)
+         memo[id(self)] = result
+         result.widget = copy.deepcopy(self.widget, memo)
++        result.error_messages = self.error_messages.copy()
+         result.validators = self.validators[:]
+         return result
+ 
+diff --git a/tests/forms_tests/field_tests/test_base.py b/tests/forms_tests/field_tests/test_base.py
+index 4ddbea3414..e94fe4e08b 100644
+--- a/tests/forms_tests/field_tests/test_base.py
++++ b/tests/forms_tests/field_tests/test_base.py
+@@ -35,6 +35,15 @@ class BasicFieldsTests(SimpleTestCase):
+         self.assertEqual(f.fields['field1'].widget.choices, [('1', '1')])
+         self.assertEqual(f.fields['field2'].widget.choices, [('2', '2')])
+ 
++    def test_field_deepcopies_error_messages(self):
++        class TestForm(Form):
++            field1 = Field()
++            field2 = Field()
++
++        f = TestForm()
++        f.fields['field1'].error_messages['required'] = 'Custom message'
++        self.assertEqual(f.fields['field2'].error_messages['required'], 'This field is required.')
++
+ 
+ class DisabledFieldTests(SimpleTestCase):
+     def test_disabled_field_has_changed_always_false(self):

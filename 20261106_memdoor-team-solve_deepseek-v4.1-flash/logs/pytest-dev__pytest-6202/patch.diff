@@ -1,0 +1,46 @@
+diff --git a/changelog/6205.bugfix.rst b/changelog/6205.bugfix.rst
+new file mode 100644
+index 000000000..dffac64b0
+--- /dev/null
++++ b/changelog/6205.bugfix.rst
+@@ -0,0 +1,3 @@
++Fixed a regression where node IDs and report headlines had ``.[`` replaced
++with ``[``, producing incorrect names for tests with parameters containing
++these characters.
+diff --git a/src/_pytest/python.py b/src/_pytest/python.py
+index b8b365ad3..5f2af31e2 100644
+--- a/src/_pytest/python.py
++++ b/src/_pytest/python.py
+@@ -286,7 +286,7 @@ class PyobjMixin(PyobjContext):
+             parts.append(name)
+         parts.reverse()
+         s = ".".join(parts)
+-        return s.replace(".[", "[")
++        return s
+ 
+     def reportinfo(self):
+         # XXX caching?
+diff --git a/testing/test_collection.py b/testing/test_collection.py
+index 8050e80f9..069c576e9 100644
+--- a/testing/test_collection.py
++++ b/testing/test_collection.py
+@@ -738,6 +738,19 @@ class Test_genitems:
+         ids = [x.getmodpath() for x in items]
+         assert ids == ["MyTestSuite.x_test", "TestCase.test_y"]
+ 
++    def test_getmodpath_with_nasty_parametrize_id(self, testdir):
++        p = testdir.makepyfile(
++            """
++            import pytest
++
++            @pytest.mark.parametrize("a", ["..["])
++            def test_boo(a):
++                pass
++        """
++        )
++        items, reprec = testdir.inline_genitems(p)
++        assert items[0].getmodpath() == "test_boo[..[]"
++
+ 
+ def test_matchnodes_two_collections_same_file(testdir):
+     testdir.makeconftest(

@@ -1,0 +1,38 @@
+diff --git a/sympy/core/symbol.py b/sympy/core/symbol.py
+index f4a555c13f..2aca8bab27 100644
+--- a/sympy/core/symbol.py
++++ b/sympy/core/symbol.py
+@@ -791,7 +791,7 @@ def literal(s):
+         return tuple(result)
+     else:
+         for name in names:
+-            result.append(symbols(name, **args))
++            result.append(symbols(name, cls=cls, **args))
+ 
+         return type(names)(result)
+ 
+diff --git a/sympy/core/tests/test_symbol.py b/sympy/core/tests/test_symbol.py
+index 19494c2083..27f796ffd9 100644
+--- a/sympy/core/tests/test_symbol.py
++++ b/sympy/core/tests/test_symbol.py
+@@ -1,6 +1,7 @@
+ from sympy.core.numbers import (I, Rational, pi)
+ from sympy.core.relational import (GreaterThan, LessThan, StrictGreaterThan, StrictLessThan)
+ from sympy.core.symbol import (Dummy, Symbol, Wild, symbols)
++from sympy.core.function import Function, UndefinedFunction
+ from sympy.core.sympify import sympify  # can't import as S yet
+ from sympy.core.symbol import uniquely_named_symbol, _symbol, Str
+ 
+@@ -294,6 +295,12 @@ def test_symbols():
+     assert symbols('aa:d,x:z') == (aa, ab, ac, ad, x, y, z)
+     assert symbols(('aa:d','x:z')) == ((aa, ab, ac, ad), (x, y, z))
+ 
++    # issue 23524: cls must be passed through when names is a sequence
++    q, u = symbols(('q:2', 'u:2'), cls=Function)
++    assert all(isinstance(s, UndefinedFunction) for s in q + u)
++    assert q == (Function('q0'), Function('q1'))
++    assert u == (Function('u0'), Function('u1'))
++
+ 
+     # issue 6675
+     def sym(s):

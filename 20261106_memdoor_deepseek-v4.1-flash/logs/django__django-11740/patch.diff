@@ -1,0 +1,39 @@
+diff --git a/django/db/migrations/autodetector.py b/django/db/migrations/autodetector.py
+index 0dc1c77c53..063a00e413 100644
+--- a/django/db/migrations/autodetector.py
++++ b/django/db/migrations/autodetector.py
+@@ -963,6 +963,11 @@ class MigrationAutodetector:
+                             preserve_default = False
+                     else:
+                         field = new_field
++                    dependencies = []
++                    if new_field.remote_field and new_field.remote_field.model:
++                        dependencies.extend(
++                            self._get_dependencies_for_foreign_key(new_field)
++                        )
+                     self.add_operation(
+                         app_label,
+                         operations.AlterField(
+@@ -970,7 +975,8 @@ class MigrationAutodetector:
+                             name=field_name,
+                             field=field,
+                             preserve_default=preserve_default,
+-                        )
++                        ),
++                        dependencies=dependencies,
+                     )
+                 else:
+                     # We cannot alter between m2m and concrete fields
+diff --git a/tests/migrations/test_autodetector.py b/tests/migrations/test_autodetector.py
+index e9926ba3bf..0ee557c027 100644
+--- a/tests/migrations/test_autodetector.py
++++ b/tests/migrations/test_autodetector.py
+@@ -665,7 +665,7 @@ class AutodetectorTests(TestCase):
+         """Tests deletion of old models."""
+         changes = self.get_changes([self.author_empty], [])
+         # Right number/type of migrations?
+-        self.assertNumberMigrations(changes, 'testapp', 1)
++        self.assertNumberMigrations(changes, "testapp", 1)
+         self.assertOperationTypes(changes, 'testapp', 0, ["DeleteModel"])
+         self.assertOperationAttributes(changes, "testapp", 0, 0, name="Author")
+ 

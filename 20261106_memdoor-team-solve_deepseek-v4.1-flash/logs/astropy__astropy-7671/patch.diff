@@ -1,0 +1,67 @@
+diff --git a/CHANGES.rst b/CHANGES.rst
+index 2c2da771f..b6bd83f5e 100644
+--- a/CHANGES.rst
++++ b/CHANGES.rst
+@@ -154,6 +154,10 @@ astropy.units
+ astropy.utils
+ ^^^^^^^^^^^^^
+ 
++- Fix ``minversion`` raising a ``TypeError`` when either the installed or
++  required version contains a non-numeric suffix such as ``dev`` or ``rc1``.
++  [#7665]
++
+ astropy.visualization
+ ^^^^^^^^^^^^^^^^^^^^^
+ 
+diff --git a/astropy/utils/introspection.py b/astropy/utils/introspection.py
+index 3e784f9fc..449e0ac87 100644
+--- a/astropy/utils/introspection.py
++++ b/astropy/utils/introspection.py
+@@ -4,6 +4,7 @@
+ 
+ 
+ import inspect
++import re
+ import types
+ import importlib
+ from distutils.version import LooseVersion
+@@ -139,6 +140,17 @@ def minversion(module, version, inclusive=True, version_path='__version__'):
+     else:
+         have_version = resolve_name(module.__name__, version_path)
+ 
++    # LooseVersion raises a TypeError when strings like dev, rc1 are part
++    # of the version number. Match the dotted numbers only. Regex taken
++    # from PEP440, https://www.python.org/dev/peps/pep-0440/, Appendix B
++    expr = '^([1-9]\\d*!)?(0|[1-9]\\d*)(\\.(0|[1-9]\\d*))*'
++    m = re.match(expr, have_version)
++    if m:
++        have_version = m.group(0)
++    m = re.match(expr, version)
++    if m:
++        version = m.group(0)
++
+     if inclusive:
+         return LooseVersion(have_version) >= LooseVersion(version)
+     else:
+diff --git a/astropy/utils/tests/test_introspection.py b/astropy/utils/tests/test_introspection.py
+index d8262d458..3a4a9f8b5 100644
+--- a/astropy/utils/tests/test_introspection.py
++++ b/astropy/utils/tests/test_introspection.py
+@@ -73,3 +73,17 @@ def test_minversion():
+         assert minversion(test_module, version)
+     for version in bad_versions:
+         assert not minversion(test_module, version)
++
++
++def test_minversion_dev_version():
++    """Regression test for #7665: dev versions should not raise a TypeError."""
++    from types import ModuleType
++    test_module = ModuleType(str("test_module"))
++    test_module.__version__ = '1.14.3'
++    assert minversion(test_module, '1.14dev')
++    assert minversion(test_module, '1.14.0.dev')
++    assert not minversion(test_module, '1.15dev')
++
++    test_module.__version__ = '1.14dev'
++    assert minversion(test_module, '1.14')
++    assert not minversion(test_module, '1.14.3')

@@ -1,0 +1,83 @@
+diff --git a/ChangeLog b/ChangeLog
+index a0f12a7a..c3067eb3 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -9,6 +9,11 @@ Release date: TBA
+ ..
+   Put new features and bugfixes here and also in 'doc/whatsnew/2.9.rst'
+ 
++* Fix false positive ``unused-import`` for imports used only in type comments
++  through a qualified name, such as ``abc.ABC``.
++
++  Closes #4545
++
+ * Add type annotations to pyreverse dot files
+ 
+   Closes #1548
+diff --git a/doc/whatsnew/2.9.rst b/doc/whatsnew/2.9.rst
+index 514dcb3e..e444337b 100644
+--- a/doc/whatsnew/2.9.rst
++++ b/doc/whatsnew/2.9.rst
+@@ -77,3 +77,6 @@ Other Changes
+ 
+ * Fix false positive ``useless-type-doc`` on ignored argument using ``pylint.extensions.docparams`` when a function
+   was typed using pep484 but not inside the docstring.
++
++* Fix false positive ``unused-import`` for imports used only in type comments
++  through a qualified name, such as ``abc.ABC``.
+diff --git a/pylint/checkers/variables.py b/pylint/checkers/variables.py
+index 3ddafd59..78c8d8b8 100644
+--- a/pylint/checkers/variables.py
++++ b/pylint/checkers/variables.py
+@@ -1822,20 +1822,20 @@ class VariablesChecker(BaseChecker):
+ 
+     def _store_type_annotation_node(self, type_annotation):
+         """Given a type annotation, store all the name nodes it refers to"""
+-        if isinstance(type_annotation, astroid.Name):
+-            self._type_annotation_names.append(type_annotation.name)
++        if type_annotation is None:
+             return
+ 
+-        if not isinstance(type_annotation, astroid.Subscript):
++        if isinstance(type_annotation, astroid.Name):
++            self._type_annotation_names.append(type_annotation.name)
+             return
+ 
+         if (
+-            isinstance(type_annotation.value, astroid.Attribute)
++            isinstance(type_annotation, astroid.Subscript)
++            and isinstance(type_annotation.value, astroid.Attribute)
+             and isinstance(type_annotation.value.expr, astroid.Name)
+             and type_annotation.value.expr.name == TYPING_MODULE
+         ):
+             self._type_annotation_names.append(TYPING_MODULE)
+-            return
+ 
+         self._type_annotation_names.extend(
+             annotation.name
+diff --git a/tests/functional/u/unused/unused_typing_imports.py b/tests/functional/u/unused/unused_typing_imports.py
+index 7de4e411..eac45000 100644
+--- a/tests/functional/u/unused/unused_typing_imports.py
++++ b/tests/functional/u/unused/unused_typing_imports.py
+@@ -5,8 +5,10 @@ The problem was that we weren't handling keyword-only arguments annotations,
+ which means we were never processing them.
+ """
+ 
++import abc
+ import re
+ import typing
++from abc import ABC
+ from collections import Counter as CollectionCounter
+ from collections import defaultdict
+ from datetime import datetime
+@@ -83,3 +85,10 @@ def unused_reassigned_import(counter):
+     # type: (CollectionCounter) -> int
+     print(counter)
+     return 42
++
++
++def type_comment_qualified_name():
++    """Regression test for https://github.com/PyCQA/pylint/issues/4545"""
++    variable = None  # type: abc.ABC
++    other_variable = None  # type: ABC
++    return variable, other_variable

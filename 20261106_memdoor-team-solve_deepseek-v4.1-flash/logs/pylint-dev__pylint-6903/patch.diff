@@ -1,0 +1,168 @@
+diff --git a/doc/whatsnew/2/2.15/index.rst b/doc/whatsnew/2/2.15/index.rst
+index cac82dd2..25660a84 100644
+--- a/doc/whatsnew/2/2.15/index.rst
++++ b/doc/whatsnew/2/2.15/index.rst
+@@ -44,6 +44,12 @@ False negatives fixed
+ Other bug fixes
+ ===============
+ 
++* Fix a crash when ``--jobs=0`` is used in a container whose cgroup reports a
++  fractional or very small number of CPUs (e.g. ``cpu.shares`` of 2). The
++  computed number of jobs is now always at least 1.
++
++  Closes #6764
++
+ 
+ Other Changes
+ =============
+diff --git a/pylint/lint/run.py b/pylint/lint/run.py
+index a7e5d557..282bc530 100644
+--- a/pylint/lint/run.py
++++ b/pylint/lint/run.py
+@@ -52,12 +52,16 @@ def _query_cpu() -> int | None:
+         with open("/sys/fs/cgroup/cpu/cpu.cfs_period_us", encoding="utf-8") as file:
+             cpu_period = int(file.read().rstrip())
+         # Divide quota by period and you should get num of allotted CPU to the container, rounded down if fractional.
+-        avail_cpu = int(cpu_quota / cpu_period)
++        # A fractional result (e.g. a quota smaller than the period) must not
++        # result in 0, as multiprocessing requires at least one process.
++        avail_cpu = max(1, int(cpu_quota / cpu_period))
+     elif Path("/sys/fs/cgroup/cpu/cpu.shares").is_file():
+         with open("/sys/fs/cgroup/cpu/cpu.shares", encoding="utf-8") as file:
+             cpu_shares = int(file.read().rstrip())
+         # For AWS, gives correct value * 1024.
+-        avail_cpu = int(cpu_shares / 1024)
++        # Some container runtimes report very small shares (e.g. 2), which
++        # would otherwise be rounded down to 0.
++        avail_cpu = max(1, int(cpu_shares / 1024))
+     return avail_cpu
+ 
+ 
+@@ -76,8 +80,8 @@ def _cpu_count() -> int:
+     else:
+         cpu_count = 1
+     if cpu_share is not None:
+-        return min(cpu_share, cpu_count)
+-    return cpu_count
++        return max(1, min(cpu_share, cpu_count))
++    return max(1, cpu_count)
+ 
+ 
+ UNUSED_PARAM_SENTINEL = object()
+diff --git a/tests/lint/test_run.py b/tests/lint/test_run.py
+new file mode 100644
+index 00000000..1a99691e
+--- /dev/null
++++ b/tests/lint/test_run.py
+@@ -0,0 +1,84 @@
++# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
++# For details: https://github.com/PyCQA/pylint/blob/main/LICENSE
++# Copyright (c) https://github.com/PyCQA/pylint/blob/main/CONTRIBUTORS.txt
++
++from __future__ import annotations
++
++from pathlib import Path
++
++import pytest
++
++from pylint.lint import run
++
++
++def _mock_cgroup(
++    monkeypatch: pytest.MonkeyPatch,
++    files: dict[str, str],
++) -> None:
++    """Pretend the given cgroup files exist with the given contents."""
++
++    def _is_file(self: Path) -> bool:
++        return str(self) in files
++
++    def _open(file: str, *args: object, **kwargs: object) -> object:
++        return _FakeFile(files[file])
++
++    monkeypatch.setattr(Path, "is_file", _is_file)
++    monkeypatch.setattr("builtins.open", _open)
++
++
++class _FakeFile:
++    def __init__(self, content: str) -> None:
++        self.content = content
++
++    def __enter__(self) -> _FakeFile:
++        return self
++
++    def __exit__(self, *args: object) -> None:
++        return None
++
++    def read(self) -> str:
++        return self.content
++
++
++def test_query_cpu_shares_never_zero(monkeypatch: pytest.MonkeyPatch) -> None:
++    """A tiny cpu.shares value must not result in 0 CPUs.
++
++    Reproduces the Kubernetes case from #6764 where cpu.shares is 2 and
++    cpu.cfs_quota_us is -1.
++    """
++    _mock_cgroup(
++        monkeypatch,
++        {
++            "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "-1\n",
++            "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000\n",
++            "/sys/fs/cgroup/cpu/cpu.shares": "2\n",
++        },
++    )
++    assert run._query_cpu() == 1
++
++
++def test_query_cpu_fractional_quota_never_zero(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """A quota smaller than the period must not result in 0 CPUs."""
++    _mock_cgroup(
++        monkeypatch,
++        {
++            "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "50000\n",
++            "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000\n",
++        },
++    )
++    assert run._query_cpu() == 1
++
++
++def test_query_cpu_no_cgroup(monkeypatch: pytest.MonkeyPatch) -> None:
++    _mock_cgroup(monkeypatch, {})
++    assert run._query_cpu() is None
++
++
++def test_cpu_count_never_zero(monkeypatch: pytest.MonkeyPatch) -> None:
++    """_cpu_count must always return at least one CPU."""
++    monkeypatch.setattr(run, "_query_cpu", lambda: 1)
++    monkeypatch.setattr(run.os, "sched_getaffinity", lambda _pid: set(), raising=False)
++    assert run._cpu_count() >= 1
+diff --git a/tests/lint/unittest_expand_modules.py b/tests/lint/unittest_expand_modules.py
+index 15f72d0c..34998b31 100644
+--- a/tests/lint/unittest_expand_modules.py
++++ b/tests/lint/unittest_expand_modules.py
+@@ -69,6 +69,14 @@ test_pylinter = {
+     "path": str(TEST_DIRECTORY / "lint/test_pylinter.py"),
+ }
+ 
++test_run = {
++    "basename": "lint",
++    "basepath": INIT_PATH,
++    "isarg": False,
++    "name": "lint.test_run",
++    "path": str(TEST_DIRECTORY / "lint/test_run.py"),
++}
++
+ test_caching = {
+     "basename": "lint",
+     "basepath": INIT_PATH,
+@@ -109,6 +117,7 @@ class TestExpandModules(CheckerTestCase):
+                     init_of_package,
+                     test_caching,
+                     test_pylinter,
++                    test_run,
+                     test_utils,
+                     this_file_from_init,
+                     unittest_lint,

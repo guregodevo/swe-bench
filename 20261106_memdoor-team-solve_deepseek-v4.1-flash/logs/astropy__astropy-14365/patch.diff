@@ -1,0 +1,50 @@
+diff --git a/astropy/io/ascii/qdp.py b/astropy/io/ascii/qdp.py
+index 83a4f004a..d92357a6a 100755
+--- a/astropy/io/ascii/qdp.py
++++ b/astropy/io/ascii/qdp.py
+@@ -34,6 +34,8 @@ def _line_type(line, delimiter=None):
+     --------
+     >>> _line_type("READ SERR 3")
+     'command'
++    >>> _line_type("read serr 3")
++    'command'
+     >>> _line_type(" \\n    !some gibberish")
+     'comment'
+     >>> _line_type("   ")
+@@ -60,7 +62,9 @@ def _line_type(line, delimiter=None):
+     ValueError: Unrecognized QDP line...
+     """
+     _decimal_re = r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?"
+-    _command_re = r"READ [TS]ERR(\s+[0-9]+)+"
++    # QDP commands are case insensitive, so accept any case (e.g. both
++    # "READ SERR 1 2" and "read serr 1 2").
++    _command_re = r"(?i:READ [TS]ERR(\s+[0-9]+)+)"
+ 
+     sep = delimiter
+     if delimiter is None:
+diff --git a/astropy/io/ascii/tests/test_qdp.py b/astropy/io/ascii/tests/test_qdp.py
+index ef24e6f6a..ccd02307b 100755
+--- a/astropy/io/ascii/tests/test_qdp.py
++++ b/astropy/io/ascii/tests/test_qdp.py
+@@ -43,6 +43,21 @@ def test_get_tables_from_qdp_file(tmp_path):
+     assert np.isclose(table2["MJD_nerr"][0], -2.37847222222222e-05)
+ 
+ 
++def test_read_lowercase_command(tmp_path):
++    """QDP commands are case insensitive (regression test for #14647)."""
++    example_qdp = "read serr 1 2\n1 0.5 1 0.5\n"
++    path = tmp_path / "test.qdp"
++    path.write_text(example_qdp)
++
++    table = Table.read(path, format="ascii.qdp", table_id=0)
++
++    assert table.colnames == ["col1", "col1_err", "col2", "col2_err"]
++    assert np.allclose(table["col1"], [1])
++    assert np.allclose(table["col1_err"], [0.5])
++    assert np.allclose(table["col2"], [1])
++    assert np.allclose(table["col2_err"], [0.5])
++
++
+ def test_roundtrip(tmp_path):
+     example_qdp = """
+     ! Swift/XRT hardness ratio of trigger: XXXX, name: BUBU X-2

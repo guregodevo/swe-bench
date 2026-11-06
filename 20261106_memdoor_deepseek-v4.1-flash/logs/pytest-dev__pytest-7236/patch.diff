@@ -1,0 +1,79 @@
+diff --git a/changelog/7246.bugfix.rst b/changelog/7246.bugfix.rst
+new file mode 100644
+index 000000000..522d4c0be
+--- /dev/null
++++ b/changelog/7246.bugfix.rst
+@@ -0,0 +1,2 @@
++Fixed a regression where ``unittest.TestCase.tearDown`` was called for skipped
++tests when running with ``--pdb``.
+diff --git a/src/_pytest/unittest.py b/src/_pytest/unittest.py
+index 773f545af..3b86983ec 100644
+--- a/src/_pytest/unittest.py
++++ b/src/_pytest/unittest.py
+@@ -221,8 +221,17 @@ class TestCaseFunction(Function):
+             # TestCase instance interacts with the results object, so better to only do it
+             # when absolutely needed
+             if self.config.getoption("usepdb"):
+-                self._explicit_tearDown = self._testcase.tearDown
+-                setattr(self._testcase, "tearDown", lambda *args: None)
++                # Delay calling tearDown() until after the test has run, so that
++                # instance variables are still available when entering the pdb
++                # prompt. Only record the original tearDown() here: if the test
++                # is skipped (statically or during setUp()) unittest never calls
++                # tearDown(), and neither should we.
++                original_tearDown = self._testcase.tearDown
++
++                def delayed_tearDown(*args):
++                    self._explicit_tearDown = original_tearDown
++
++                setattr(self._testcase, "tearDown", delayed_tearDown)
+ 
+             # we need to update the actual bound method with self.obj, because
+             # wrap_pytest_function_for_tracing replaces self.obj by a wrapper
+diff --git a/testing/test_unittest.py b/testing/test_unittest.py
+index 83f1b6b2a..8cb5fdf2d 100644
+--- a/testing/test_unittest.py
++++ b/testing/test_unittest.py
+@@ -1193,6 +1193,42 @@ def test_pdb_teardown_called(testdir, monkeypatch):
+     ]
+ 
+ 
++def test_pdb_teardown_not_called_for_skipped(testdir, monkeypatch):
++    """Skipped tests must not have tearDown() called when --pdb is given.
++
++    unittest itself never calls tearDown() for skipped tests, and pytest
++    should not do so either (see #7246).
++    """
++    teardowns = []
++    monkeypatch.setattr(
++        pytest,
++        "test_pdb_teardown_not_called_for_skipped_teardowns",
++        teardowns,
++        raising=False,
++    )
++
++    testdir.makepyfile(
++        """
++        import unittest
++        import pytest
++
++        class MyTestCase(unittest.TestCase):
++
++            def tearDown(self):
++                pytest.test_pdb_teardown_not_called_for_skipped_teardowns.append(
++                    self.id()
++                )
++
++            @unittest.skip("hello")
++            def test_1(self):
++                pass
++    """
++    )
++    result = testdir.runpytest_inprocess("--pdb")
++    result.stdout.fnmatch_lines("* 1 skipped in *")
++    assert teardowns == []
++
++
+ def test_async_support(testdir):
+     pytest.importorskip("unittest.async_case")
+ 

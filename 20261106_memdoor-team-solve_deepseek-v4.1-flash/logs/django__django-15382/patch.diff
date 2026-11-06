@@ -1,0 +1,94 @@
+diff --git a/django/db/models/expressions.py b/django/db/models/expressions.py
+index 81f8f79c71..96f93e3b5a 100644
+--- a/django/db/models/expressions.py
++++ b/django/db/models/expressions.py
+@@ -1204,6 +1204,10 @@ class Exists(Subquery):
+         self.negated = negated
+         super().__init__(queryset, **kwargs)
+ 
++    @property
++    def empty_result_set_value(self):
++        return not self.negated
++
+     def __invert__(self):
+         clone = self.copy()
+         clone.negated = not self.negated
+@@ -1211,13 +1215,21 @@ class Exists(Subquery):
+ 
+     def as_sql(self, compiler, connection, template=None, **extra_context):
+         query = self.query.exists(using=connection.alias)
+-        sql, params = super().as_sql(
+-            compiler,
+-            connection,
+-            template=template,
+-            query=query,
+-            **extra_context,
+-        )
++        try:
++            sql, params = super().as_sql(
++                compiler,
++                connection,
++                template=template,
++                query=query,
++                **extra_context,
++            )
++        except EmptyResultSet:
++            if self.negated:
++                features = compiler.connection.features
++                if not features.supports_boolean_expr_in_select_clause:
++                    return '1=1', ()
++                return '1', ()
++            raise
+         if self.negated:
+             sql = 'NOT {}'.format(sql)
+         return sql, params
+diff --git a/tests/expressions/tests.py b/tests/expressions/tests.py
+index 5cf9dd1ea5..da4ecfb0ae 100644
+--- a/tests/expressions/tests.py
++++ b/tests/expressions/tests.py
+@@ -1905,6 +1905,45 @@ class ExistsTests(TestCase):
+         )
+         self.assertNotIn('ORDER BY', captured_sql)
+ 
++    def test_exists_with_empty_queryset(self):
++        qs = Experiment.objects.filter(
++            Exists(Experiment.objects.none()),
++            name='test',
++        )
++        self.assertIs(qs.exists(), False)
++        self.assertSequenceEqual(qs, [])
++
++    def test_negated_exists_with_empty_queryset(self):
++        experiment = Experiment.objects.create(
++            name='test',
++            assigned=datetime.date(2010, 6, 25),
++            completed=datetime.date(2010, 6, 27),
++            estimated_time=datetime.timedelta(2),
++            start=datetime.datetime(2010, 6, 25, 12, 15, 30, 747000),
++            end=datetime.datetime(2010, 6, 27, 12, 15, 30, 747000),
++        )
++        qs = Experiment.objects.filter(
++            ~Exists(Experiment.objects.none()),
++            name='test',
++        )
++        self.assertIs(qs.exists(), True)
++        self.assertSequenceEqual(qs, [experiment])
++
++    def test_negated_exists_with_empty_queryset_annotation(self):
++        experiment = Experiment.objects.create(
++            name='test',
++            assigned=datetime.date(2010, 6, 25),
++            completed=datetime.date(2010, 6, 27),
++            estimated_time=datetime.timedelta(2),
++            start=datetime.datetime(2010, 6, 25, 12, 15, 30, 747000),
++            end=datetime.datetime(2010, 6, 27, 12, 15, 30, 747000),
++        )
++        qs = Experiment.objects.annotate(
++            exists=~Exists(Experiment.objects.none()),
++        )
++        self.assertIs(qs.query.annotations['exists'].empty_result_set_value, False)
++        self.assertSequenceEqual(qs, [experiment])
++
+ 
+ class FieldTransformTests(TestCase):
+ 

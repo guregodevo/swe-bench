@@ -1,0 +1,105 @@
+diff --git a/examples/ensemble/plot_isolation_forest.py b/examples/ensemble/plot_isolation_forest.py
+index 1b79072df..b26f156a0 100755
+--- a/examples/ensemble/plot_isolation_forest.py
++++ b/examples/ensemble/plot_isolation_forest.py
+@@ -21,6 +21,10 @@ Random partitioning produces noticeable shorter paths for anomalies.
+ Hence, when a forest of random trees collectively produce shorter path lengths
+ for particular samples, they are highly likely to be anomalies.
+ 
++The forest can be grown incrementally by setting ``warm_start=True`` and
++increasing ``n_estimators`` between calls to ``fit``. This reuses the trees
++already fitted instead of fitting a completely new forest.
++
+ """
+ print(__doc__)
+ 
+diff --git a/sklearn/ensemble/bagging.py b/sklearn/ensemble/bagging.py
+index f21fbd81b..30e562c16 100755
+--- a/sklearn/ensemble/bagging.py
++++ b/sklearn/ensemble/bagging.py
+@@ -363,7 +363,10 @@ class BaseBagging(BaseEnsemble, metaclass=ABCMeta):
+             random_state.randint(MAX_INT, size=len(self.estimators_))
+ 
+         seeds = random_state.randint(MAX_INT, size=n_more_estimators)
+-        self._seeds = seeds
++        if self.warm_start and hasattr(self, '_seeds'):
++            self._seeds = np.concatenate([self._seeds, seeds])
++        else:
++            self._seeds = seeds
+ 
+         all_results = Parallel(n_jobs=n_jobs, verbose=self.verbose,
+                                **self._parallel_args())(
+diff --git a/sklearn/ensemble/iforest.py b/sklearn/ensemble/iforest.py
+index 8a1bd3625..f42c80532 100755
+--- a/sklearn/ensemble/iforest.py
++++ b/sklearn/ensemble/iforest.py
+@@ -120,6 +120,11 @@ class IsolationForest(BaseBagging, OutlierMixin):
+     verbose : int, optional (default=0)
+         Controls the verbosity of the tree building process.
+ 
++    warm_start : bool, optional (default=False)
++        When set to ``True``, reuse the solution of the previous call to fit
++        and add more estimators to the ensemble, otherwise, just fit a whole
++        new forest. See :term:`the Glossary <warm_start>`.
++
+ 
+     Attributes
+     ----------
+@@ -173,7 +178,8 @@ class IsolationForest(BaseBagging, OutlierMixin):
+                  n_jobs=None,
+                  behaviour='old',
+                  random_state=None,
+-                 verbose=0):
++                 verbose=0,
++                 warm_start=False):
+         super().__init__(
+             base_estimator=ExtraTreeRegressor(
+                 max_features=1,
+@@ -187,7 +193,8 @@ class IsolationForest(BaseBagging, OutlierMixin):
+             max_features=max_features,
+             n_jobs=n_jobs,
+             random_state=random_state,
+-            verbose=verbose)
++            verbose=verbose,
++            warm_start=warm_start)
+ 
+         self.behaviour = behaviour
+         self.contamination = contamination
+diff --git a/sklearn/ensemble/tests/test_iforest.py b/sklearn/ensemble/tests/test_iforest.py
+index 67ba2d7f9..60002f116 100755
+--- a/sklearn/ensemble/tests/test_iforest.py
++++ b/sklearn/ensemble/tests/test_iforest.py
+@@ -247,6 +247,33 @@ def test_max_samples_consistency():
+     assert_equal(clf.max_samples_, clf._max_samples)
+ 
+ 
++def test_iforest_warm_start():
++    """Test warm_start parameter"""
++    rng = check_random_state(0)
++    X = rng.rand(30, 4)
++
++    clf = IsolationForest(n_estimators=5, warm_start=True, random_state=rng)
++    clf.fit(X)
++    assert_equal(len(clf.estimators_), 5)
++    first_estimators = list(clf.estimators_)
++
++    # Increasing n_estimators should add new trees to the existing forest
++    clf.set_params(n_estimators=10)
++    clf.fit(X)
++    assert_equal(len(clf.estimators_), 10)
++    assert_equal(len(clf.estimators_samples_), 10)
++    for old, new in zip(first_estimators, clf.estimators_[:5]):
++        assert old is new
++
++    # Without warm_start, a new forest is fitted from scratch
++    clf = IsolationForest(n_estimators=5, random_state=rng).fit(X)
++    first_estimators = list(clf.estimators_)
++    clf.set_params(n_estimators=10).fit(X)
++    assert_equal(len(clf.estimators_), 10)
++    for old, new in zip(first_estimators, clf.estimators_):
++        assert old is not new
++
++
+ @pytest.mark.filterwarnings('ignore:default contamination')
+ @pytest.mark.filterwarnings('ignore:threshold_ attribute')
+ @pytest.mark.filterwarnings('ignore:behaviour="old"')

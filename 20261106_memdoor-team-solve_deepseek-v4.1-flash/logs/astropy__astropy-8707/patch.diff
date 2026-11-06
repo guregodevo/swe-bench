@@ -1,0 +1,115 @@
+diff --git a/CHANGES.rst b/CHANGES.rst
+index 3dc79416e..2366449a4 100644
+--- a/CHANGES.rst
++++ b/CHANGES.rst
+@@ -181,6 +181,9 @@ astropy.io.misc
+ astropy.io.fits
+ ^^^^^^^^^^^^^^^
+ 
++``Header.fromstring`` and ``Card.fromstring`` now accept both ``str`` and
++``bytes`` input on Python 3. [#4970]
++
+ astropy.io.registry
+ ^^^^^^^^^^^^^^^^^^^
+ 
+diff --git a/astropy/io/fits/card.py b/astropy/io/fits/card.py
+index 8c1ac5d73..d3fee8550 100644
+--- a/astropy/io/fits/card.py
++++ b/astropy/io/fits/card.py
+@@ -5,7 +5,7 @@ import warnings
+ 
+ import numpy as np
+ 
+-from .util import _str_to_num, _is_int, translate, _words_group
++from .util import _str_to_num, _is_int, translate, _words_group, decode_ascii
+ from .verify import _Verify, _ErrList, VerifyError, VerifyWarning
+ 
+ from . import conf
+@@ -547,13 +547,15 @@ class Card(_Verify):
+     @classmethod
+     def fromstring(cls, image):
+         """
+-        Construct a `Card` object from a (raw) string. It will pad the string
+-        if it is not the length of a card image (80 columns).  If the card
+-        image is longer than 80 columns, assume it contains ``CONTINUE``
+-        card(s).
++        Construct a `Card` object from a (raw) string or byte string.  It will
++        pad the string if it is not the length of a card image (80 columns).
++        If the card image is longer than 80 columns, assume it contains
++        ``CONTINUE`` card(s).
+         """
+ 
+         card = cls()
++        if isinstance(image, bytes):
++            image = decode_ascii(image)
+         card._image = _pad(image)
+         card._verified = False
+         return card
+diff --git a/astropy/io/fits/header.py b/astropy/io/fits/header.py
+index ad07e6d52..6d059fbbf 100644
+--- a/astropy/io/fits/header.py
++++ b/astropy/io/fits/header.py
+@@ -334,10 +334,10 @@ class Header:
+ 
+         Parameters
+         ----------
+-        data : str
+-           String containing the entire header.
++        data : str or bytes
++           String or byte string containing the entire header.
+ 
+-        sep : str, optional
++        sep : str or bytes, optional
+             The string separating cards from each other, such as a newline.  By
+             default there is no card separator (as is the case in a raw FITS
+             file).
+@@ -348,6 +348,12 @@ class Header:
+             A new `Header` instance.
+         """
+ 
++        if isinstance(data, bytes):
++            data = decode_ascii(data)
++
++        if isinstance(sep, bytes):
++            sep = decode_ascii(sep)
++
+         cards = []
+ 
+         # If the card separator contains characters that may validly appear in
+diff --git a/astropy/io/fits/tests/test_header.py b/astropy/io/fits/tests/test_header.py
+index 7c1725aed..7dccf70b5 100644
+--- a/astropy/io/fits/tests/test_header.py
++++ b/astropy/io/fits/tests/test_header.py
+@@ -102,6 +102,32 @@ class TestHeaderFunctions(FitsTestCase):
+         c = fits.Card.fromstring('ABC     = F')
+         assert c.value is False
+ 
++    def test_card_from_bytes(self):
++        """Regression test for https://github.com/astropy/astropy/issues/4970
++
++        `Card.fromstring` should accept both `str` and `bytes` input.
++        """
++
++        c = fits.Card.fromstring(b'ABC     = F')
++        assert c.keyword == 'ABC'
++        assert c.value is False
++        assert str(c) == _pad('ABC     = F')
++
++    def test_header_from_bytes(self):
++        """Regression test for https://github.com/astropy/astropy/issues/4970
++
++        `Header.fromstring` should accept both `str` and `bytes` input.
++        """
++
++        hstr = b"FOCALLEN= +1.550000000000e+002\nAPERTURE= +0.000000000000e+000"
++        h = fits.Header.fromstring(hstr, sep=b'\n')
++        assert h['FOCALLEN'] == 155.0
++        assert h['APERTURE'] == 0.0
++
++        h = fits.Header.fromstring(hstr, sep='\n')
++        assert h['FOCALLEN'] == 155.0
++        assert h['APERTURE'] == 0.0
++
+     def test_long_integer_value_card(self):
+         """Test Card constructor with long integer value"""
+ 

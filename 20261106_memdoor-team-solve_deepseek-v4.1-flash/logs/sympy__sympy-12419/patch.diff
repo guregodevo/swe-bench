@@ -1,0 +1,39 @@
+diff --git a/sympy/concrete/summations.py b/sympy/concrete/summations.py
+index 372487664..2234c6bde 100755
+--- a/sympy/concrete/summations.py
++++ b/sympy/concrete/summations.py
+@@ -866,6 +866,17 @@ def eval_sum(f, limits):
+                     return None
+                 newargs.append((newexpr, arg.cond))
+             return f.func(*newargs)
++        else:
++            # If a piece's condition is exactly the summation range, then
++            # that piece applies to every term of the sum and the Piecewise
++            # can be dropped.  This happens for nested sums of KroneckerDelta
++            # expressions, e.g. Sum(Sum(KroneckerDelta(i, j), (i, 0, n - 1)),
++            # (j, 0, n - 1)).
++            from sympy.sets import Interval
++            interval = Interval(a, b).as_relational(i)
++            for arg in f.args:
++                if arg.cond == interval:
++                    return eval_sum(arg.expr, limits)
+ 
+     if f.has(KroneckerDelta) and _has_simple_delta(f, limits[0]):
+         return deltasummation(f, limits)
+diff --git a/sympy/matrices/expressions/matexpr.py b/sympy/matrices/expressions/matexpr.py
+index b4d759836..1cb0cf4df 100755
+--- a/sympy/matrices/expressions/matexpr.py
++++ b/sympy/matrices/expressions/matexpr.py
+@@ -476,10 +476,8 @@ def conjugate(self):
+         return self
+ 
+     def _entry(self, i, j):
+-        if i == j:
+-            return S.One
+-        else:
+-            return S.Zero
++        from sympy.functions.special.tensor_functions import KroneckerDelta
++        return KroneckerDelta(i, j)
+ 
+     def _eval_determinant(self):
+         return S.One

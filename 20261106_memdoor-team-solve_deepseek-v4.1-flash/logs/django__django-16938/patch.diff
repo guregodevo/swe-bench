@@ -1,0 +1,93 @@
+diff --git a/django/core/serializers/python.py b/django/core/serializers/python.py
+index 36048601af..7ec894aa00 100644
+--- a/django/core/serializers/python.py
++++ b/django/core/serializers/python.py
+@@ -79,7 +79,12 @@ class Serializer(base.Serializer):
+                     return self._value_from_field(value, value._meta.pk)
+ 
+                 def queryset_iterator(obj, field):
+-                    return getattr(obj, field.name).only("pk").iterator()
++                    return (
++                        getattr(obj, field.name)
++                        .select_related(None)
++                        .only("pk")
++                        .iterator()
++                    )
+ 
+             m2m_iter = getattr(obj, "_prefetched_objects_cache", {}).get(
+                 field.name,
+diff --git a/django/core/serializers/xml_serializer.py b/django/core/serializers/xml_serializer.py
+index 1d3269c41a..3f9955aa23 100644
+--- a/django/core/serializers/xml_serializer.py
++++ b/django/core/serializers/xml_serializer.py
+@@ -155,7 +155,12 @@ class Serializer(base.Serializer):
+                     self.xml.addQuickElement("object", attrs={"pk": str(value.pk)})
+ 
+                 def queryset_iterator(obj, field):
+-                    return getattr(obj, field.name).only("pk").iterator()
++                    return (
++                        getattr(obj, field.name)
++                        .select_related(None)
++                        .only("pk")
++                        .iterator()
++                    )
+ 
+             m2m_iter = getattr(obj, "_prefetched_objects_cache", {}).get(
+                 field.name,
+diff --git a/tests/serializers/models/base.py b/tests/serializers/models/base.py
+index af9ca2b20a..5fb71fb17c 100644
+--- a/tests/serializers/models/base.py
++++ b/tests/serializers/models/base.py
+@@ -163,3 +163,23 @@ class ComplexModel(models.Model):
+     field1 = models.CharField(max_length=10)
+     field2 = models.CharField(max_length=10)
+     field3 = models.CharField(max_length=10)
++
++
++class SelectRelatedManager(models.Manager):
++    def get_queryset(self):
++        return super().get_queryset().select_related("master")
++
++
++class TestTagMaster(models.Model):
++    name = models.CharField(max_length=120)
++
++
++class TestTag(models.Model):
++    objects = SelectRelatedManager()
++    name = models.CharField(max_length=120)
++    master = models.ForeignKey(TestTagMaster, models.SET_NULL, null=True)
++
++
++class TestTagM2M(models.Model):
++    name = models.CharField(max_length=120)
++    tags = models.ManyToManyField(TestTag, blank=True)
+diff --git a/tests/serializers/tests.py b/tests/serializers/tests.py
+index 67ae8f43de..b79355c5d6 100644
+--- a/tests/serializers/tests.py
++++ b/tests/serializers/tests.py
+@@ -26,6 +26,9 @@ from .models import (
+     ProxyProxyBaseModel,
+     Score,
+     Team,
++    TestTag,
++    TestTagM2M,
++    TestTagMaster,
+ )
+ 
+ 
+@@ -421,6 +424,14 @@ class SerializersTestBase:
+         meta_data_sql = ctx[2]["sql"]
+         self.assertNotIn(connection.ops.quote_name("kind"), meta_data_sql)
+ 
++    def test_serialize_m2m_with_custom_manager_using_select_related(self):
++        tag_master = TestTagMaster.objects.create(name="master")
++        tag = TestTag.objects.create(name="tag", master=tag_master)
++        obj = TestTagM2M.objects.create(name="test")
++        obj.tags.add(tag)
++        serialized = serializers.serialize(self.serializer_name, [obj])
++        self.assertIn(str(tag.pk), serialized)
++
+     def test_serialize_no_only_pk_with_natural_keys(self):
+         with self.assertNumQueries(5) as ctx:
+             serializers.serialize(

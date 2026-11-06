@@ -1,0 +1,68 @@
+diff --git a/django/contrib/sitemaps/__init__.py b/django/contrib/sitemaps/__init__.py
+index 27756d9d96..b40ad806ed 100755
+--- a/django/contrib/sitemaps/__init__.py
++++ b/django/contrib/sitemaps/__init__.py
+@@ -168,7 +168,7 @@ class Sitemap:
+         if callable(self.lastmod):
+             try:
+                 return max([self.lastmod(item) for item in self.items()])
+-            except TypeError:
++            except (TypeError, ValueError):
+                 return None
+         else:
+             return self.lastmod
+diff --git a/tests/sitemaps_tests/test_http.py b/tests/sitemaps_tests/test_http.py
+index 4a269b8737..15fd5ce9fd 100755
+--- a/tests/sitemaps_tests/test_http.py
++++ b/tests/sitemaps_tests/test_http.py
+@@ -333,6 +333,11 @@ class HTTPSitemapTests(SitemapTestsBase):
+         response = self.client.get("/empty/sitemap.xml")
+         self.assertEqual(response.status_code, 200)
+ 
++    def test_empty_sitemap_index_with_callable_lastmod(self):
++        response = self.client.get("/empty/lastmod-index.xml")
++        self.assertEqual(response.status_code, 200)
++        self.assertNotContains(response, "<lastmod>")
++
+     @override_settings(LANGUAGES=(("en", "English"), ("pt", "Portuguese")))
+     def test_simple_i18n_sitemap_index(self):
+         """
+diff --git a/tests/sitemaps_tests/urls/http.py b/tests/sitemaps_tests/urls/http.py
+index 9a468de476..f81e00712f 100755
+--- a/tests/sitemaps_tests/urls/http.py
++++ b/tests/sitemaps_tests/urls/http.py
+@@ -54,6 +54,11 @@ class EmptySitemap(Sitemap):
+     location = "/location/"
+ 
+ 
++class EmptySitemapCallableLastmod(EmptySitemap):
++    def lastmod(self, obj):
++        return None
++
++
+ class FixedLastmodSitemap(SimpleSitemap):
+     lastmod = datetime(2013, 3, 13, 10, 0, 0)
+ 
+@@ -170,6 +175,10 @@ empty_sitemaps = {
+     "empty": EmptySitemap,
+ }
+ 
++empty_sitemaps_callable_lastmod = {
++    "empty": EmptySitemapCallableLastmod,
++}
++
+ fixed_lastmod_sitemaps = {
+     "fixed-lastmod": FixedLastmodSitemap,
+ }
+@@ -302,6 +311,11 @@ urlpatterns = [
+         {"sitemaps": empty_sitemaps},
+         name="django.contrib.sitemaps.views.sitemap",
+     ),
++    path(
++        "empty/lastmod-index.xml",
++        views.index,
++        {"sitemaps": empty_sitemaps_callable_lastmod},
++    ),
+     path(
+         "lastmod/sitemap.xml",
+         views.sitemap,

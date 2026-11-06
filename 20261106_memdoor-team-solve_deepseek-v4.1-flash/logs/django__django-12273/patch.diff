@@ -1,0 +1,59 @@
+diff --git a/django/db/models/base.py b/django/db/models/base.py
+index 844c01e95e..07e2baad5f 100644
+--- a/django/db/models/base.py
++++ b/django/db/models/base.py
+@@ -804,9 +804,18 @@ class Model(metaclass=ModelBase):
+         inserted = False
+         for parent, field in meta.parents.items():
+             # Make sure the link fields are synced between parent and self.
+-            if (field and getattr(self, parent._meta.pk.attname) is None and
+-                    getattr(self, field.attname) is not None):
+-                setattr(self, parent._meta.pk.attname, getattr(self, field.attname))
++            if field:
++                parent_pk = getattr(self, parent._meta.pk.attname)
++                link = getattr(self, field.attname)
++                if self._state.adding:
++                    if parent_pk is None and link is not None:
++                        setattr(self, parent._meta.pk.attname, link)
++                elif field.primary_key and (parent_pk is None or link is None):
++                    # The primary key was reset on an existing instance, so
++                    # reset both values to force an INSERT of a new row
++                    # instead of an UPDATE of the existing one.
++                    setattr(self, parent._meta.pk.attname, None)
++                    setattr(self, field.attname, None)
+             parent_inserted = self._save_parents(cls=parent, using=using, update_fields=update_fields)
+             updated = self._save_table(
+                 cls=parent, using=using, update_fields=update_fields,
+diff --git a/tests/model_inheritance/tests.py b/tests/model_inheritance/tests.py
+index 5eef0f5bfa..4903af8a7d 100644
+--- a/tests/model_inheritance/tests.py
++++ b/tests/model_inheritance/tests.py
+@@ -149,6 +149,28 @@ class ModelInheritanceTests(TestCase):
+                     sql = query['sql']
+                     self.assertIn('INSERT INTO', sql, sql)
+ 
++    def test_reset_pk_of_child_model(self):
++        """Resetting the primary key of a child model inserts a new row."""
++        grand_parent = GrandParent.objects.create(
++            email='grand_parent@example.com',
++            first_name='grand',
++            last_name='parent',
++        )
++        grand_child = GrandChild.objects.create(
++            email='grand_child@example.com',
++            first_name='grand',
++            last_name='child',
++        )
++        pk = grand_child.pk
++        grand_child.pk = None
++        grand_child.first_name = 'clone'
++        grand_child.email = 'clone@example.com'
++        grand_child.save()
++        self.assertNotEqual(grand_child.pk, pk)
++        self.assertTrue(GrandParent.objects.filter(pk=pk).exists())
++        self.assertEqual(GrandParent.objects.count(), 3)
++        self.assertEqual(GrandChild.objects.count(), 2)
++
+     def test_eq(self):
+         # Equality doesn't transfer in multitable inheritance.
+         self.assertNotEqual(Place(id=1), Restaurant(id=1))

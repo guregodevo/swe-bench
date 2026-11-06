@@ -1,0 +1,57 @@
+diff --git a/sympy/printing/repr.py b/sympy/printing/repr.py
+index c936a692c0..80cdbc2665 100644
+--- a/sympy/printing/repr.py
++++ b/sympy/printing/repr.py
+@@ -250,6 +250,21 @@ def _print_tuple(self, expr):
+         else:
+             return "(%s)" % self.reprify(expr, ", ")
+ 
++    def _print_set(self, expr):
++        if not expr:
++            return "set()"
++        return "{%s}" % self.reprify(expr, ", ")
++
++    def _print_frozenset(self, expr):
++        if not expr:
++            return "frozenset()"
++        return "frozenset({%s})" % self.reprify(expr, ", ")
++
++    def _print_dict(self, expr):
++        return "{%s}" % ", ".join(
++            "%s: %s" % (self._print(k), self._print(v))
++            for k, v in expr.items())
++
+     def _print_WildFunction(self, expr):
+         return "%s('%s')" % (expr.__class__.__name__, expr.name)
+ 
+diff --git a/sympy/printing/tests/test_repr.py b/sympy/printing/tests/test_repr.py
+index f749683ff7..d5f17821b2 100644
+--- a/sympy/printing/tests/test_repr.py
++++ b/sympy/printing/tests/test_repr.py
+@@ -193,6 +193,26 @@ def test_tuple():
+     sT((x, y), "(Symbol('x'), Symbol('y'))")
+ 
+ 
++def test_set():
++    sT(set(), "set()")
++    sT(frozenset(), "frozenset()")
++    # the order of items in a set is not fixed
++    s = {x, y}
++    assert srepr(s) in (
++        "{Symbol('x'), Symbol('y')}", "{Symbol('y'), Symbol('x')}")
++    assert eval(srepr(s), ENV) == s
++    fs = frozenset({x, y})
++    assert srepr(fs) in (
++        "frozenset({Symbol('x'), Symbol('y')})",
++        "frozenset({Symbol('y'), Symbol('x')})")
++    assert eval(srepr(fs), ENV) == fs
++
++
++def test_dict():
++    sT({x: y}, "{Symbol('x'): Symbol('y')}")
++    sT({}, "{}")
++
++
+ def test_WildFunction():
+     sT(WildFunction('w'), "WildFunction('w')")
+ 

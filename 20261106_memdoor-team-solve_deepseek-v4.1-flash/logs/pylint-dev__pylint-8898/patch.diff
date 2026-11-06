@@ -1,0 +1,134 @@
+diff --git a/pylint/config/argument.py b/pylint/config/argument.py
+index 30a5fd175..c7fa9cf86 100644
+--- a/pylint/config/argument.py
++++ b/pylint/config/argument.py
+@@ -111,10 +111,52 @@ def _regex_transformer(value: str) -> Pattern[str]:
+         raise argparse.ArgumentTypeError(msg) from e
+ 
+ 
++def _split_regex_list(value: str) -> list[str]:
++    """Split a comma separated list of regular expressions.
++
++    Commas inside an unescaped ``(...)``, ``[...]`` or ``{...}`` construct are
++    part of the regular expression and are not treated as separators. A comma
++    escaped as ``\\,`` is a literal comma and is not a separator either; the
++    escape is removed before the pattern is compiled.
++    """
++    patterns: list[str] = []
++    current: list[str] = []
++    escaped = False
++    depth = 0
++    for char in value:
++        if escaped:
++            if char == ",":
++                current.append(",")
++            else:
++                current.append("\\")
++                current.append(char)
++            escaped = False
++        elif char == "\\":
++            escaped = True
++        elif char in "([{":
++            depth += 1
++            current.append(char)
++        elif char in ")]}":
++            if depth > 0:
++                depth -= 1
++            current.append(char)
++        elif char == "," and depth == 0:
++            patterns.append("".join(current))
++            current = []
++        else:
++            current.append(char)
++    if escaped:
++        current.append("\\")
++    patterns.append("".join(current))
++    # Match the previous _csv_transformer behaviour: strip each item and drop
++    # empty ones (the default value for these options is the empty string).
++    return [pattern.strip() for pattern in patterns if pattern.strip()]
++
++
+ def _regexp_csv_transfomer(value: str) -> Sequence[Pattern[str]]:
+     """Transforms a comma separated list of regular expressions."""
+     patterns: list[Pattern[str]] = []
+-    for pattern in _csv_transformer(value):
++    for pattern in _split_regex_list(value):
+         patterns.append(_regex_transformer(pattern))
+     return patterns
+ 
+diff --git a/tests/config/test_config.py b/tests/config/test_config.py
+index 83c8b072e..a0bb955c1 100644
+--- a/tests/config/test_config.py
++++ b/tests/config/test_config.py
+@@ -137,12 +137,12 @@ def test_csv_regex_error(capsys: CaptureFixture) -> None:
+     """
+     with pytest.raises(SystemExit):
+         Run(
+-            [str(EMPTY_MODULE), r"--bad-names-rgx=(foo{1,3})"],
++            [str(EMPTY_MODULE), r"--bad-names-rgx=foo,("],
+             exit=False,
+         )
+     output = capsys.readouterr()
+     assert (
+-        r"Error in provided regular expression: (foo{1 beginning at index 0: missing ), unterminated subpattern"
++        r"Error in provided regular expression: ( beginning at index 0: missing ), unterminated subpattern"
+         in output.err
+     )
+ 
+diff --git a/tests/config/test_regexp_csv_transformer.py b/tests/config/test_regexp_csv_transformer.py
+new file mode 100644
+index 000000000..9956c2dd4
+--- /dev/null
++++ b/tests/config/test_regexp_csv_transformer.py
+@@ -0,0 +1,51 @@
++# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
++# For details: https://github.com/pylint-dev/pylint/blob/main/LICENSE
++# Copyright (c) https://github.com/pylint-dev/pylint/blob/main/CONTRIBUTORS.txt
++"""Regression tests for the regex-list configuration transformer."""
++
++from __future__ import annotations
++
++from pathlib import Path
++
++from pylint.config.argument import _regexp_csv_transfomer
++from pylint.config.config_file_parser import _RawConfParser
++
++
++def test_quantifier_comma_is_not_a_separator() -> None:
++    patterns = _regexp_csv_transfomer("(foo{1,3})")
++    assert len(patterns) == 1
++    assert patterns[0].pattern == "(foo{1,3})"
++
++
++def test_character_class_comma_is_not_a_separator() -> None:
++    patterns = _regexp_csv_transfomer("[a,b]")
++    assert len(patterns) == 1
++    assert patterns[0].pattern == "[a,b]"
++
++
++def test_top_level_comma_still_separates() -> None:
++    patterns = _regexp_csv_transfomer("foo,bar")
++    assert [pattern.pattern for pattern in patterns] == ["foo", "bar"]
++
++
++def test_escaped_comma_is_literal_and_does_not_separate() -> None:
++    patterns = _regexp_csv_transfomer(r"foo\,bar")
++    assert len(patterns) == 1
++    assert patterns[0].pattern == "foo,bar"
++
++
++def test_escaped_comma_mixed_with_list() -> None:
++    patterns = _regexp_csv_transfomer(r"foo\,bar,baz")
++    assert [pattern.pattern for pattern in patterns] == ["foo,bar", "baz"]
++
++
++def test_empty_value_produces_no_patterns() -> None:
++    assert _regexp_csv_transfomer("") == []
++
++
++def test_ini_value_with_quantifier_comma(tmp_path: Path) -> None:
++    config = tmp_path / "pylintrc"
++    config.write_text("[tool.pylint.basic]\nbad-name-rgxs = (foo{1,3})\n")
++    content, _ = _RawConfParser.parse_ini_file(config)
++    patterns = _regexp_csv_transfomer(content["bad-name-rgxs"])
++    assert [pattern.pattern for pattern in patterns] == ["(foo{1,3})"]

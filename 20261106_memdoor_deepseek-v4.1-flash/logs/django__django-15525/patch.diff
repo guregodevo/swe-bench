@@ -1,0 +1,78 @@
+diff --git a/django/core/serializers/base.py b/django/core/serializers/base.py
+index da85cb4b92..9a2c35c02c 100644
+--- a/django/core/serializers/base.py
++++ b/django/core/serializers/base.py
+@@ -336,7 +336,9 @@ def build_instance(Model, data, db):
+         and hasattr(default_manager, "get_by_natural_key")
+         and hasattr(Model, "natural_key")
+     ):
+-        natural_key = Model(**data).natural_key()
++        instance = Model(**data)
++        instance._state.db = db
++        natural_key = instance.natural_key()
+         try:
+             data[Model._meta.pk.attname] = Model._meta.pk.to_python(
+                 default_manager.db_manager(db).get_by_natural_key(*natural_key).pk
+diff --git a/tests/serializers/models/natural.py b/tests/serializers/models/natural.py
+index 1e439b34eb..afeaeb4601 100644
+--- a/tests/serializers/models/natural.py
++++ b/tests/serializers/models/natural.py
+@@ -19,9 +19,21 @@ class NaturalKeyAnchor(models.Model):
+         return (self.data,)
+ 
+ 
++class FKDataNaturalKeyManager(models.Manager):
++    def get_by_natural_key(self, data):
++        return self.get(data__data=data)
++
++
+ class FKDataNaturalKey(models.Model):
+     data = models.ForeignKey(NaturalKeyAnchor, models.SET_NULL, null=True)
+ 
++    objects = FKDataNaturalKeyManager()
++
++    def natural_key(self):
++        return self.data.natural_key()
++
++    natural_key.dependencies = ["serializers.NaturalKeyAnchor"]
++
+ 
+ class NaturalKeyThing(models.Model):
+     key = models.CharField(max_length=100, unique=True)
+diff --git a/tests/serializers/test_natural.py b/tests/serializers/test_natural.py
+index 6b6cfae6f3..521993153b 100644
+--- a/tests/serializers/test_natural.py
++++ b/tests/serializers/test_natural.py
+@@ -17,6 +17,32 @@ class NaturalKeySerializerTests(TestCase):
+     pass
+ 
+ 
++class NaturalKeySerializerMultiDatabaseTests(TestCase):
++    databases = {"default", "other"}
++
++    def test_deserialize_natural_key_foreign_key_other_database(self):
++        anchor = NaturalKeyAnchor.objects.using("other").create(
++            data="Natural Key Anchor"
++        )
++        obj = FKDataNaturalKey.objects.using("other").create(data=anchor)
++        serialized_data = serializers.serialize(
++            "json",
++            [anchor, obj],
++            use_natural_foreign_keys=True,
++            use_natural_primary_keys=True,
++        )
++        FKDataNaturalKey.objects.using("other").all().delete()
++        NaturalKeyAnchor.objects.using("other").all().delete()
++        for deserialized in serializers.deserialize(
++            "json", serialized_data, using="other"
++        ):
++            deserialized.save(using="other")
++        self.assertEqual(
++            FKDataNaturalKey.objects.using("other").get().data.data,
++            "Natural Key Anchor",
++        )
++
++
+ def natural_key_serializer_test(self, format):
+     # Create all the objects defined in the test data
+     with connection.constraint_checks_disabled():

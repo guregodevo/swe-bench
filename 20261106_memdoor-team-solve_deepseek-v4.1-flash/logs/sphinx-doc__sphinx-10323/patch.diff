@@ -1,0 +1,79 @@
+diff --git a/CHANGES b/CHANGES
+index 7037723fe..13ecdfd4d 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -72,6 +72,9 @@ Bugs fixed
+   bulding texinfo document
+ * #10000: LaTeX: glossary terms with common definition are rendered with
+   too much vertical whitespace
++* #10321: literalinclude: ``:dedent:`` is now applied before ``:prepend:`` and
++  ``:append:``, so that the indentation of the prepended/appended lines is
++  preserved
+ 
+ Testing
+ --------
+diff --git a/doc/usage/restructuredtext/directives.rst b/doc/usage/restructuredtext/directives.rst
+index d1877bca0..e4b9b3052 100644
+--- a/doc/usage/restructuredtext/directives.rst
++++ b/doc/usage/restructuredtext/directives.rst
+@@ -730,6 +730,8 @@ __ https://pygments.org/docs/lexers
+    You can prepend and/or append a line to the included code, using the
+    ``prepend`` and ``append`` option, respectively.  This is useful e.g. for
+    highlighting PHP code that doesn't include the ``<?php``/``?>`` markers.
++   The ``dedent`` option is applied only to the included lines, so the
++   indentation of the ``prepend`` and ``append`` lines is preserved.
+ 
+    If you want to show the diff of the code, you can specify the old file by
+    giving a ``diff`` option::
+@@ -769,6 +771,10 @@ __ https://pygments.org/docs/lexers
+    .. versionchanged:: 3.5
+       Support automatic dedent.
+ 
++   .. versionchanged:: 5.0
++      The ``dedent`` option is applied before the ``prepend`` and ``append``
++      options.
++
+ .. _glossary-directive:
+ 
+ Glossary
+diff --git a/sphinx/directives/code.py b/sphinx/directives/code.py
+index dc44ed314..9437fe9a5 100644
+--- a/sphinx/directives/code.py
++++ b/sphinx/directives/code.py
+@@ -224,9 +224,9 @@ class LiteralIncludeReader:
+                        self.start_filter,
+                        self.end_filter,
+                        self.lines_filter,
++                       self.dedent_filter,
+                        self.prepend_filter,
+-                       self.append_filter,
+-                       self.dedent_filter]
++                       self.append_filter]
+             lines = self.read_file(self.filename, location=location)
+             for func in filters:
+                 lines = func(lines, location=location)
+diff --git a/tests/test_directive_code.py b/tests/test_directive_code.py
+index 98a9aa899..bbb96095d 100644
+--- a/tests/test_directive_code.py
++++ b/tests/test_directive_code.py
+@@ -216,6 +216,20 @@ def test_LiteralIncludeReader_prepend(literal_inc_path):
+                        "Sphinx\n")
+ 
+ 
++@pytest.mark.xfail(os.name != 'posix', reason="Not working on windows")
++def test_LiteralIncludeReader_prepend_and_dedent(literal_inc_path):
++    # :dedent: is applied to the included lines only, not to :prepend:/:append:
++    options = {'lines': '9-11', 'dedent': 4,
++               'prepend': '    def baz():', 'append': '    pass'}
++    reader = LiteralIncludeReader(literal_inc_path, options, DUMMY_CONFIG)
++    content, lines = reader.read()
++    assert content == ("    def baz():\n"
++                       "def baz():\n"
++                       "    pass\n"
++                       "\n"
++                       "    pass\n")
++
++
+ @pytest.mark.xfail(os.name != 'posix', reason="Not working on windows")
+ def test_LiteralIncludeReader_dedent(literal_inc_path):
+     # dedent: 2

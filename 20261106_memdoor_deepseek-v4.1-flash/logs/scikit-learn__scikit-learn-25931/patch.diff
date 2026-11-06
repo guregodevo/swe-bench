@@ -1,0 +1,39 @@
+diff --git a/sklearn/ensemble/_iforest.py b/sklearn/ensemble/_iforest.py
+index 4d6c1c3f0..31bc34e65 100644
+--- a/sklearn/ensemble/_iforest.py
++++ b/sklearn/ensemble/_iforest.py
+@@ -345,7 +345,11 @@ class IsolationForest(OutlierMixin, BaseBagging):
+             return self
+ 
+         # else, define offset_ wrt contamination parameter
+-        self.offset_ = np.percentile(self.score_samples(X), 100.0 * self.contamination)
++        # To avoid performing input validation a second time we call
++        # _compute_chunked_score_samples which expects X to be a validated array.
++        self.offset_ = np.percentile(
++            -self._compute_chunked_score_samples(X), 100.0 * self.contamination
++        )
+ 
+         return self
+ 
+diff --git a/sklearn/ensemble/tests/test_iforest.py b/sklearn/ensemble/tests/test_iforest.py
+index 5f046540f..9b5771c0f 100644
+--- a/sklearn/ensemble/tests/test_iforest.py
++++ b/sklearn/ensemble/tests/test_iforest.py
+@@ -186,6 +186,17 @@ def test_max_samples_consistency():
+     assert clf.max_samples_ == clf._max_samples
+ 
+ 
++def test_iforest_does_not_warn_with_dataframe(global_random_seed):
++    # Non-regression test for gh-25796: fitting with a DataFrame and a
++    # non-default contamination should not warn about invalid feature names.
++    pd = pytest.importorskip("pandas")
++    X = pd.DataFrame({"a": [-1.1, 0.3, 0.5, 100]})
++    clf = IsolationForest(random_state=global_random_seed, contamination=0.05)
++    with warnings.catch_warnings():
++        warnings.simplefilter("error", UserWarning)
++        clf.fit(X)
++
++
+ def test_iforest_subsampled_features():
+     # It tests non-regression for #5732 which failed at predict.
+     rng = check_random_state(0)

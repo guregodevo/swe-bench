@@ -1,0 +1,52 @@
+diff --git a/CHANGES b/CHANGES
+index b94531b73..309ae918d 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -27,6 +27,8 @@ Bugs fixed
+   is not 'py'
+ * #9644: autodoc: Crashed on getting source info from problematic object
+ * #9655: autodoc: mocked object having doc comment is warned unexpectedly
++* #9674: autodoc: The base classes of a class inheriting a mocked class are
++  not displayed correctly
+ * #9651: autodoc: return type field is not generated even if
+   :confval:`autodoc_typehints_description_target` is set to "documented" when
+   its info-field-list contains ``:returns:`` field
+diff --git a/sphinx/util/typing.py b/sphinx/util/typing.py
+index 87707d48f..edc052383 100644
+--- a/sphinx/util/typing.py
++++ b/sphinx/util/typing.py
+@@ -106,6 +106,7 @@ def is_system_TypeVar(typ: Any) -> bool:
+ 
+ def restify(cls: Optional[Type]) -> str:
+     """Convert python class to a reST reference."""
++    from sphinx.ext.autodoc.mock import _MockObject
+     from sphinx.util import inspect  # lazy loading
+ 
+     try:
+@@ -138,6 +139,8 @@ def restify(cls: Optional[Type]) -> str:
+                 )
+             else:
+                 return ':py:class:`%s`' % cls.__name__
++        elif isinstance(cls, _MockObject):
++            return ':py:class:`%s`' % cls.__display_name__
+         else:
+             if sys.version_info >= (3, 7):  # py37+
+                 return _restify_py37(cls)
+diff --git a/tests/test_util_typing.py b/tests/test_util_typing.py
+index d493a0040..7153182e8 100644
+--- a/tests/test_util_typing.py
++++ b/tests/test_util_typing.py
+@@ -51,6 +51,13 @@ def test_restify():
+     assert restify('str') == "str"
+ 
+ 
++def test_restify_mocked_object():
++    from sphinx.ext.autodoc.mock import _MockObject
++
++    mock = _MockObject()
++    assert restify(mock.SomeClass) == ":py:class:`_MockObject.SomeClass`"
++
++
+ def test_restify_type_hints_containers():
+     assert restify(List) == ":py:class:`~typing.List`"
+     assert restify(Dict) == ":py:class:`~typing.Dict`"

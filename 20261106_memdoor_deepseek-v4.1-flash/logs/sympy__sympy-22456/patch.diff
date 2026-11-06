@@ -1,0 +1,66 @@
+diff --git a/sympy/codegen/ast.py b/sympy/codegen/ast.py
+index a02714b174..84c9af9bc6 100644
+--- a/sympy/codegen/ast.py
++++ b/sympy/codegen/ast.py
+@@ -132,6 +132,7 @@
+ 
+ from sympy.core.relational import (Ge, Gt, Le, Lt)
+ from sympy.core import Symbol, Tuple, Dummy
++from sympy.core.symbol import Str
+ from sympy.core.basic import Basic
+ from sympy.core.expr import Expr
+ from sympy.core.numbers import Float, Integer, oo
+@@ -895,15 +896,20 @@ class String(Token):
+ 
+     """
+     __slots__ = ('text',)
+-    not_in_args = ['text']
+     is_Atom = True
+ 
+     @classmethod
+     def _construct_text(cls, text):
++        if isinstance(text, Str):
++            text = text.name
+         if not isinstance(text, str):
+             raise TypeError("Argument text is not a string type.")
+         return text
+ 
++    @property
++    def args(self):
++        return (Str(self.text),)
++
+     def _sympystr(self, printer, *args, **kwargs):
+         return self.text
+ 
+diff --git a/sympy/codegen/tests/test_ast.py b/sympy/codegen/tests/test_ast.py
+index 00c5d4cf28..00738b7a4f 100644
+--- a/sympy/codegen/tests/test_ast.py
++++ b/sympy/codegen/tests/test_ast.py
+@@ -266,7 +266,7 @@ def test_String():
+     assert st.is_Atom
+     assert st == String('foobar')
+     assert st.text == 'foobar'
+-    assert st.func(**st.kwargs()) == st
++    assert st.func(*st.args) == st
+ 
+ 
+     class Signifier(String):
+diff --git a/sympy/codegen/tests/test_cnodes.py b/sympy/codegen/tests/test_cnodes.py
+index f0578d66e8..a313ea5e49 100644
+--- a/sympy/codegen/tests/test_cnodes.py
++++ b/sympy/codegen/tests/test_cnodes.py
+@@ -1,4 +1,4 @@
+-from sympy.core.symbol import symbols
++from sympy.core.symbol import symbols, Str
+ from sympy.printing.codeprinter import ccode
+ from sympy.codegen.ast import Declaration, Variable, float64, int64, String, CodeBlock
+ from sympy.codegen.cnodes import (
+@@ -78,7 +78,7 @@ def test_sizeof():
+     assert ccode(sz) == 'sizeof(%s)' % typename
+     assert sz.func(*sz.args) == sz
+     assert not sz.is_Atom
+-    assert sz.atoms() == {String('unsigned int'), String('sizeof')}
++    assert sz.atoms() == {Str('unsigned int'), Str('sizeof')}
+ 
+ 
+ def test_struct():

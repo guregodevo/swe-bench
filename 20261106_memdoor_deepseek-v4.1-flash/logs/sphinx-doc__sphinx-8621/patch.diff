@@ -1,0 +1,97 @@
+diff --git a/sphinx/builders/html/transforms.py b/sphinx/builders/html/transforms.py
+index c91da57e9..2a04fc4f0 100644
+--- a/sphinx/builders/html/transforms.py
++++ b/sphinx/builders/html/transforms.py
+@@ -38,25 +38,81 @@ class KeyboardTransform(SphinxPostTransform):
+     default_priority = 400
+     builders = ('html',)
+     pattern = re.compile(r'(-|\+|\^|\s+)')
++    separator = re.compile(r'[-+^]+')
+ 
+     def run(self, **kwargs: Any) -> None:
+         matcher = NodeMatcher(nodes.literal, classes=["kbd"])
+         for node in self.document.traverse(matcher):  # type: nodes.literal
+-            parts = self.pattern.split(node[-1].astext())
+-            if len(parts) == 1:
++            parts = self._split(node[-1].astext())
++            if len(parts) == 1 and parts[0][0] == 'key':
++                # a single keystroke; nothing to split
+                 continue
+ 
+             node.pop()
+-            while parts:
+-                key = parts.pop(0)
+-                node += nodes.literal('', key, classes=["kbd"])
+-
+-                try:
++            for kind, value in parts:
++                if kind == 'key':
++                    node += nodes.literal('', value, classes=["kbd"])
++                else:
+                     # key separator (ex. -, +, ^)
+-                    sep = parts.pop(0)
+-                    node += nodes.Text(sep)
+-                except IndexError:
+-                    pass
++                    node += nodes.Text(value)
++
++    def _split(self, text: str) -> list:
++        """Split a keystroke sequence into keys and separators.
++
++        The compound-key separators (``-``, ``+`` and ``^``) are only
++        separators when they appear between keystrokes.  If they appear at
++        either end of a sequence, or next to another separator, they are
++        treated as keystrokes themselves (for example ``Shift-+``).
++        """
++        parts = []
++        for token in re.split(r'(\s+)', text):
++            if not token:
++                continue
++            elif token.isspace():
++                parts.append(('sep', token))
++            else:
++                parts.extend(self._split_keystrokes(token))
++        return parts
++
++    def _split_keystrokes(self, text: str) -> list:
++        if self.separator.fullmatch(text):
++            # a standalone separator is itself a keystroke
++            return [('key', text)]
++
++        runs = re.findall(r'[-+^]+|[^-+^]+', text)
++        parts = []
++        i = 0
++        while i < len(runs):
++            run = runs[i]
++            if not self.separator.fullmatch(run):
++                parts.append(('key', run))
++                i += 1
++                continue
++
++            has_key_before = i > 0
++            has_key_after = i + 1 < len(runs)
++            if not has_key_before:
++                # leading separator: it belongs to the following keystroke
++                parts.append(('key', run + runs[i + 1]))
++                i += 2
++            elif not has_key_after:
++                if len(run) == 1:
++                    # trailing separator: it belongs to the previous keystroke
++                    kind, value = parts[-1]
++                    parts[-1] = ('key', value + run)
++                else:
++                    parts.append(('sep', run[0]))
++                    parts.append(('key', run[1:]))
++                i += 1
++            else:
++                parts.append(('sep', run[0]))
++                if len(run) > 1:
++                    # the remaining separators are keystrokes in their own right
++                    parts.append(('key', run[1:] + runs[i + 1]))
++                    i += 2
++                else:
++                    i += 1
++        return parts
+ 
+ 
+ def setup(app: Sphinx) -> Dict[str, Any]:

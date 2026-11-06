@@ -1,0 +1,41 @@
+diff --git a/changelog/5263.bugfix b/changelog/5263.bugfix
+new file mode 100644
+index 00000000..1a4d62e0
+--- /dev/null
++++ b/changelog/5263.bugfix
+@@ -0,0 +1,2 @@
++``_pytest.capture.EncodedFile.mode`` no longer includes ``b``, so that code which
++checks the mode to decide whether to write ``bytes`` or ``str`` works correctly.
+diff --git a/src/_pytest/capture.py b/src/_pytest/capture.py
+index 25eab7fd..45871557 100644
+--- a/src/_pytest/capture.py
++++ b/src/_pytest/capture.py
+@@ -447,6 +447,10 @@ class EncodedFile(object):
+         """Ensure that file.name is a string."""
+         return repr(self.buffer)
+ 
++    @property
++    def mode(self):
++        return getattr(self.buffer, "mode", "").replace("b", "")
++
+     def __getattr__(self, name):
+         return getattr(object.__getattribute__(self, "buffer"), name)
+ 
+diff --git a/testing/test_capture.py b/testing/test_capture.py
+index 5d80eb63..8ccd1f1d 100644
+--- a/testing/test_capture.py
++++ b/testing/test_capture.py
+@@ -1461,6 +1461,13 @@ def test_pickling_and_unpickling_encoded_file():
+     pickle.loads(ef_as_str)
+ 
+ 
++def test_encoded_file_mode_does_not_include_binary(tmpdir):
++    # See https://github.com/pytest-dev/pytest/issues/5263
++    f = tmpdir.join("test").open("wb")
++    ef = capture.EncodedFile(f, "UTF-8")
++    assert "b" not in ef.mode
++
++
+ def test_global_capture_with_live_logging(testdir):
+     # Issue 3819
+     # capture should work with live cli logging
