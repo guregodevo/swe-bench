@@ -1,0 +1,29 @@
+diff --git a/sympy/geometry/point.py b/sympy/geometry/point.py
+index 593048464..bfa27731b 100644
+--- a/sympy/geometry/point.py
++++ b/sympy/geometry/point.py
+@@ -266,8 +266,11 @@ def distance(self, p):
+         sqrt(x**2 + y**2)
+ 
+         """
+-        return sqrt(sum([(a - b)**2 for a, b in zip(
+-            self.args, p.args if isinstance(p, Point) else p)]))
++        p = Point(p)
++        dims = max(len(self.args), len(p.args))
++        a = tuple(self.args) + (S.Zero,)*(dims - len(self.args))
++        b = tuple(p.args) + (S.Zero,)*(dims - len(p.args))
++        return sqrt(sum([(x - y)**2 for x, y in zip(a, b)]))
+ 
+     def taxicab_distance(self, p):
+         """The Taxicab Distance from self to point p.
+diff --git a/sympy/geometry/tests/test_point.py b/sympy/geometry/tests/test_point.py
+index c7b2d30f1..be966e12d 100644
+--- a/sympy/geometry/tests/test_point.py
++++ b/sympy/geometry/tests/test_point.py
+@@ -41,6 +41,7 @@ def test_point():
+     assert Point.distance(p3, p4) == sqrt(2)
+     assert Point.distance(p1, p1) == 0
+     assert Point.distance(p3, p2) == sqrt(p2.x**2 + p2.y**2)
++    assert Point(2, 0).distance(Point(1, 0, 2)) == sqrt(5)
+ 
+     assert Point.taxicab_distance(p4, p3) == 2
