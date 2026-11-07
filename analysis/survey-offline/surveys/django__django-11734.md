@@ -1,0 +1,48 @@
+# Survey: OuterRef in exclude() / ~Q() uses wrong model (Django #30739)
+
+Paths named or shown by the issue first, then the code they reach, then siblings that do the same thing the same way.
+
+- `django/db/models/query.py:QuerySet.exclude` — public API the issue names; negates the filter and delegates to `_filter_or_exclude(True, ...)`, which is how the `OuterRef` lookup becomes a negated branch.
+- `django/db/models/query.py:QuerySet.filter` — the working case in the issue; uses the same `_filter_or_exclude(False, ...)` path, so it never triggers the negated multi-valued subquery pushdown.
+- `django/db/models/query.py:QuerySet._filter_or_exclude` — clones the queryset and calls `query.add_q(~Q(*args, **kwargs))` for `exclude()` (or `Q(...)` for `filter()`), the point where the lookup enters the query.
+- `django/db/models/query.py:QuerySet.annotate` — wraps the `Exists(...)` subquery as an annotation and calls `query.add_annotation`, which resolves the subquery against the outer query.
+- `django/db/models/expressions.py:Exists` — the subquery expression the issue wraps around `exclude()`/`filter(~Q())`; its `__init__` strips ordering and hands the queryset to `Subquery`.
+- `django/db/models/expressions.py:Subquery.__init__` — stores `queryset.query` as the inner query that will later be compiled with the unresolved `OuterRef`.
+- `django/db/models/expressions.py:Subquery.as_sql` — compiles the inner query; this is where a `ResolvedOuterRef` that was resolved against the wrong (inner) query reaches SQL generation.
+- `django/db/models/expressions.py:OuterRef.resolve_expression` — resolves `OuterRef` to `ResolvedOuterRef` against whatever query is passed; in `split_exclude`'s inner query that is the wrong model.
+- `django/db/models/expressions.py:ResolvedOuterRef.as_sql` — raises the exact `ValueError: This queryset contains a reference to an outer query and may only be used in a subquery` from the issue.
+- `django/db/models/expressions.py:ResolvedOuterRef.relabeled_clone` — returns itself unchanged, so alias relabelling cannot fix a wrongly-resolved outer reference.
+- `django/db/models/expressions.py:F.resolve_expression` — sibling reference resolution that `split_exclude` explicitly special-cases by wrapping the `F` name in `OuterRef`.
+- `django/db/models/expressions.py:Exists.__invert__` — sibling negation path: negates the `Exists` wrapper (`NOT EXISTS`) instead of negating the inner `Q`, so it does not hit `split_exclude`.
+- `django/db/models/expressions.py:Exists.as_sql` — emits `NOT EXISTS(...)` when the `Exists` itself is negated, the alternative to negating the inner filter.
+- `django/db/models/query_utils.py:Q.__invert__` — produces the negated `Q` used by both `exclude()` and `filter(~Q(...))`, setting the `negated` flag that drives `branch_negated`.
+- `django/db/models/query_utils.py:Q.resolve_expression` — resolves a `Q` used as an expression by calling `query._add_q(..., split_subq=False)`, a sibling entry into the same filter-building code.
+- `django/db/models/sql/query.py:Query.add_q` — preprocesses the `Q` object and calls `_add_q`, then adds the resulting clause to the where tree.
+- `django/db/models/sql/query.py:Query._add_q` — walks the `Q` children, tracks `branch_negated`/`current_negated`, and calls `build_filter` for each leaf lookup.
+- `django/db/models/sql/query.py:Query.build_filter` — resolves the lookup value (turning `OuterRef` into `ResolvedOuterRef`) and, on a `MultiJoin`, calls `split_exclude`; this is the branch that decides the subquery pushdown.
+- `django/db/models/sql/query.py:Query.split_exclude` — the bug site: it wraps an `F` right-hand side in `OuterRef` but leaves an existing `OuterRef` untouched, so it is resolved against the inner `Query(self.model)` instead of the outer query.
+- `django/db/models/sql/query.py:Query.resolve_lookup_value` — resolves the right-hand-side expression against the query it is called on, which in `split_exclude` is the inner query (the wrong model).
+- `django/db/models/sql/query.py:Query.trim_start` — builds the inner subquery's trimmed join prefix and select column for `split_exclude`, producing the `V0`/`U1` aliases seen in the ticket's SQL.
+- `django/db/models/sql/query.py:Query.bump_prefix` — re-aliases the inner query so its aliases do not clash with the outer query, the source of the `V0` alias the `OuterRef` wrongly resolves to.
+- `django/db/models/sql/query.py:Query.resolve_expression` — bumps the prefix, marks the query as a subquery, and resolves its where/annotations against the outer query; the correct place an outer reference should bind.
+- `django/db/models/sql/query.py:Query.add_filter` — wraps a single filter clause in `Q` and calls `add_q`; used by `split_exclude` to add the pushed-down filter to the inner query.
+- `django/db/models/sql/query.py:Query.add_annotation` — resolves an annotation expression against the query, the path that resolves the `Exists` subquery for `annotate()`.
+- `django/db/models/sql/query.py:Query.build_where` — sibling that builds a where clause with `allow_joins=False` and `simple_col=True`, reusing the same `_add_q`/`build_filter` machinery.
+- `django/db/models/sql/query.py:Query.build_filtered_relation_q` — sibling `Q` walker for `FilteredRelation` that calls `build_filter` with `split_subq=False`, so it avoids the `split_exclude` path.
+- `django/db/models/sql/query.py:Query.resolve_ref` — resolves `F`/field names to `Col` expressions, the sibling of `OuterRef` resolution that `split_exclude` relies on for the `F` case.
+- `django/db/models/sql/query.py:Query.clone` — copies `external_aliases` and the where tree when the inner query is built, preserving the outer-reference bookkeeping.
+- `django/db/models/sql/where.py:WhereNode.as_sql` — compiles the negated where node, emitting the `NOT (...)` wrapper around the `IN (subquery)` condition.
+- `django/db/models/sql/where.py:WhereNode.resolve_expression` — resolves the where tree's children against the outer query, the sibling resolution path that should bind `OuterRef` correctly.
+- `django/db/models/sql/where.py:WhereNode.relabel_aliases` — relabels aliases in the where tree during `bump_prefix`, the mechanism that would need to carry an outer reference through.
+- `django/db/models/lookups.py:In.process_rhs` — turns the `split_exclude` subquery into the right-hand side of the `IN` lookup, the SQL shape shown in the ticket.
+- `django/db/models/lookups.py:Lookup.process_rhs` — sibling that compiles an expression right-hand side (including `ResolvedOuterRef`) via `compiler.compile`, where the `ValueError` surfaces.
+- `django/db/models/sql/compiler.py:SQLCompiler.as_subquery_condition` — sibling subquery pushdown used for `__in=<queryset>`, building `EXISTS (...)` with correlated columns.
+- `django/db/models/query.py:QuerySet.complex_filter` — sibling public filter API that also routes a `Q` through `query.add_q` or `_filter_or_exclude`.
+- `django/db/models/query.py:QuerySet._clone` — clones the queryset/query for `filter`/`exclude`, the copy step before the negated `Q` is added.
+- `django/db/models/query.py:QuerySet._chain` — sibling clone helper used by `_filter_or_exclude` and `annotate`.
+- `django/db/models/constraints.py:CheckConstraint._get_check_sql` — sibling `build_where` consumer that compiles a `Q` condition without joins.
+- `django/db/models/constraints.py:UniqueConstraint._get_condition_sql` — sibling `build_where` consumer for a conditional unique constraint.
+- `django/contrib/postgres/constraints.py:ExclusionConstraint._get_condition_sql` — sibling `build_where` consumer for a PostgreSQL exclusion constraint.
+- `django/contrib/auth/backends.py:ModelBackend.get_all_permissions` — real-world sibling using `Exists(...)` with `OuterRef` inside `filter()`, which works because the inner filter is not negated.
+- `tests/queries/tests.py:test_exclude_reverse_fk_field_ref` — existing regression test exercising the `F` right-hand-side branch of `split_exclude` that the fix must preserve.
+- `tests/queries/tests.py:test_exclude_with_circular_fk_relation` — sibling existing test for `exclude()` with an `F` reference across a circular FK, another `split_exclude` case.

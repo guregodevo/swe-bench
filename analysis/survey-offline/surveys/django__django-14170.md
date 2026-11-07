@@ -1,0 +1,56 @@
+# Survey: `__iso_year` lookup broken by YearLookup BETWEEN optimization
+
+Paths named or shown by the issue first, then the siblings that do the same thing the same way.
+
+- `django/db/models/lookups.py:YearLookup.as_sql` — the optimization itself: when the RHS is a direct value it skips the EXTRACT transform and compiles the underlying field (`self.lhs.lhs`) against year bounds, which is what turns `start_date__iso_year=2020` into `start_date BETWEEN 2020-01-01 AND 2020-12-31`.
+- `django/db/models/lookups.py:YearLookup.year_lookup_bounds` — picks calendar-year bounds from the backend (`year_lookup_bounds_for_date_field` / `..._for_datetime_field`), i.e. Jan 1–Dec 31 of the given year, which is wrong for ISO week-numbering years.
+- `django/db/models/lookups.py:YearLookup.get_direct_rhs_sql` — emits the comparison operator (or `BETWEEN` in `YearExact`) used with those bounds instead of an EXTRACT comparison.
+- `django/db/models/lookups.py:YearLookup.get_bound_params` — abstract hook subclasses fill with the start/finish bounds; raises `NotImplementedError` if a subclass forgets it.
+- `django/db/models/lookups.py:YearExact.get_direct_rhs_sql` — returns `BETWEEN %s AND %s`, producing the exact `BETWEEN 2020-01-01 AND 2020-12-31` SQL shown in the issue.
+- `django/db/models/lookups.py:YearExact.get_bound_params` — supplies both calendar-year bounds for the BETWEEN.
+- `django/db/models/lookups.py:YearGt.get_bound_params` — uses only the upper calendar-year bound for `__iso_year__gt`.
+- `django/db/models/lookups.py:YearGte.get_bound_params` — uses only the lower calendar-year bound for `__iso_year__gte`.
+- `django/db/models/lookups.py:YearLt.get_bound_params` — uses only the lower calendar-year bound for `__iso_year__lt`.
+- `django/db/models/lookups.py:YearLte.get_bound_params` — uses only the upper calendar-year bound for `__iso_year__lte`.
+- `django/db/models/functions/datetime.py:ExtractIsoYear` — the transform that correctly extracts the ISO-8601 week-numbering year (`lookup_name = 'iso_year'`); it works in annotations but is bypassed by the lookup optimization.
+- `django/db/models/functions/datetime.py:Extract.as_sql` — compiles the transform to `EXTRACT('isoyear' FROM ...)` via the backend's `date_extract_sql`/`datetime_extract_sql`, the correct path that the optimization skips.
+- `django/db/models/functions/datetime.py:Extract.resolve_expression` — validates the source field and treats `iso_year` as a year-like component (e.g. rejects it on `DurationField`), confirming it is meant to be a real extraction.
+- `django/db/models/functions/datetime.py:DateField.register_lookup(ExtractIsoYear)` — registers `iso_year` as a transform on date fields, which is how `start_date__iso_year` resolves.
+- `django/db/models/functions/datetime.py:ExtractIsoYear.register_lookup(YearExact)` — the invalid registration that attaches the BETWEEN-based `YearExact` to the ISO-year transform, causing the bug.
+- `django/db/models/functions/datetime.py:ExtractIsoYear.register_lookup(YearGt)` — attaches the BETWEEN-based `YearGt` to `iso_year`.
+- `django/db/models/functions/datetime.py:ExtractIsoYear.register_lookup(YearGte)` — attaches the BETWEEN-based `YearGte` to `iso_year`.
+- `django/db/models/functions/datetime.py:ExtractIsoYear.register_lookup(YearLt)` — attaches the BETWEEN-based `YearLt` to `iso_year`.
+- `django/db/models/functions/datetime.py:ExtractIsoYear.register_lookup(YearLte)` — attaches the BETWEEN-based `YearLte` to `iso_year`.
+- `django/db/models/functions/datetime.py:ExtractYear.register_lookup(YearExact)` — the legitimate sibling registration: `year` really is a calendar year, so the BETWEEN optimization is correct there.
+- `django/db/models/functions/datetime.py:ExtractYear.register_lookup(YearGt)` — legitimate calendar-year `__year__gt` optimization.
+- `django/db/models/functions/datetime.py:ExtractYear.register_lookup(YearGte)` — legitimate calendar-year `__year__gte` optimization.
+- `django/db/models/functions/datetime.py:ExtractYear.register_lookup(YearLt)` — legitimate calendar-year `__year__lt` optimization.
+- `django/db/models/functions/datetime.py:ExtractYear.register_lookup(YearLte)` — legitimate calendar-year `__year__lte` optimization.
+- `django/db/models/sql/query.py:Query.build_lookup` — resolves the `iso_year` name to the registered lookup/transform and instantiates `YearExact` (or the Gt/Gte/Lt/Lte variant) with the transform as LHS, which is where the bad registration takes effect.
+- `django/db/models/sql/query.py:Query.solve_lookup_type` — splits `start_date__iso_year` into field and lookup parts, routing the filter to the `iso_year` transform.
+- `django/db/models/sql/query.py:Query.try_transform` — builds the `ExtractIsoYear` transform when the name is not a direct lookup, the path used for expression RHS values that avoid the optimization.
+- `django/db/models/query_utils.py:RegisterLookupMixin.register_lookup` — stores each lookup class in `class_lookups`, the mechanism by which `YearExact` etc. become reachable from `ExtractIsoYear`.
+- `django/db/models/query_utils.py:RegisterLookupMixin.get_lookup` — returns the registered lookup class for a name, so `iso_year` resolves to the BETWEEN-based classes.
+- `django/db/models/lookups.py:Lookup.rhs_is_direct_value` — the condition that decides whether the optimization runs; a literal `2020` is direct, an `F()`/annotation expression is not.
+- `django/db/models/lookups.py:Lookup.process_lhs` — compiles the LHS; `YearLookup.as_sql` calls it with `self.lhs.lhs` to compile the raw date column instead of the EXTRACT.
+- `django/db/models/lookups.py:Lookup.process_rhs` — compiles the RHS value/expression used in the optimized comparison.
+- `django/db/backends/base/operations.py:BaseDatabaseOperations.year_lookup_bounds_for_date_field` — returns Jan 1 / Dec 31 of the calendar year for DateField, the bounds that are wrong for ISO years.
+- `django/db/backends/base/operations.py:BaseDatabaseOperations.year_lookup_bounds_for_datetime_field` — returns Jan 1 00:00:00 / Dec 31 23:59:59.999999 of the calendar year for DateTimeField, likewise wrong for ISO years.
+- `django/db/backends/postgresql/operations.py:DatabaseOperations.date_extract_sql` — the correct PostgreSQL extraction, mapping `iso_year` to `EXTRACT('isoyear' FROM ...)`.
+- `django/db/backends/postgresql/operations.py:DatabaseOperations.datetime_extract_sql` — applies timezone conversion then delegates to `date_extract_sql`, the correct datetime extraction path.
+- `django/db/backends/oracle/operations.py:DatabaseOperations.date_extract_sql` — correct Oracle extraction, mapping `iso_year` to `TO_CHAR(..., 'IYYY')`.
+- `django/db/backends/oracle/operations.py:DatabaseOperations.datetime_extract_sql` — timezone conversion then `date_extract_sql`, the correct datetime path.
+- `django/db/backends/mysql/operations.py:DatabaseOperations.date_extract_sql` — correct MySQL extraction, deriving the ISO year from `YEARWEEK(..., 3)`.
+- `django/db/backends/mysql/operations.py:DatabaseOperations.datetime_extract_sql` — timezone conversion then `date_extract_sql`, the correct datetime path.
+- `django/db/backends/sqlite3/operations.py:DatabaseOperations.date_extract_sql` — emits `django_date_extract('iso_year', ...)`, the correct SQLite extraction entry point.
+- `django/db/backends/sqlite3/operations.py:DatabaseOperations.datetime_extract_sql` — emits `django_datetime_extract('iso_year', ...)`, the correct SQLite datetime extraction entry point.
+- `django/db/backends/sqlite3/base.py:_sqlite_datetime_extract` — the Python UDF that actually computes `dt.isocalendar()[0]` for `iso_year`, the correct value the BETWEEN optimization never reaches.
+- `tests/db_functions/datetime/test_extract_trunc.py:test_extract_year_exact_lookup` — the test that loops over `('year', 'iso_year')` and asserts BETWEEN/no-EXTRACT for both, encoding the broken expectation the issue says must be reverted.
+- `tests/db_functions/datetime/test_extract_trunc.py:test_extract_year_greaterthan_lookup` — same sibling test asserting no EXTRACT for `iso_year__gt`/`gte`.
+- `tests/db_functions/datetime/test_extract_trunc.py:test_extract_year_lessthan_lookup` — same sibling test asserting no EXTRACT for `iso_year__lt`/`lte`.
+- `tests/db_functions/datetime/test_extract_trunc.py:test_extract_iso_year_func` — the annotation test showing `ExtractIsoYear` works correctly on its own, the contrast the issue describes.
+- `tests/db_functions/datetime/test_extract_trunc.py:test_extract_iso_year_func_boundaries` — the boundary test (week 52/53 spanning calendar years) that demonstrates why calendar-year BETWEEN bounds are wrong for ISO years.
+- `tests/lookup/test_lookups.py:YearLookupTests.test_get_bound_params` — unit test of the `YearLookup.get_bound_params` abstract hook, the base of the optimization.
+- `docs/ref/models/querysets.txt:iso_year` — documents `pub_date__iso_year` and `pub_date__iso_year__gte` as ISO 8601 week-numbering year matches, the public contract the optimization violates.
+- `docs/ref/models/database-functions.txt:ExtractIsoYear` — documents `ExtractIsoYear` / `lookup_name = 'iso_year'` as returning the ISO-8601 week-numbering year.
+- `docs/releases/2.2.txt:ExtractIsoYear release note` — records that `ExtractIsoYear` and the `iso_year` lookup were introduced together in Django 2.2, the origin of the regression.

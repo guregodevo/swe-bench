@@ -1,0 +1,41 @@
+# Survey: Strip unused annotations from count queries
+
+Issue: `Book.objects.annotate(Count('chapters')).count()` emits SQL containing the unused `Count('chapters')` annotation instead of behaving like `Book.objects.count()`. Paths named by the issue come first, then the code that implements the same behaviour elsewhere.
+
+- `django/db/models/query.py:QuerySet.count` — the public API the issue calls; returns the cached length or delegates to `self.query.get_count(using=self.db)`, so it never inspects or strips annotations itself.
+- `django/db/models/sql/query.py:Query.get_count` — clones the query, adds a summary `Count("*")` as `__count`, and calls `get_aggregation(using, ["__count"])`; it passes the clone's existing annotations through untouched.
+- `django/db/models/sql/query.py:Query.get_aggregation` — where the behaviour happens: it collects `existing_annotations` and, because any exist, forces the whole query into an `AggregateQuery` subquery (GROUP BY) instead of dropping annotations not referenced by filters, other annotations, or ordering.
+- `django/db/models/query.py:QuerySet.annotate` — public API that attaches `Count('chapters')` to the queryset before `count()` is called, via `_annotate(..., select=True)`.
+- `django/db/models/query.py:QuerySet._annotate` — resolves each annotation and calls `query.add_annotation`, and sets `group_by = True` for aggregate annotations, which is what later makes `get_aggregation` take the subquery branch.
+- `django/db/models/sql/query.py:Query.add_annotation` — registers the annotation in `self.annotations` and appends its alias to the annotation select mask, so it is selected by default.
+- `django/db/models/sql/query.py:Query.annotation_select` — returns the unmasked annotations that will be emitted in SELECT; this is the set `get_aggregation` treats as "existing annotations" and fails to prune.
+- `django/db/models/sql/query.py:Query.set_annotation_mask` — the masking mechanism that could exclude unused annotations from SELECT; `get_aggregation` only uses it to copy the full mask into the inner query.
+- `django/db/models/sql/query.py:Query.append_annotation_mask` — adds aliases to the select mask; used by `add_annotation` and `rewrite_cols`, so annotations stay selected unless explicitly masked out.
+- `django/db/models/sql/query.py:Query.clone` — copies `annotations` and `annotation_select_mask` into the clone used by `get_count`, preserving the unused annotation.
+- `django/db/models/sql/query.py:Query.exists` — sibling precedent: it calls `clear_select_clause()` to drop all selected columns/annotations before running an existence check, the same "ignore unused select work" idea the issue wants for `count()`.
+- `django/db/models/sql/query.py:Query.clear_select_clause` — clears `select`, `default_cols`, `select_related`, extra mask and annotation mask; the existing mechanism for stripping select work that `count()` does not use.
+- `django/db/models/query.py:QuerySet.exists` — public sibling of `count()` that routes to `query.has_results` and therefore benefits from the select-clause stripping.
+- `django/db/models/sql/query.py:Query.has_results` — compiles the stripped `exists()` query and executes it, the sibling path that avoids the unused-annotation cost.
+- `django/db/models/query.py:QuerySet.aggregate` — sibling public API that also funnels into `query.get_aggregation`, so it shares the same "existing annotations force a subquery" behaviour.
+- `django/db/models/query.py:QuerySet.acount` — async wrapper around `count()`, inheriting the same unused-annotation behaviour.
+- `django/db/models/query.py:QuerySet.aaggregate` — async wrapper around `aggregate()`, same `get_aggregation` path.
+- `django/db/models/query.py:QuerySet.aexists` — async wrapper around `exists()`, same stripped-select path.
+- `django/db/models/query.py:QuerySet.__len__` — sibling count-like path that fetches all rows and returns `len(self._result_cache)` rather than issuing a COUNT query.
+- `django/db/models/sql/query.py:Query.rewrite_cols` — moves summary aggregates into the outer query and appends `__colN` aliases to the annotation mask, another place annotations are added to the SELECT set during aggregation.
+- `django/db/models/sql/subqueries.py:AggregateQuery` — the outer query class `get_aggregation` builds when annotations exist; it selects only the annotations left in its mask over the inner subquery.
+- `django/db/models/sql/compiler.py:SQLAggregateCompiler.as_sql` — compiles the outer aggregate query by iterating `query.annotation_select`, so any annotation left unmasked is emitted in the SQL.
+- `django/db/models/sql/compiler.py:SQLCompiler.get_select` — builds the SELECT list from `query.annotation_select`, the point where an unused annotation becomes a selected column in the inner query.
+- `django/db/models/sql/compiler.py:SQLCompiler.get_group_by` — adds selected annotations to GROUP BY, which is why the unused `Count('chapters')` forces grouping in the subquery.
+- `django/db/models/sql/compiler.py:SQLCompiler.has_results` — executes the `exists()` query, the sibling execution path that avoids the annotation cost.
+- `django/db/models/sql/query.py:Query.set_values` — `values()`/`values_list()` path that recomputes the annotation mask from the requested fields, another place annotations are filtered out of SELECT.
+- `django/db/models/query.py:QuerySet.values` — public sibling that narrows the selected annotations through `set_values`, showing the existing masking route for dropping annotations.
+- `django/db/models/sql/query.py:Query.solve_lookup_type` — resolves whether a filter lookup refers to an annotation, the mechanism that would determine which annotations are "referenced by filters".
+- `django/db/models/sql/query.py:Query.build_filter` — builds filter clauses and calls `solve_lookup_type`, so it is where filter references to annotations are detected.
+- `django/db/models/sql/query.py:Query._add_q` — walks Q objects into filters, the aggregate entry point for filter references used to decide which annotations must be kept.
+- `django/db/models/query_utils.py:refs_expression` — matches lookup prefixes against annotation aliases, the helper that identifies annotation references in filters.
+- `django/db/models/expressions.py:Ref` — represents a reference to an annotation alias; used when inlining annotation references into aggregates.
+- `django/db/models/expressions.py:Expression.replace_expressions` — generic expression-tree substitution used to inline referenced annotations into the aggregate being computed.
+- `django/db/models/sql/where.py:WhereNode.split_having_qualify` — splits WHERE/HAVING/QUALIFY parts, the check for whether filters reference aggregate or window annotations that must be preserved.
+- `django/db/models/sql/where.py:WhereNode.replace_expressions` — substitutes expressions inside a WHERE tree, the where-side counterpart of annotation inlining.
+- `django/core/paginator.py:Paginator.count` — calls `object_list.count()` when available, a downstream consumer of the same `QuerySet.count` behaviour.
+- `django/db/models/fields/related_descriptors.py:RelatedManager.get_queryset` — related managers expose `count()` through their queryset, so related-object counts hit the same `get_count`/`get_aggregation` path.
