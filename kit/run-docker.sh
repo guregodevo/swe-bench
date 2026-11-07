@@ -69,7 +69,11 @@ one() { # instance variant
     python3 /kit/weboff.py --once > /tmp/weboff.log 2>&1 || exit 97
     python3 /kit/weboff.py >> /tmp/weboff.log 2>&1 &
     MEMDOOR_GATEWAY=http://localhost:18797 /kit/memdoor workflow run '"$wf"' --model '"$M"' --timeout 4h --wait - < /tmp/prompt.txt' > $O/logs/$id-$v.txt 2>&1; local rc=$?
-  docker exec "$c" bash -c 'cd /testbed; git add -A -N -- . ":(exclude).memdoor" 2>/dev/null; git diff "$(cat /tmp/base)" -- . ":(exclude).memdoor"' > $O/patches/$id-$v.diff
+  docker exec "$c" bash -c 'cd /testbed; git add -A -N -- . ":(exclude).memdoor" 2>/dev/null; git diff "$(cat /tmp/base)" -- . ":(exclude).memdoor"' > $O/patches/$id-$v.raw.diff
+  # The submission is the change without its test files (strip-tests.py): the harness applies the hidden test patch on
+  # top, and a test file the agent adds at the same path, or an edit inside a hunk it touches, makes that fail. Five
+  # team patches of run 2 scored as wrong for it (2026-11-07). The raw diff stays beside it for the trajectory.
+  python3 -I $HOME/kit/strip-tests.py < $O/patches/$id-$v.raw.diff > $O/patches/$id-$v.diff
   # An earlier run's folder would take this one inside it (docker cp into an existing directory).
   [ -e $O/runs/$id-$v ] && mv $O/runs/$id-$v $O/runs/.old-$id-$v-$(date +%s)
   docker cp "$c:/testbed/.memdoor/runs" $O/runs/$id-$v >/dev/null 2>&1
