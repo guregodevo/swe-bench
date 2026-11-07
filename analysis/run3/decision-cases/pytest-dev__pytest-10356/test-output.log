@@ -1,0 +1,9 @@
+check: python -m pytest testing/test_mark.py -q
+........................................................................ [ 80%]
+.x................                                                       [100%]
+89 passed, 1 xfailed in 3.12s
+scope: src/_pytest/mark/structures.py src/_pytest/python.py testing changelog
+OUTSIDE THE SCOPE: doc/en/example/markers.rst +3 -0 (undo it: git checkout the file, or delete it when the run made it)
+changed: src/_pytest/mark/structures.py +30 -6
+changed: testing/test_mark.py +19 -0
+changed: changelog/5357.bugfix.rst +2 -0

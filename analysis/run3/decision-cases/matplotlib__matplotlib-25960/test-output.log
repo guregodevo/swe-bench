@@ -1,0 +1,103 @@
+check: pytest lib/matplotlib/tests/test_figure.py -k subfigure
+============================= test session starts ==============================
+platform linux -- Python 3.11.11, pytest-8.3.4, pluggy-1.5.0
+rootdir: /testbed
+configfile: pytest.ini
+plugins: cov-6.0.0, xdist-3.6.1, timeout-2.3.1, rerunfailures-15.0
+collected 144 items / 134 deselected / 10 selected
+
+lib/matplotlib/tests/test_figure.py .F...FF.F.                           [100%]
+
+=================================== FAILURES ===================================
+_____________________________ test_subfigure[png] ______________________________
+
+args = ()
+kwds = {'extension': 'png', 'request': <FixtureRequest for <Function test_subfigure[png]>>}
+
+    @wraps(func)
+    def inner(*args, **kwds):
+        with self._recreate_cm():
+>           return func(*args, **kwds)
+E           matplotlib.testing.exceptions.ImageComparisonFailure: images not close (RMS 8.032):
+E           	result_images/test_figure/test_subfigure.png
+E           	result_images/test_figure/test_subfigure-expected.png
+E           	result_images/test_figure/test_subfigure-failed-diff.png
+
+/opt/miniconda3/envs/testbed/lib/python3.11/contextlib.py:81: ImageComparisonFailure
+__________________________ test_subfigure_double[png] __________________________
+
+args = ()
+kwds = {'extension': 'png', 'request': <FixtureRequest for <Function test_subfigure_double[png]>>}
+
+    @wraps(func)
+    def inner(*args, **kwds):
+        with self._recreate_cm():
+>           return func(*args, **kwds)
+E           matplotlib.testing.exceptions.ImageComparisonFailure: images not close (RMS 0.858):
+E           	result_images/test_figure/test_subfigure_double.png
+E           	result_images/test_figure/test_subfigure_double-expected.png
+E           	result_images/test_figure/test_subfigure_double-failed-diff.png
+
+/opt/miniconda3/envs/testbed/lib/python3.11/contextlib.py:81: ImageComparisonFailure
+___________________________ test_subfigure_spanning ____________________________
+
+    def test_subfigure_spanning():
+        # test that subfigures get laid out properly...
+        fig = plt.figure(constrained_layout=True)
+        gs = fig.add_gridspec(3, 3)
+        sub_figs = [
+            fig.add_subfigure(gs[0, 0]),
+            fig.add_subfigure(gs[0:2, 1]),
+            fig.add_subfigure(gs[2, 1:3]),
+            fig.add_subfigure(gs[0:, 1:])
+        ]
+    
+        w = 640
+        h = 480
+>       np.testing.assert_allclose(sub_figs[0].bbox.min, [0., h * 2/3])
+
+lib/matplotlib/tests/test_figure.py:1381: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (<function assert_allclose.<locals>.compare at 0x785e85499d00>, array([  0.        , 338.82352941]), array([  0., 320.]))
+kwds = {'equal_nan': True, 'err_msg': '', 'header': 'Not equal to tolerance rtol=1e-07, atol=0', 'verbose': True}
+
+    @wraps(func)
+    def inner(*args, **kwds):
+        with self._recreate_cm():
+>           return func(*args, **kwds)
+E           AssertionError: 
+E           Not equal to tolerance rtol=1e-07, atol=0
+E           
+E           Mismatched elements: 1 / 2 (50%)
+E           Max absolute difference: 18.82352941
+E           Max relative difference: 0.05882353
+E            x: array([  0.      , 338.823529])
+E            y: array([  0., 320.])
+
+/opt/miniconda3/envs/testbed/lib/python3.11/contextlib.py:81: AssertionError
+_______________________ test_subfigure_scatter_size[png] _______________________
+
+args = ()
+kwds = {'extension': 'png', 'request': <FixtureRequest for <Function test_subfigure_scatter_size[png]>>}
+
+    @wraps(func)
+    def inner(*args, **kwds):
+        with self._recreate_cm():
+>           return func(*args, **kwds)
+E           matplotlib.testing.exceptions.ImageComparisonFailure: images not close (RMS 28.176):
+E           	result_images/test_figure/test_subfigure_scatter_size.png
+E           	result_images/test_figure/test_subfigure_scatter_size-expected.png
+E           	result_images/test_figure/test_subfigure_scatter_size-failed-diff.png
+
+/opt/miniconda3/envs/testbed/lib/python3.11/contextlib.py:81: ImageComparisonFailure
+=========================== short test summary info ============================
+FAILED lib/matplotlib/tests/test_figure.py::test_subfigure[png] - matplotlib....
+FAILED lib/matplotlib/tests/test_figure.py::test_subfigure_double[png] - matp...
+FAILED lib/matplotlib/tests/test_figure.py::test_subfigure_spanning - Asserti...
+FAILED lib/matplotlib/tests/test_figure.py::test_subfigure_scatter_size[png]
+================= 4 failed, 6 passed, 134 deselected in 7.59s ==================
+
+the Check also fails on the tree as the run found it (baseline-check.log): nothing it says counts, the judge decides
+scope: lib/matplotlib/figure.py lib/matplotlib/tests/test_figure.py
+changed: lib/matplotlib/figure.py +13 -9

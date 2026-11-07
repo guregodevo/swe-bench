@@ -1,0 +1,1 @@
+put back: the direct attempt, which passed test-0 (the repair after the review is in .memdoor/runs/team-solve-2026-11-06T140540/repair.patch, not applied: check none, judge none)

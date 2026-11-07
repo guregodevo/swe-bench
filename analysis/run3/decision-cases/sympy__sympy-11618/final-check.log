@@ -1,0 +1,7 @@
+check: python -m pytest sympy/geometry/tests/test_point.py
+/opt/miniconda3/envs/testbed/bin/python: No module named pytest
+
+the Check also fails on the tree as the run found it (baseline-check.log): nothing it says counts, the judge decides
+scope: sympy/geometry/point.py sympy/geometry/tests
+changed: sympy/geometry/point.py +15 -2
+changed: sympy/geometry/tests/test_point.py +3 -0
