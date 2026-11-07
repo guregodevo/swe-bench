@@ -1,0 +1,23 @@
+check: python tests/runtests.py backends.postgresql.test_client
+E
+======================================================================
+ERROR: test_client (unittest.loader._FailedTest)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_client
+Traceback (most recent call last):
+  File "/opt/miniconda3/envs/testbed/lib/python3.6/unittest/loader.py", line 153, in loadTestsFromName
+    module = __import__(module_name)
+ModuleNotFoundError: No module named 'backends.postgresql.test_client'
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)
+Testing against Django installed in '/testbed/django' with up to 8 processes
+System check identified no issues (0 silenced).
+
+the Check fails on the tree as the run found it too (baseline-check.log), and this change adds no failing test to it: it passes
+scope: django/db/backends/postgresql/client.py tests/backends/postgresql
+changed: django/db/backends/postgresql/client.py +5 -33
+OUTSIDE THE SCOPE: tests/dbshell/test_postgresql.py +18 -23 (undo it: git checkout the file, or delete it when the run made it)

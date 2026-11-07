@@ -1,0 +1,11 @@
+check: python -m pytest sympy/assumptions/tests/ sympy/core/tests/test_assumptions.py -q
+/opt/miniconda3/envs/testbed/bin/python: No module named pytest
+
+the Check also fails on the tree as the run found it (baseline-check.log): nothing it says counts, the judge decides
+scope: sympy/core/assumptions.py sympy/assumptions sympy/core/tests
+changed: sympy/assumptions/ask.py +1 -0
+changed: sympy/assumptions/ask_generated.py +11 -10
+changed: sympy/assumptions/tests/test_query.py +5 -0
+changed: sympy/core/assumptions.py +1 -0
+changed: sympy/core/tests/test_assumptions.py +12 -9
+OUTSIDE THE SCOPE: answer.md +82 -0 (undo it: git checkout the file, or delete it when the run made it)

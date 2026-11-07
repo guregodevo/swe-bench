@@ -1,0 +1,8 @@
+check: python -m pytest lib/matplotlib/tests/test_text.py -q
+..s..s..s............s..s............................s.................s [ 62%]
+s.................................s..s..s..s                             [100%]
+104 passed, 12 skipped in 14.29s
+scope: lib/matplotlib/text.py lib/matplotlib/axes/_axes.py lib/matplotlib/tests
+OUTSIDE THE SCOPE: lib/matplotlib/offsetbox.py +2 -1 (undo it: git checkout the file, or delete it when the run made it)
+changed: lib/matplotlib/tests/test_text.py +13 -0
+changed: lib/matplotlib/text.py +4 -1
