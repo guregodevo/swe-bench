@@ -22,8 +22,10 @@ PY
 )
   if [ -z "$ready" ]; then [ -n "$fin" ] && break; sleep 60; continue; fi
   b=$(date +%s)
-  # team-solve's own first try, as the run saved it (none: an empty patch).
-  for id in $ready; do f=$(ls $O/runs/$id-team/team-solve-*/direct.patch 2>/dev/null | head -1); if [ -n "$f" ]; then cp "$f" $O/patches/$id-direct.diff; else : > $O/patches/$id-direct.diff; fi; done
+  # team-solve's own first try, as the run saved it (none: an empty patch), without its test files like the team's
+  # patch (strip-tests.py): a first try that had rewritten an existing test scored RESOLVED against the team's stripped
+  # patch, the same tree, and the net rule stopped run 3 on it (django-11141, 2026-11-07).
+  for id in $ready; do f=$(ls $O/runs/$id-team/team-solve-*/direct.patch 2>/dev/null | head -1); if [ -n "$f" ]; then python3 -I $HOME/kit/strip-tests.py < "$f" > $O/patches/$id-direct.diff; else : > $O/patches/$id-direct.diff; fi; done
   for v in ${ARMS:-single team} $(printf '%s\n' "${ARMS:-single team}" | grep -qw team && echo direct); do
     ids=$ready
     if [ "$v" = direct ]; then
