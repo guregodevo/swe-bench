@@ -34,15 +34,26 @@ one() { # instance variant
   local img=$(python3 -c "import json; print([x for x in json.load(open('$HOME/verified.json')) if x['instance_id']=='$id'][0]['image'])")
   # One pull per image at a time: single and team pulled the same image at once while the scorer removed images, and
   # containerd failed to extract a layer (run 1, 2026-11-06, django-14915: "failed to Lchown"). Then up to three starts.
-  local lock=/tmp/swe-pull-$(printf %s "$img" | md5sum | cut -c1-12).lock n
-  for n in 1 2 3; do
-    flock "$lock" docker pull -q "$img" >> $O/logs/$id-$v.docker 2>&1 && docker run -d --name "$c" --network swe-internal \
+  local lock=/tmp/swe-pull-$(printf %s "$img" | md5sum | cut -c1-12).lock n=0
+  # Docker Hub allows an address 100 anonymous pulls in 6 hours: a pull it refuses for that waits ten minutes and
+  # tries again, as long as it takes (a kit fault that spent a machine's pulls in minutes stopped phase A, 2026-11-07).
+  while :; do
+    if ! flock "$lock" docker pull -q "$img" >> $O/logs/$id-$v.docker 2>&1; then
+      if tail -15 $O/logs/$id-$v.docker | grep -qiE "rate limit|too ?many ?requests|: 429"; then
+        echo "$(date -u +%FT%TZ) $id $v: Docker Hub's pull rate limit; waiting 10 min" >> $O/pulls.log; sleep 600; continue
+      fi
+      n=$((n + 1)); [ $n -ge 3 ] && break; sleep $((n * 20)); continue
+    fi
+    docker run -d --name "$c" --network swe-internal \
       -e HTTPS_PROXY=http://swe-proxy:3128 -e HTTP_PROXY=http://swe-proxy:3128 -e https_proxy=http://swe-proxy:3128 -e http_proxy=http://swe-proxy:3128 -e NO_PROXY=localhost,127.0.0.1 -e no_proxy=localhost,127.0.0.1 \
       -e OPEN_ROUTER_API_KEY -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 -e PYTHONIOENCODING=utf-8 -e PATH=/opt/miniconda3/envs/testbed/bin:/opt/miniconda3/condabin:/opt/miniconda3/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
       -v $HOME/kit:/kit:ro -w /testbed "$img" sleep infinity >/dev/null 2>>$O/logs/$id-$v.docker && break
-    docker rm -f "$c" >/dev/null 2>&1; docker rmi -f "$img" >/dev/null 2>&1; sleep $((n * 20))
+    docker rm -f "$c" >/dev/null 2>&1; docker rmi -f "$img" >/dev/null 2>&1
+    n=$((n + 1)); [ $n -ge 3 ] && break; sleep $((n * 20))
   done
-  if [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" != true ]; then printf '%s\t%s\tdocker-failed\n' "$id" "$v" >> $O/results.tsv; return; fi
+  # A container that never started is no result: the id keeps no row, so the next start of the runner takes it
+  # again (a docker-failed row once stopped all four machines for a pull Docker Hub refused, 2026-11-07).
+  if [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" != true ]; then echo "$(date -u +%FT%TZ) $id $v: the container never started after three tries ($O/logs/$id-$v.docker)" >> $O/docker-failed.log; return; fi
   # Only the problem statement goes in: never the patch, the tests or the hints.
   python3 -c "import json; print([x for x in json.load(open('$HOME/verified.json')) if x['instance_id']=='$id'][0]['problem_statement'])" | docker exec -i "$c" sh -c 'cat > /tmp/prompt.txt'
   local t0=$(date +%s)
@@ -105,5 +116,5 @@ PY
 }
 export -f one spent_total; export O M
 if [ -n "${2:-}" ]; then cat "$2"; else python3 -c "import json; [print(r['instance_id']) for r in json.load(open('$HOME/verified.json'))]"; fi \
-  | while read id; do echo "$id single"; echo "$id team"; done | xargs -P $((K*2)) -L 1 bash -c 'one "$0" "$1"'
+  | while read id; do for v in ${ARMS:-single team}; do echo "$id $v"; done; done | xargs -P $((K * $(echo ${ARMS:-single team} | wc -w))) -L 1 bash -c 'one "$0" "$1"'
 touch $O/run-finished   # the list (all of Verified, or a shard) is done

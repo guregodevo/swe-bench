@@ -16,14 +16,15 @@ have = {}
 for l in open(f"{O}/results.tsv") if os.path.exists(f"{O}/results.tsv") else []:
     f = l.split("\t")
     if len(f) >= 3 and f[2].startswith("wf="): have.setdefault(f[0], set()).add(f[1])   # a run that ran: never docker-failed
-print(" ".join([i for i, v in have.items() if {"single", "team"} <= v and (i, "single") not in done][:12]))
+arms = set(os.environ.get("ARMS", "single team").split())   # the arms this run makes (ARMS=team: the team alone)
+print(" ".join([i for i, v in have.items() if arms <= v and (i, sorted(arms)[0]) not in done][:12]))
 PY
 )
   if [ -z "$ready" ]; then [ -n "$fin" ] && break; sleep 60; continue; fi
   b=$(date +%s)
   # team-solve's own first try, as the run saved it (none: an empty patch).
   for id in $ready; do f=$(ls $O/runs/$id-team/team-solve-*/direct.patch 2>/dev/null | head -1); if [ -n "$f" ]; then cp "$f" $O/patches/$id-direct.diff; else : > $O/patches/$id-direct.diff; fi; done
-  for v in single team direct; do
+  for v in ${ARMS:-single team} $(printf '%s\n' "${ARMS:-single team}" | grep -qw team && echo direct); do
     ids=$ready
     if [ "$v" = direct ]; then
       # A first try the team left as it was has the team's score: the same lines changed.
