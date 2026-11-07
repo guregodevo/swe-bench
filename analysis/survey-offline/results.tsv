@@ -1,0 +1,24 @@
+instance	survey	found	missed	other_files_changed
+mwaskom__seaborn-3187	survey=yes	found: seaborn/utils.py	missed: -	other-files-changed=0
+django__django-13212	survey=yes	found: django/forms/fields.py	missed: -	other-files-changed=0
+pydata__xarray-3993	survey=yes	found: xarray/core/dataset.py	missed: -	other-files-changed=0
+matplotlib__matplotlib-25479	survey=yes	found: lib/matplotlib/colors.py	missed: -	other-files-changed=0
+sphinx-doc__sphinx-7462	survey=yes	found: sphinx/pycode/ast.py	missed: -	other-files-changed=0
+django__django-10554	survey=yes	found: django/db/models/sql/compiler.py	missed: -	other-files-changed=0
+django__django-11477	survey=yes	found: django/urls/resolvers.py	missed: -	other-files-changed=0
+django__django-11532	survey=yes	found: django/core/validators.py django/utils/html.py	missed: django/utils/encoding.py	other-files-changed=0
+django__django-11734	survey=yes	found: -	missed: django/db/models/fields/__init__.py django/db/models/fields/related_lookups.py	other-files-changed=0
+django__django-11885	survey=yes	found: django/contrib/admin/utils.py	missed: -	other-files-changed=0
+django__django-13195	survey=yes	found: django/contrib/messages/storage/cookie.py django/contrib/sessions/middleware.py	missed: -	other-files-changed=0
+django__django-14034	survey=yes	found: django/forms/boundfield.py	missed: -	other-files-changed=0
+django__django-14170	survey=yes	found: django/db/backends/base/operations.py django/db/models/lookups.py	missed: -	other-files-changed=0
+django__django-15127	survey=yes	found: -	missed: django/contrib/messages/apps.py	other-files-changed=0
+django__django-15252	survey=yes	found: django/db/migrations/executor.py	missed: -	other-files-changed=0
+django__django-16256	survey=yes	found: django/contrib/contenttypes/fields.py	missed: -	other-files-changed=0
+django__django-16263	survey=yes	found: django/db/models/expressions.py django/db/models/query_utils.py django/db/models/sql/where.py	missed: -	other-files-changed=0
+matplotlib__matplotlib-25332	survey=yes	found: lib/matplotlib/cbook.py	missed: -	other-files-changed=0
+pydata__xarray-6992	survey=yes	found: -	missed: xarray/core/indexes.py	other-files-changed=0
+pylint-dev__pylint-4604	survey=yes	found: -	missed: pylint/constants.py	other-files-changed=0
+pylint-dev__pylint-4661	survey=yes	found: -	missed: setup.cfg	other-files-changed=0
+sphinx-doc__sphinx-7590	survey=yes	found: sphinx/domains/c.py sphinx/util/cfamily.py	missed: -	other-files-changed=0
+sympy__sympy-22080	survey=yes	found: sympy/printing/codeprinter.py sympy/printing/precedence.py	missed: -	other-files-changed=0
