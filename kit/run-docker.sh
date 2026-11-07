@@ -39,7 +39,7 @@ one() { # instance variant
   # tries again, as long as it takes (a kit fault that spent a machine's pulls in minutes stopped phase A, 2026-11-07).
   while :; do
     if ! flock "$lock" docker pull -q "$img" >> $O/logs/$id-$v.docker 2>&1; then
-      if tail -3 $O/logs/$id-$v.docker | grep -qi "rate limit"; then
+      if tail -15 $O/logs/$id-$v.docker | grep -qi "rate limit"; then
         echo "$(date -u +%FT%TZ) $id $v: Docker Hub's pull rate limit; waiting 10 min" >> $O/pulls.log; sleep 600; continue
       fi
       n=$((n + 1)); [ $n -ge 3 ] && break; sleep $((n * 20)); continue
