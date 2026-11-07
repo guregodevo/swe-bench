@@ -57,7 +57,7 @@ one() { # instance variant
     MEMDOOR_GATEWAY=http://localhost:18797 /kit/memdoor setup --admin-email "$(id -un)@localhost" --admin-password "$(head -c 24 /dev/urandom | base64 | tr -dc A-Za-z0-9)" --workspace-name Memdoor > /tmp/setup.log 2>&1
     python3 /kit/weboff.py --once > /tmp/weboff.log 2>&1 || exit 97
     python3 /kit/weboff.py >> /tmp/weboff.log 2>&1 &
-    MEMDOOR_GATEWAY=http://localhost:18797 /kit/memdoor workflow run '"$wf"' --model '"$M"' --wait - < /tmp/prompt.txt' > $O/logs/$id-$v.txt 2>&1; local rc=$?
+    MEMDOOR_GATEWAY=http://localhost:18797 /kit/memdoor workflow run '"$wf"' --model '"$M"' --timeout 4h --wait - < /tmp/prompt.txt' > $O/logs/$id-$v.txt 2>&1; local rc=$?
   docker exec "$c" bash -c 'cd /testbed; git add -A -N -- . ":(exclude).memdoor" 2>/dev/null; git diff "$(cat /tmp/base)" -- . ":(exclude).memdoor"' > $O/patches/$id-$v.diff
   # An earlier run's folder would take this one inside it (docker cp into an existing directory).
   [ -e $O/runs/$id-$v ] && mv $O/runs/$id-$v $O/runs/.old-$id-$v-$(date +%s)
