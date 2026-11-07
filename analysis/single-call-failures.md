@@ -148,3 +148,23 @@ The 13 `repair.patch` of group K1, each the whole change against the base commit
 
     python -m swebench.harness.run_evaluation -d SWE-bench/SWE-bench_Verified -p analysis/repairs-not-applied/preds.jsonl --max_workers 4 -id repairs-not-applied
 
+Scored 2026-11-07 (swebench 5.0.2, one n2-standard-8 from the kit's snapshot; the harness's report and each instance's `report.json` are in `repairs-not-applied/reports/`). **4 of 13 resolve.** The direct attempt that `keep` put back resolved none of the 13, so applying the repair whenever it passed the Check would have made the team arm 404 of 500 (80.8%) and cost nothing: the 9 others were already wrong.
+
+| instance | repair | FAIL_TO_PASS | PASS_TO_PASS broken |
+|---|---|---|---|
+| astropy__astropy-13977 | wrong | 12 of 20 pass | 0 |
+| django__django-10973 | **resolves** | 5 of 5 | 0 |
+| django__django-13195 | wrong | 4 of 5 | 1 |
+| django__django-13212 | wrong | 3 of 5 | 0 |
+| django__django-14155 | wrong | 0 of 3 | 0 |
+| matplotlib__matplotlib-25960 (never seen) | **resolves** | 1 of 1 | 0 |
+| matplotlib__matplotlib-26466 (never seen) | wrong | 0 of 1 | 0 |
+| pydata__xarray-3993 (never seen) | **resolves** | 2 of 2 | 0 |
+| pytest-dev__pytest-10356 (never seen) | wrong | 0 of 1 | 0 |
+| sphinx-doc__sphinx-7748 (never seen) | wrong | 0 of 2 | 0 |
+| sympy__sympy-11618 | **resolves** | 1 of 1 | 0 |
+| sympy__sympy-13798 (never seen) | wrong | 0 of 1 | 0 |
+| sympy__sympy-16597 (never seen) | wrong | 0 of 3 | 0 |
+
+The harness marks pytest-dev__pytest-10356 "ambiguous" (one of its test commands collected no tests); its FAIL_TO_PASS test fails on an assertion, so it is counted wrong. One repair (django__django-13195) breaks a test that passed before: a case the Check should have caught and did not.
+

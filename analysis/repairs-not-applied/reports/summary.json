@@ -1,0 +1,86 @@
+{
+    "total_instances": 13,
+    "submitted_instances": 13,
+    "completed_instances": 13,
+    "resolved_instances": 4,
+    "unresolved_instances": 9,
+    "infra_failure_instances": 0,
+    "ambiguous_failure_instances": 1,
+    "empty_patch_instances": 0,
+    "error_instances": 0,
+    "completed_ids": [
+        "astropy__astropy-13977",
+        "django__django-10973",
+        "django__django-13195",
+        "django__django-13212",
+        "django__django-14155",
+        "matplotlib__matplotlib-25960",
+        "matplotlib__matplotlib-26466",
+        "pydata__xarray-3993",
+        "pytest-dev__pytest-10356",
+        "sphinx-doc__sphinx-7748",
+        "sympy__sympy-11618",
+        "sympy__sympy-13798",
+        "sympy__sympy-16597"
+    ],
+    "incomplete_ids": [],
+    "empty_patch_ids": [],
+    "submitted_ids": [
+        "astropy__astropy-13977",
+        "django__django-10973",
+        "django__django-13195",
+        "django__django-13212",
+        "django__django-14155",
+        "matplotlib__matplotlib-25960",
+        "matplotlib__matplotlib-26466",
+        "pydata__xarray-3993",
+        "pytest-dev__pytest-10356",
+        "sphinx-doc__sphinx-7748",
+        "sympy__sympy-11618",
+        "sympy__sympy-13798",
+        "sympy__sympy-16597"
+    ],
+    "resolved_ids": [
+        "django__django-10973",
+        "matplotlib__matplotlib-25960",
+        "pydata__xarray-3993",
+        "sympy__sympy-11618"
+    ],
+    "unresolved_ids": [
+        "astropy__astropy-13977",
+        "django__django-13195",
+        "django__django-13212",
+        "django__django-14155",
+        "matplotlib__matplotlib-26466",
+        "pytest-dev__pytest-10356",
+        "sphinx-doc__sphinx-7748",
+        "sympy__sympy-13798",
+        "sympy__sympy-16597"
+    ],
+    "infra_failure_ids": [],
+    "ambiguous_failure_ids": [
+        "pytest-dev__pytest-10356"
+    ],
+    "failure_reasons": {
+        "pytest-dev__pytest-10356": "no_tests_collected"
+    },
+    "error_ids": [],
+    "schema_version": 2,
+    "unstopped_instances": 0,
+    "unstopped_containers": [],
+    "unremoved_images": [
+        "swebench/sweb.eval.x86_64.astropy_1776_astropy-13977:latest",
+        "swebench/sweb.eval.x86_64.django_1776_django-10973:latest",
+        "swebench/sweb.eval.x86_64.django_1776_django-13195:latest",
+        "swebench/sweb.eval.x86_64.django_1776_django-13212:latest",
+        "swebench/sweb.eval.x86_64.django_1776_django-14155:latest",
+        "swebench/sweb.eval.x86_64.matplotlib_1776_matplotlib-25960:latest",
+        "swebench/sweb.eval.x86_64.matplotlib_1776_matplotlib-26466:latest",
+        "swebench/sweb.eval.x86_64.pydata_1776_xarray-3993:latest",
+        "swebench/sweb.eval.x86_64.pytest-dev_1776_pytest-10356:latest",
+        "swebench/sweb.eval.x86_64.sphinx-doc_1776_sphinx-7748:latest",
+        "swebench/sweb.eval.x86_64.sympy_1776_sympy-11618:latest",
+        "swebench/sweb.eval.x86_64.sympy_1776_sympy-13798:latest",
+        "swebench/sweb.eval.x86_64.sympy_1776_sympy-16597:latest"
+    ]
+}
