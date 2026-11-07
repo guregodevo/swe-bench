@@ -1,0 +1,94 @@
+diff --git a/astropy/units/quantity.py b/astropy/units/quantity.py
+index b98abfafb..a86ea7c45 100644
+--- a/astropy/units/quantity.py
++++ b/astropy/units/quantity.py
+@@ -640,7 +640,19 @@ class Quantity(np.ndarray):
+         # input to that expected (e.g., radian for np.sin), or to get
+         # consistent units between two inputs (e.g., in np.add) --
+         # and the unit of the result (or tuple of units for nout > 1).
+-        converters, unit = converters_and_unit(function, method, *inputs)
++        try:
++            converters, unit = converters_and_unit(function, method, *inputs)
++        except UnitConversionError:
++            # If the other input is not a Quantity, we may be able to
++            # defer to it (e.g., a duck array).  In that case, return
++            # NotImplemented, so that the other class can handle it.
++            if any(
++                not isinstance(input_, np.ndarray)
++                and hasattr(input_, "__array_ufunc__")
++                for input_ in inputs
++            ):
++                return NotImplemented
++            raise
+ 
+         out = kwargs.get("out", None)
+         # Avoid loop back by turning any Quantity output into array views.
+@@ -666,8 +678,20 @@ class Quantity(np.ndarray):
+         # Same for inputs, but here also convert if necessary.
+         arrays = []
+         for input_, converter in zip(inputs, converters):
+-            input_ = getattr(input_, "value", input_)
+-            arrays.append(converter(input_) if converter else input_)
++            if converter is not None:
++                try:
++                    input_ = converter(getattr(input_, "value", input_))
++                except (TypeError, ValueError):
++                    # If the input is not a Quantity, it may be a duck array
++                    # that can handle the operation itself.
++                    if not isinstance(input_, np.ndarray) and hasattr(
++                        input_, "__array_ufunc__"
++                    ):
++                        return NotImplemented
++                    raise
++            else:
++                input_ = getattr(input_, "value", input_)
++            arrays.append(input_)
+ 
+         # Call our superclass's __array_ufunc__
+         result = super().__array_ufunc__(function, method, *arrays, **kwargs)
+diff --git a/astropy/units/tests/test_quantity_ufuncs.py b/astropy/units/tests/test_quantity_ufuncs.py
+index 5f8c3ab3e..ef3918e78 100644
+--- a/astropy/units/tests/test_quantity_ufuncs.py
++++ b/astropy/units/tests/test_quantity_ufuncs.py
+@@ -1404,3 +1404,41 @@ if HAS_SCIPY:
+                 ),
+             ):
+                 function(1.0 * u.kg, 3.0 * u.m / u.s)
++
++
++class TestDuckArray:
++    """Test that Quantity defers to other array classes when it cannot convert."""
++
++    class DuckArray(np.lib.mixins.NDArrayOperatorsMixin):
++        def __init__(self, ndarray):
++            self.ndarray = ndarray
++
++        @property
++        def unit(self):
++            return self.ndarray.unit
++
++        def __array_ufunc__(self, function, method, *inputs, **kwargs):
++            inputs = [
++                inp.ndarray if isinstance(inp, self.__class__) else inp
++                for inp in inputs
++            ]
++            for inp in inputs:
++                if isinstance(inp, np.ndarray):
++                    result = inp.__array_ufunc__(function, method, *inputs, **kwargs)
++                    if result is not NotImplemented:
++                        return self.__class__(result)
++            return NotImplemented
++
++    def test_reflected_operation_with_different_units(self):
++        # Regression test: Quantity should return NotImplemented rather than
++        # letting the unit converter raise a ValueError for a foreign duck
++        # array, so that the duck array's reflected operation is used.
++        result = (1 * u.m) + self.DuckArray(1 * u.mm)
++        assert isinstance(result, self.DuckArray)
++        assert result.ndarray == 1.001 * u.m
++
++    def test_incompatible_units_still_raise(self):
++        # If the duck array cannot handle the operation either, a UnitsError
++        # is raised (rather than the old ValueError from the converter).
++        with pytest.raises(u.UnitsError):
++            (1 * u.m) + self.DuckArray(1 * u.s)
