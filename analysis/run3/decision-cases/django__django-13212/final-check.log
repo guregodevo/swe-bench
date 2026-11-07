@@ -1,0 +1,11 @@
+check: python tests/runtests.py validators
+Testing against Django installed in '/testbed/django' with up to 8 processes
+System check identified no issues (0 silenced).
+...................
+----------------------------------------------------------------------
+Ran 19 tests in 0.234s
+
+OK
+scope: django/core/validators.py django/contrib/postgres/validators.py
+changed: django/contrib/postgres/validators.py +2 -2
+changed: django/core/validators.py +35 -18

@@ -1,0 +1,1079 @@
+check: python -m pytest astropy/units/tests/
+<frozen importlib._bootstrap>:228: RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility. Expected 80 from C header, got 96 from PyObject
+[1m============================= test session starts ==============================[0m
+platform linux -- Python 3.9.20, pytest-7.4.0, pluggy-1.3.0
+
+Running tests with Astropy version 5.3.dev125+g5250b2442.d20260813.
+Running tests in astropy/units/tests/.
+
+Date: 2026-11-06T17:29:16
+
+Platform: Linux-7.0.0-1014-gcp-x86_64-with-glibc2.35
+
+Executable: /opt/miniconda3/envs/testbed/bin/python
+
+Full Python Version: 
+3.9.20 (main, Oct  3 2024, 07:27:41) 
+[GCC 11.2.0]
+
+encodings: sys: utf-8, locale: UTF-8, filesystem: utf-8
+byteorder: little
+float info: dig: 15, mant_dig: 15
+
+Package versions: 
+Numpy: 1.25.2
+Scipy: not available
+Matplotlib: not available
+h5py: not available
+Pandas: not available
+PyERFA: 2.0.0.3
+Cython: not available
+Scikit-image: not available
+asdf: not available
+pyarrow: not available
+
+Using Astropy options: remote_data: none.
+
+CI: undefined
+ARCH_ON_CI: undefined
+IS_CRON: undefined
+
+rootdir: /testbed
+configfile: setup.cfg
+plugins: doctestplus-1.0.0, remotedata-0.4.0, xdist-3.3.1, cov-4.1.0, openfiles-0.5.0, arraydiff-0.5.0, hypothesis-6.82.6, astropy-header-0.2.2, mock-3.11.1, filter-subpackage-0.1.2, astropy-0.10.0
+collected 2930 items
+
+astropy/units/tests/test_aliases.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m               [  0%][0m
+astropy/units/tests/test_deprecated.py [32m.[0m[32m.[0m[32m                                [  0%][0m
+astropy/units/tests/test_equivalencies.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [  1%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m                         [  3%][0m
+astropy/units/tests/test_format.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [  4%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [  7%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [  9%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 12%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 14%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 17%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 19%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 21%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 24%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 26%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m                          [ 28%][0m
+astropy/units/tests/test_logarithmic.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 29%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 32%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 34%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m                        [ 36%][0m
+astropy/units/tests/test_photometric.py [32m.[0m[32m.[0m[32m                               [ 36%][0m
+astropy/units/tests/test_physical.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 37%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 39%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 42%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m                                    [ 43%][0m
+astropy/units/tests/test_quantity.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33mx[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 44%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m              [ 46%][0m
+astropy/units/tests/test_quantity_annotations.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33ms[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 47%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m                                                            [ 48%][0m
+astropy/units/tests/test_quantity_array_methods.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 48%]
+[0m[32m.[0m[32m.[0m[31mF[0m[31mF[0m[31mF[0m[32m.[0m[32m.[0m[31mF[0m[31mF[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                   [ 50%][0m
+astropy/units/tests/test_quantity_decorator.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 51%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 53%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 56%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 58%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 61%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 63%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 66%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 68%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                                 [ 70%][0m
+astropy/units/tests/test_quantity_helpers.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                        [ 70%][0m
+astropy/units/tests/test_quantity_non_ufuncs.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 70%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[31mF[0m[32m.[0m[31mF[0m[32m.[0m[31mF[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[31m [ 73%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 75%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33ms[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[31m [ 78%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[31mF[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33mx[0m[33mx[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31mF[0m[32m.[0m[31m                                     [ 79%][0m
+astropy/units/tests/test_quantity_typing.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                        [ 79%][0m
+astropy/units/tests/test_quantity_ufuncs.py [33ms[0m[33ms[0m[33ms[0m[32m.[0m[32m.[0m[32m.[0m[33ms[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 80%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 83%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 85%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                                      [ 86%][0m
+astropy/units/tests/test_structured.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 87%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                                    [ 89%][0m
+astropy/units/tests/test_structured_erfa_ufuncs.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[33mx[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 89%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                                                        [ 90%][0m
+astropy/units/tests/test_units.py [32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 91%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 94%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 96%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m [ 99%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[31m                                                  [ 99%][0m
+astropy/units/tests/test_utils.py [32m.[0m[32m.[0m[31m                                     [100%][0m
+
+=================================== FAILURES ===================================
+[31m[1m_______________________ TestQuantityStatsFuncs.test_min ________________________[0m
+
+self = <astropy.units.tests.test_quantity_array_methods.TestQuantityStatsFuncs object at 0x7084004e83d0>
+
+    def test_min(self):
+        q1 = np.array([1.0, 2.0, 4.0, 5.0, 6.0]) * u.m
+>       assert np.min(q1) == 1.0 * u.m
+
+[1m[31mastropy/units/tests/test_quantity_array_methods.py[0m:219: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [1., 2., 4., 5., 6.] m>
+function = <function min at 0x7084017252b0>
+types = (<class 'astropy.units.quantity.Quantity'>,)
+args = (<Quantity [1., 2., 4., 5., 6.] m>,), kwargs = {}
+
+    def __array_function__(self, function, types, args, kwargs):
+        """Wrap numpy functions, taking care of units.
+    
+        Parameters
+        ----------
+        function : callable
+            Numpy function to wrap
+        types : iterable of classes
+            Classes that provide an ``__array_function__`` override. Can
+            in principle be used to interact with other classes. Below,
+            mostly passed on to `~numpy.ndarray`, which can only interact
+            with subclasses.
+        args : tuple
+            Positional arguments provided in the function call.
+        kwargs : dict
+            Keyword arguments provided in the function call.
+    
+        Returns
+        -------
+        result: `~astropy.units.Quantity`, `~numpy.ndarray`
+            As appropriate for the function.  If the function is not
+            supported, `NotImplemented` is returned, which will lead to
+            a `TypeError` unless another argument overrode the function.
+    
+        Raises
+        ------
+        ~astropy.units.UnitsError
+            If operands have incompatible units.
+        """
+        # A function should be in one of the following sets or dicts:
+        # 1. SUBCLASS_SAFE_FUNCTIONS (set), if the numpy implementation
+        #    supports Quantity; we pass on to ndarray.__array_function__.
+        # 2. FUNCTION_HELPERS (dict), if the numpy implementation is usable
+        #    after converting quantities to arrays with suitable units,
+        #    and possibly setting units on the result.
+        # 3. DISPATCHED_FUNCTIONS (dict), if the function makes sense but
+        #    requires a Quantity-specific implementation.
+        # 4. UNSUPPORTED_FUNCTIONS (set), if the function does not make sense.
+        # For now, since we may not yet have complete coverage, if a
+        # function is in none of the above, we simply call the numpy
+        # implementation.
+        if function in SUBCLASS_SAFE_FUNCTIONS:
+            return super().__array_function__(function, types, args, kwargs)
+    
+        elif function in FUNCTION_HELPERS:
+            function_helper = FUNCTION_HELPERS[function]
+            try:
+                args, kwargs, unit, out = function_helper(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            result = super().__array_function__(function, types, args, kwargs)
+            # Fall through to return section
+    
+        elif function in DISPATCHED_FUNCTIONS:
+            dispatched_function = DISPATCHED_FUNCTIONS[function]
+            try:
+                result, unit, out = dispatched_function(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            # Fall through to return section
+    
+        elif function in UNSUPPORTED_FUNCTIONS:
+            return NotImplemented
+    
+        else:
+>           warnings.warn(
+                f"function '{function.__name__}' is not known to astropy's Quantity."
+                " Will run it anyway, hoping it will treat ndarray subclasses"
+                " correctly. Please raise an issue at"
+                " https://github.com/astropy/astropy/issues.",
+                AstropyWarning,
+            )
+[1m[31mE           astropy.utils.exceptions.AstropyWarning: function 'min' is not known to astropy's Quantity. Will run it anyway, hoping it will treat ndarray subclasses correctly. Please raise an issue at https://github.com/astropy/astropy/issues.[0m
+
+[1m[31mastropy/units/quantity.py[0m:1867: AstropyWarning
+[31m[1m___________________ TestQuantityStatsFuncs.test_min_inplace ____________________[0m
+
+self = <astropy.units.tests.test_quantity_array_methods.TestQuantityStatsFuncs object at 0x7084004e84f0>
+
+    def test_min_inplace(self):
+        q1 = np.array([1.0, 2.0, 4.0, 5.0, 6.0]) * u.m
+        qi = 1.5 * u.s
+>       np.min(q1, out=qi)
+
+[1m[31mastropy/units/tests/test_quantity_array_methods.py[0m:224: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [1., 2., 4., 5., 6.] m>
+function = <function min at 0x7084017252b0>
+types = (<class 'astropy.units.quantity.Quantity'>,)
+args = (<Quantity [1., 2., 4., 5., 6.] m>,), kwargs = {'out': <Quantity 1.5 s>}
+
+    def __array_function__(self, function, types, args, kwargs):
+        """Wrap numpy functions, taking care of units.
+    
+        Parameters
+        ----------
+        function : callable
+            Numpy function to wrap
+        types : iterable of classes
+            Classes that provide an ``__array_function__`` override. Can
+            in principle be used to interact with other classes. Below,
+            mostly passed on to `~numpy.ndarray`, which can only interact
+            with subclasses.
+        args : tuple
+            Positional arguments provided in the function call.
+        kwargs : dict
+            Keyword arguments provided in the function call.
+    
+        Returns
+        -------
+        result: `~astropy.units.Quantity`, `~numpy.ndarray`
+            As appropriate for the function.  If the function is not
+            supported, `NotImplemented` is returned, which will lead to
+            a `TypeError` unless another argument overrode the function.
+    
+        Raises
+        ------
+        ~astropy.units.UnitsError
+            If operands have incompatible units.
+        """
+        # A function should be in one of the following sets or dicts:
+        # 1. SUBCLASS_SAFE_FUNCTIONS (set), if the numpy implementation
+        #    supports Quantity; we pass on to ndarray.__array_function__.
+        # 2. FUNCTION_HELPERS (dict), if the numpy implementation is usable
+        #    after converting quantities to arrays with suitable units,
+        #    and possibly setting units on the result.
+        # 3. DISPATCHED_FUNCTIONS (dict), if the function makes sense but
+        #    requires a Quantity-specific implementation.
+        # 4. UNSUPPORTED_FUNCTIONS (set), if the function does not make sense.
+        # For now, since we may not yet have complete coverage, if a
+        # function is in none of the above, we simply call the numpy
+        # implementation.
+        if function in SUBCLASS_SAFE_FUNCTIONS:
+            return super().__array_function__(function, types, args, kwargs)
+    
+        elif function in FUNCTION_HELPERS:
+            function_helper = FUNCTION_HELPERS[function]
+            try:
+                args, kwargs, unit, out = function_helper(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            result = super().__array_function__(function, types, args, kwargs)
+            # Fall through to return section
+    
+        elif function in DISPATCHED_FUNCTIONS:
+            dispatched_function = DISPATCHED_FUNCTIONS[function]
+            try:
+                result, unit, out = dispatched_function(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            # Fall through to return section
+    
+        elif function in UNSUPPORTED_FUNCTIONS:
+            return NotImplemented
+    
+        else:
+>           warnings.warn(
+                f"function '{function.__name__}' is not known to astropy's Quantity."
+                " Will run it anyway, hoping it will treat ndarray subclasses"
+                " correctly. Please raise an issue at"
+                " https://github.com/astropy/astropy/issues.",
+                AstropyWarning,
+            )
+[1m[31mE           astropy.utils.exceptions.AstropyWarning: function 'min' is not known to astropy's Quantity. Will run it anyway, hoping it will treat ndarray subclasses correctly. Please raise an issue at https://github.com/astropy/astropy/issues.[0m
+
+[1m[31mastropy/units/quantity.py[0m:1867: AstropyWarning
+[31m[1m____________________ TestQuantityStatsFuncs.test_min_where _____________________[0m
+
+self = <astropy.units.tests.test_quantity_array_methods.TestQuantityStatsFuncs object at 0x7084004e8610>
+
+    def test_min_where(self):
+        q1 = np.array([0.0, 1.0, 2.0, 4.0, 5.0, 6.0]) * u.m
+>       assert np.min(q1, initial=10 * u.m, where=q1 > 0 * u.m) == 1.0 * u.m
+
+[1m[31mastropy/units/tests/test_quantity_array_methods.py[0m:229: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [0., 1., 2., 4., 5., 6.] m>
+function = <function min at 0x7084017252b0>
+types = (<class 'astropy.units.quantity.Quantity'>,)
+args = (<Quantity [0., 1., 2., 4., 5., 6.] m>,)
+kwargs = {'initial': <Quantity 10. m>, 'where': array([False,  True,  True,  True,  True,  True])}
+
+    def __array_function__(self, function, types, args, kwargs):
+        """Wrap numpy functions, taking care of units.
+    
+        Parameters
+        ----------
+        function : callable
+            Numpy function to wrap
+        types : iterable of classes
+            Classes that provide an ``__array_function__`` override. Can
+            in principle be used to interact with other classes. Below,
+            mostly passed on to `~numpy.ndarray`, which can only interact
+            with subclasses.
+        args : tuple
+            Positional arguments provided in the function call.
+        kwargs : dict
+            Keyword arguments provided in the function call.
+    
+        Returns
+        -------
+        result: `~astropy.units.Quantity`, `~numpy.ndarray`
+            As appropriate for the function.  If the function is not
+            supported, `NotImplemented` is returned, which will lead to
+            a `TypeError` unless another argument overrode the function.
+    
+        Raises
+        ------
+        ~astropy.units.UnitsError
+            If operands have incompatible units.
+        """
+        # A function should be in one of the following sets or dicts:
+        # 1. SUBCLASS_SAFE_FUNCTIONS (set), if the numpy implementation
+        #    supports Quantity; we pass on to ndarray.__array_function__.
+        # 2. FUNCTION_HELPERS (dict), if the numpy implementation is usable
+        #    after converting quantities to arrays with suitable units,
+        #    and possibly setting units on the result.
+        # 3. DISPATCHED_FUNCTIONS (dict), if the function makes sense but
+        #    requires a Quantity-specific implementation.
+        # 4. UNSUPPORTED_FUNCTIONS (set), if the function does not make sense.
+        # For now, since we may not yet have complete coverage, if a
+        # function is in none of the above, we simply call the numpy
+        # implementation.
+        if function in SUBCLASS_SAFE_FUNCTIONS:
+            return super().__array_function__(function, types, args, kwargs)
+    
+        elif function in FUNCTION_HELPERS:
+            function_helper = FUNCTION_HELPERS[function]
+            try:
+                args, kwargs, unit, out = function_helper(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            result = super().__array_function__(function, types, args, kwargs)
+            # Fall through to return section
+    
+        elif function in DISPATCHED_FUNCTIONS:
+            dispatched_function = DISPATCHED_FUNCTIONS[function]
+            try:
+                result, unit, out = dispatched_function(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            # Fall through to return section
+    
+        elif function in UNSUPPORTED_FUNCTIONS:
+            return NotImplemented
+    
+        else:
+>           warnings.warn(
+                f"function '{function.__name__}' is not known to astropy's Quantity."
+                " Will run it anyway, hoping it will treat ndarray subclasses"
+                " correctly. Please raise an issue at"
+                " https://github.com/astropy/astropy/issues.",
+                AstropyWarning,
+            )
+[1m[31mE           astropy.utils.exceptions.AstropyWarning: function 'min' is not known to astropy's Quantity. Will run it anyway, hoping it will treat ndarray subclasses correctly. Please raise an issue at https://github.com/astropy/astropy/issues.[0m
+
+[1m[31mastropy/units/quantity.py[0m:1867: AstropyWarning
+[31m[1m_______________________ TestQuantityStatsFuncs.test_max ________________________[0m
+
+self = <astropy.units.tests.test_quantity_array_methods.TestQuantityStatsFuncs object at 0x7084004e8970>
+
+    def test_max(self):
+        q1 = np.array([1.0, 2.0, 4.0, 5.0, 6.0]) * u.m
+>       assert np.max(q1) == 6.0 * u.m
+
+[1m[31mastropy/units/tests/test_quantity_array_methods.py[0m:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [1., 2., 4., 5., 6.] m>
+function = <function max at 0x70840171ff70>
+types = (<class 'astropy.units.quantity.Quantity'>,)
+args = (<Quantity [1., 2., 4., 5., 6.] m>,), kwargs = {}
+
+    def __array_function__(self, function, types, args, kwargs):
+        """Wrap numpy functions, taking care of units.
+    
+        Parameters
+        ----------
+        function : callable
+            Numpy function to wrap
+        types : iterable of classes
+            Classes that provide an ``__array_function__`` override. Can
+            in principle be used to interact with other classes. Below,
+            mostly passed on to `~numpy.ndarray`, which can only interact
+            with subclasses.
+        args : tuple
+            Positional arguments provided in the function call.
+        kwargs : dict
+            Keyword arguments provided in the function call.
+    
+        Returns
+        -------
+        result: `~astropy.units.Quantity`, `~numpy.ndarray`
+            As appropriate for the function.  If the function is not
+            supported, `NotImplemented` is returned, which will lead to
+            a `TypeError` unless another argument overrode the function.
+    
+        Raises
+        ------
+        ~astropy.units.UnitsError
+            If operands have incompatible units.
+        """
+        # A function should be in one of the following sets or dicts:
+        # 1. SUBCLASS_SAFE_FUNCTIONS (set), if the numpy implementation
+        #    supports Quantity; we pass on to ndarray.__array_function__.
+        # 2. FUNCTION_HELPERS (dict), if the numpy implementation is usable
+        #    after converting quantities to arrays with suitable units,
+        #    and possibly setting units on the result.
+        # 3. DISPATCHED_FUNCTIONS (dict), if the function makes sense but
+        #    requires a Quantity-specific implementation.
+        # 4. UNSUPPORTED_FUNCTIONS (set), if the function does not make sense.
+        # For now, since we may not yet have complete coverage, if a
+        # function is in none of the above, we simply call the numpy
+        # implementation.
+        if function in SUBCLASS_SAFE_FUNCTIONS:
+            return super().__array_function__(function, types, args, kwargs)
+    
+        elif function in FUNCTION_HELPERS:
+            function_helper = FUNCTION_HELPERS[function]
+            try:
+                args, kwargs, unit, out = function_helper(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            result = super().__array_function__(function, types, args, kwargs)
+            # Fall through to return section
+    
+        elif function in DISPATCHED_FUNCTIONS:
+            dispatched_function = DISPATCHED_FUNCTIONS[function]
+            try:
+                result, unit, out = dispatched_function(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            # Fall through to return section
+    
+        elif function in UNSUPPORTED_FUNCTIONS:
+            return NotImplemented
+    
+        else:
+>           warnings.warn(
+                f"function '{function.__name__}' is not known to astropy's Quantity."
+                " Will run it anyway, hoping it will treat ndarray subclasses"
+                " correctly. Please raise an issue at"
+                " https://github.com/astropy/astropy/issues.",
+                AstropyWarning,
+            )
+[1m[31mE           astropy.utils.exceptions.AstropyWarning: function 'max' is not known to astropy's Quantity. Will run it anyway, hoping it will treat ndarray subclasses correctly. Please raise an issue at https://github.com/astropy/astropy/issues.[0m
+
+[1m[31mastropy/units/quantity.py[0m:1867: AstropyWarning
+[31m[1m___________________ TestQuantityStatsFuncs.test_max_inplace ____________________[0m
+
+self = <astropy.units.tests.test_quantity_array_methods.TestQuantityStatsFuncs object at 0x7084004dee80>
+
+    def test_max_inplace(self):
+        q1 = np.array([1.0, 2.0, 4.0, 5.0, 6.0]) * u.m
+        qi = 1.5 * u.s
+>       np.max(q1, out=qi)
+
+[1m[31mastropy/units/tests/test_quantity_array_methods.py[0m:247: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [1., 2., 4., 5., 6.] m>
+function = <function max at 0x70840171ff70>
+types = (<class 'astropy.units.quantity.Quantity'>,)
+args = (<Quantity [1., 2., 4., 5., 6.] m>,), kwargs = {'out': <Quantity 1.5 s>}
+
+    def __array_function__(self, function, types, args, kwargs):
+        """Wrap numpy functions, taking care of units.
+    
+        Parameters
+        ----------
+        function : callable
+            Numpy function to wrap
+        types : iterable of classes
+            Classes that provide an ``__array_function__`` override. Can
+            in principle be used to interact with other classes. Below,
+            mostly passed on to `~numpy.ndarray`, which can only interact
+            with subclasses.
+        args : tuple
+            Positional arguments provided in the function call.
+        kwargs : dict
+            Keyword arguments provided in the function call.
+    
+        Returns
+        -------
+        result: `~astropy.units.Quantity`, `~numpy.ndarray`
+            As appropriate for the function.  If the function is not
+            supported, `NotImplemented` is returned, which will lead to
+            a `TypeError` unless another argument overrode the function.
+    
+        Raises
+        ------
+        ~astropy.units.UnitsError
+            If operands have incompatible units.
+        """
+        # A function should be in one of the following sets or dicts:
+        # 1. SUBCLASS_SAFE_FUNCTIONS (set), if the numpy implementation
+        #    supports Quantity; we pass on to ndarray.__array_function__.
+        # 2. FUNCTION_HELPERS (dict), if the numpy implementation is usable
+        #    after converting quantities to arrays with suitable units,
+        #    and possibly setting units on the result.
+        # 3. DISPATCHED_FUNCTIONS (dict), if the function makes sense but
+        #    requires a Quantity-specific implementation.
+        # 4. UNSUPPORTED_FUNCTIONS (set), if the function does not make sense.
+        # For now, since we may not yet have complete coverage, if a
+        # function is in none of the above, we simply call the numpy
+        # implementation.
+        if function in SUBCLASS_SAFE_FUNCTIONS:
+            return super().__array_function__(function, types, args, kwargs)
+    
+        elif function in FUNCTION_HELPERS:
+            function_helper = FUNCTION_HELPERS[function]
+            try:
+                args, kwargs, unit, out = function_helper(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            result = super().__array_function__(function, types, args, kwargs)
+            # Fall through to return section
+    
+        elif function in DISPATCHED_FUNCTIONS:
+            dispatched_function = DISPATCHED_FUNCTIONS[function]
+            try:
+                result, unit, out = dispatched_function(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            # Fall through to return section
+    
+        elif function in UNSUPPORTED_FUNCTIONS:
+            return NotImplemented
+    
+        else:
+>           warnings.warn(
+                f"function '{function.__name__}' is not known to astropy's Quantity."
+                " Will run it anyway, hoping it will treat ndarray subclasses"
+                " correctly. Please raise an issue at"
+                " https://github.com/astropy/astropy/issues.",
+                AstropyWarning,
+            )
+[1m[31mE           astropy.utils.exceptions.AstropyWarning: function 'max' is not known to astropy's Quantity. Will run it anyway, hoping it will treat ndarray subclasses correctly. Please raise an issue at https://github.com/astropy/astropy/issues.[0m
+
+[1m[31mastropy/units/quantity.py[0m:1867: AstropyWarning
+[31m[1m____________________ TestQuantityStatsFuncs.test_max_where _____________________[0m
+
+self = <astropy.units.tests.test_quantity_array_methods.TestQuantityStatsFuncs object at 0x7084004deb20>
+
+    def test_max_where(self):
+        q1 = np.array([1.0, 2.0, 4.0, 5.0, 6.0, 7.0]) * u.m
+>       assert np.max(q1, initial=0 * u.m, where=q1 < 7 * u.m) == 6.0 * u.m
+
+[1m[31mastropy/units/tests/test_quantity_array_methods.py[0m:252: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [1., 2., 4., 5., 6., 7.] m>
+function = <function max at 0x70840171ff70>
+types = (<class 'astropy.units.quantity.Quantity'>,)
+args = (<Quantity [1., 2., 4., 5., 6., 7.] m>,)
+kwargs = {'initial': <Quantity 0. m>, 'where': array([ True,  True,  True,  True,  True, False])}
+
+    def __array_function__(self, function, types, args, kwargs):
+        """Wrap numpy functions, taking care of units.
+    
+        Parameters
+        ----------
+        function : callable
+            Numpy function to wrap
+        types : iterable of classes
+            Classes that provide an ``__array_function__`` override. Can
+            in principle be used to interact with other classes. Below,
+            mostly passed on to `~numpy.ndarray`, which can only interact
+            with subclasses.
+        args : tuple
+            Positional arguments provided in the function call.
+        kwargs : dict
+            Keyword arguments provided in the function call.
+    
+        Returns
+        -------
+        result: `~astropy.units.Quantity`, `~numpy.ndarray`
+            As appropriate for the function.  If the function is not
+            supported, `NotImplemented` is returned, which will lead to
+            a `TypeError` unless another argument overrode the function.
+    
+        Raises
+        ------
+        ~astropy.units.UnitsError
+            If operands have incompatible units.
+        """
+        # A function should be in one of the following sets or dicts:
+        # 1. SUBCLASS_SAFE_FUNCTIONS (set), if the numpy implementation
+        #    supports Quantity; we pass on to ndarray.__array_function__.
+        # 2. FUNCTION_HELPERS (dict), if the numpy implementation is usable
+        #    after converting quantities to arrays with suitable units,
+        #    and possibly setting units on the result.
+        # 3. DISPATCHED_FUNCTIONS (dict), if the function makes sense but
+        #    requires a Quantity-specific implementation.
+        # 4. UNSUPPORTED_FUNCTIONS (set), if the function does not make sense.
+        # For now, since we may not yet have complete coverage, if a
+        # function is in none of the above, we simply call the numpy
+        # implementation.
+        if function in SUBCLASS_SAFE_FUNCTIONS:
+            return super().__array_function__(function, types, args, kwargs)
+    
+        elif function in FUNCTION_HELPERS:
+            function_helper = FUNCTION_HELPERS[function]
+            try:
+                args, kwargs, unit, out = function_helper(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            result = super().__array_function__(function, types, args, kwargs)
+            # Fall through to return section
+    
+        elif function in DISPATCHED_FUNCTIONS:
+            dispatched_function = DISPATCHED_FUNCTIONS[function]
+            try:
+                result, unit, out = dispatched_function(*args, **kwargs)
+            except NotImplementedError:
+                return self._not_implemented_or_raise(function, types)
+    
+            # Fall through to return section
+    
+        elif function in UNSUPPORTED_FUNCTIONS:
+            return NotImplemented
+    
+        else:
+>           warnings.warn(
+                f"function '{function.__name__}' is not known to astropy's Quantity."
+                " Will run it anyway, hoping it will treat ndarray subclasses"
+                " correctly. Please raise an issue at"
+                " https://github.com/astropy/astropy/issues.",
+                AstropyWarning,
+            )
+[1m[31mE           astropy.utils.exceptions.AstropyWarning: function 'max' is not known to astropy's Quantity. Will run it anyway, hoping it will treat ndarray subclasses correctly. Please raise an issue at https://github.com/astropy/astropy/issues.[0m
+
+[1m[31mastropy/units/quantity.py[0m:1867: AstropyWarning
+[31m[1m______________________ TestUfuncReductions.test_sometrue _______________________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestUfuncReductions object at 0x70840022a4c0>
+
+    def test_sometrue(self):
+        with pytest.raises(TypeError):
+>           np.sometrue(self.q)
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:633: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = <Quantity [[0.  , 0.25, 0.5 ],
+           [0.75, 1.  , 1.25],
+           [1.5 , 1.75, 2.  ]] m>
+axis = None, out = None, keepdims = None
+
+    def _sometrue_dispatcher(a, axis=None, out=None, keepdims=None, *,
+                             where=np._NoValue):
+        # 2023-03-02, 1.25.0
+>       warnings.warn("`sometrue` is deprecated as of NumPy 1.25.0, and will be "
+                      "removed in NumPy 2.0. Please use `any` instead.",
+                      DeprecationWarning, stacklevel=3)
+[1m[31mE       DeprecationWarning: `sometrue` is deprecated as of NumPy 1.25.0, and will be removed in NumPy 2.0. Please use `any` instead.[0m
+
+[1m[31m/opt/miniconda3/envs/testbed/lib/python3.9/site-packages/numpy/core/fromnumeric.py[0m:3875: DeprecationWarning
+[31m[1m_______________________ TestUfuncReductions.test_alltrue _______________________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestUfuncReductions object at 0x70840022a610>
+
+    def test_alltrue(self):
+        with pytest.raises(TypeError):
+>           np.alltrue(self.q)
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:637: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = <Quantity [[0.  , 0.25, 0.5 ],
+           [0.75, 1.  , 1.25],
+           [1.5 , 1.75, 2.  ]] m>
+axis = None, out = None, keepdims = None
+
+    def _alltrue_dispatcher(a, axis=None, out=None, keepdims=None, *, where=None):
+        # 2023-03-02, 1.25.0
+>       warnings.warn("`alltrue` is deprecated as of NumPy 1.25.0, and will be "
+                      "removed in NumPy 2.0. Please use `all` instead.",
+                      DeprecationWarning, stacklevel=3)
+[1m[31mE       DeprecationWarning: `alltrue` is deprecated as of NumPy 1.25.0, and will be removed in NumPy 2.0. Please use `all` instead.[0m
+
+[1m[31m/opt/miniconda3/envs/testbed/lib/python3.9/site-packages/numpy/core/fromnumeric.py[0m:3901: DeprecationWarning
+[31m[1m_______________________ TestUfuncReductions.test_product _______________________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestUfuncReductions object at 0x70840022a8b0>
+
+    def test_product(self):
+        with pytest.raises(u.UnitsError):
+>           np.product(self.q)
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:645: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = <Quantity [[0.  , 0.25, 0.5 ],
+           [0.75, 1.  , 1.25],
+           [1.5 , 1.75, 2.  ]] m>
+axis = None, dtype = None, out = None, keepdims = None, initial = None
+where = None
+
+    def _product_dispatcher(a, axis=None, dtype=None, out=None, keepdims=None,
+                            initial=None, where=None):
+        # 2023-03-02, 1.25.0
+>       warnings.warn("`product` is deprecated as of NumPy 1.25.0, and will be "
+                      "removed in NumPy 2.0. Please use `prod` instead.",
+                      DeprecationWarning, stacklevel=3)
+[1m[31mE       DeprecationWarning: `product` is deprecated as of NumPy 1.25.0, and will be removed in NumPy 2.0. Please use `prod` instead.[0m
+
+[1m[31m/opt/miniconda3/envs/testbed/lib/python3.9/site-packages/numpy/core/fromnumeric.py[0m:3826: DeprecationWarning
+[31m[1m_____________________ TestUfuncReductions.test_cumproduct ______________________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestUfuncReductions object at 0x70840022ab50>
+
+    def test_cumproduct(self):
+        with pytest.raises(u.UnitsError):
+>           np.cumproduct(self.q)
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:653: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = <Quantity [[0.  , 0.25, 0.5 ],
+           [0.75, 1.  , 1.25],
+           [1.5 , 1.75, 2.  ]] m>
+axis = None, dtype = None, out = None
+
+    def _cumproduct_dispatcher(a, axis=None, dtype=None, out=None):
+        # 2023-03-02, 1.25.0
+>       warnings.warn("`cumproduct` is deprecated as of NumPy 1.25.0, and will be "
+                      "removed in NumPy 2.0. Please use `cumprod` instead.",
+                      DeprecationWarning, stacklevel=3)
+[1m[31mE       DeprecationWarning: `cumproduct` is deprecated as of NumPy 1.25.0, and will be removed in NumPy 2.0. Please use `cumprod` instead.[0m
+
+[1m[31m/opt/miniconda3/envs/testbed/lib/python3.9/site-packages/numpy/core/fromnumeric.py[0m:3850: DeprecationWarning
+[31m[1m__________________________ TestUfuncLike.test_round_ ___________________________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestUfuncLike object at 0x708400236100>
+
+    def test_round_(self):
+>       self.check(np.round_)
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:662: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:76: in check
+    o = func(self.q, *args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+a = <Quantity [[0.  , 0.25, 0.5 ],
+           [0.75, 1.  , 1.25],
+           [1.5 , 1.75, 2.  ]] m>
+decimals = None, out = None
+
+    def _round__dispatcher(a, decimals=None, out=None):
+        # 2023-02-28, 1.25.0
+>       warnings.warn("`round_` is deprecated as of NumPy 1.25.0, and will be "
+                      "removed in NumPy 2.0. Please use `round` instead.",
+                      DeprecationWarning, stacklevel=3)
+[1m[31mE       DeprecationWarning: `round_` is deprecated as of NumPy 1.25.0, and will be removed in NumPy 2.0. Please use `round` instead.[0m
+
+[1m[31m/opt/miniconda3/envs/testbed/lib/python3.9/site-packages/numpy/core/fromnumeric.py[0m:3798: DeprecationWarning
+[31m[1m_____________________________ TestLinAlg.test_svd ______________________________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestLinAlg object at 0x70840018e940>
+
+    @needs_array_function
+    def test_svd(self):
+        m = np.arange(10.0) * np.arange(5.0)[:, np.newaxis] * u.m
+>       svd_u, svd_s, svd_vt = np.linalg.svd(m, full_matrices=False)
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:1978: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+[1m[31mastropy/units/quantity.py[0m:1884: in __array_function__
+    return self._result_as_quantity(result, unit, out=out)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+           [ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8....  [ 0.,  3.,  6.,  9., 12., 15., 18., 21., 24., 27.],
+           [ 0.,  4.,  8., 12., 16., 20., 24., 28., 32., 36.]] m>
+result = SVDResult(U=array([[ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00,  1.00000000e+00],
+    ...0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+         0.00000000e+00]]))
+unit = (None, Unit("m"), None), out = (None, None, None)
+
+    def _result_as_quantity(self, result, unit, out):
+        """Turn result into a quantity with the given unit.
+    
+        If no output is given, it will take a view of the array as a quantity,
+        and set the unit.  If output is given, those should be quantity views
+        of the result arrays, and the function will just set the unit.
+    
+        Parameters
+        ----------
+        result : ndarray or tuple thereof
+            Array(s) which need to be turned into quantity.
+        unit : `~astropy.units.Unit`
+            Unit for the quantities to be returned (or `None` if the result
+            should not be a quantity).  Should be tuple if result is a tuple.
+        out : `~astropy.units.Quantity` or None
+            Possible output quantity. Should be `None` or a tuple if result
+            is a tuple.
+    
+        Returns
+        -------
+        out : `~astropy.units.Quantity`
+           With units set.
+        """
+        if isinstance(result, (tuple, list)):
+            if out is None:
+                out = (None,) * len(result)
+>           return result.__class__(
+                self._result_as_quantity(result_, unit_, out_)
+                for (result_, unit_, out_) in zip(result, unit, out)
+            )
+[1m[31mE           TypeError: <lambda>() missing 2 required positional arguments: 'S' and 'Vh'[0m
+
+[1m[31mastropy/units/quantity.py[0m:734: TypeError
+[31m[1m______________________________ TestLinAlg.test_qr ______________________________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestLinAlg object at 0x7084001987f0>
+
+    @needs_array_function
+    def test_qr(self):
+        # This is not exhaustive...
+        a = np.array([[1, -2j], [2j, 5]]) * u.m
+>       q, r = np.linalg.qr(a)
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:2100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+[1m[31mastropy/units/quantity.py[0m:1884: in __array_function__
+    return self._result_as_quantity(result, unit, out=out)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [[ 1.+0.j, -0.-2.j],
+           [ 0.+2.j,  5.+0.j]] m>
+result = QRResult(Q=array([[-0.4472136+0.j        ,  0.       +0.89442719j],
+       [-0.       -0.89442719j,  0.4472136+0.j    ...array([[-2.23606798+0.j        ,  0.        +5.36656315j],
+       [ 0.        +0.j        ,  0.4472136 +0.j        ]]))
+unit = (Unit(dimensionless), Unit("m")), out = (None, None)
+
+    def _result_as_quantity(self, result, unit, out):
+        """Turn result into a quantity with the given unit.
+    
+        If no output is given, it will take a view of the array as a quantity,
+        and set the unit.  If output is given, those should be quantity views
+        of the result arrays, and the function will just set the unit.
+    
+        Parameters
+        ----------
+        result : ndarray or tuple thereof
+            Array(s) which need to be turned into quantity.
+        unit : `~astropy.units.Unit`
+            Unit for the quantities to be returned (or `None` if the result
+            should not be a quantity).  Should be tuple if result is a tuple.
+        out : `~astropy.units.Quantity` or None
+            Possible output quantity. Should be `None` or a tuple if result
+            is a tuple.
+    
+        Returns
+        -------
+        out : `~astropy.units.Quantity`
+           With units set.
+        """
+        if isinstance(result, (tuple, list)):
+            if out is None:
+                out = (None,) * len(result)
+>           return result.__class__(
+                self._result_as_quantity(result_, unit_, out_)
+                for (result_, unit_, out_) in zip(result, unit, out)
+            )
+[1m[31mE           TypeError: <lambda>() missing 1 required positional argument: 'R'[0m
+
+[1m[31mastropy/units/quantity.py[0m:734: TypeError
+[31m[1m_____________________________ TestLinAlg.test_eig ______________________________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestLinAlg object at 0x708400198940>
+
+    @needs_array_function
+    def test_eig(self):
+>       w, v = np.linalg.eig(self.q)
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:2110: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+[1m[31mastropy/units/quantity.py[0m:1884: in __array_function__
+    return self._result_as_quantity(result, unit, out=out)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [[ 1., -1.,  2.],
+           [ 0.,  3., -1.],
+           [-1., -1.,  1.]] m>
+result = EigResult(eigenvalues=array([0.91272029+1.17131211j, 0.91272029-1.17131211j,
+       3.17455941+0.j        ]), eigenvec... 0.84054991+0.j        ],
+       [-0.11134434+0.55286495j, -0.11134434-0.55286495j,
+        -0.1467259 +0.j        ]]))
+unit = (Unit("m"), Unit(dimensionless)), out = (None, None)
+
+    def _result_as_quantity(self, result, unit, out):
+        """Turn result into a quantity with the given unit.
+    
+        If no output is given, it will take a view of the array as a quantity,
+        and set the unit.  If output is given, those should be quantity views
+        of the result arrays, and the function will just set the unit.
+    
+        Parameters
+        ----------
+        result : ndarray or tuple thereof
+            Array(s) which need to be turned into quantity.
+        unit : `~astropy.units.Unit`
+            Unit for the quantities to be returned (or `None` if the result
+            should not be a quantity).  Should be tuple if result is a tuple.
+        out : `~astropy.units.Quantity` or None
+            Possible output quantity. Should be `None` or a tuple if result
+            is a tuple.
+    
+        Returns
+        -------
+        out : `~astropy.units.Quantity`
+           With units set.
+        """
+        if isinstance(result, (tuple, list)):
+            if out is None:
+                out = (None,) * len(result)
+>           return result.__class__(
+                self._result_as_quantity(result_, unit_, out_)
+                for (result_, unit_, out_) in zip(result, unit, out)
+            )
+[1m[31mE           TypeError: <lambda>() missing 1 required positional argument: 'eigenvectors'[0m
+
+[1m[31mastropy/units/quantity.py[0m:734: TypeError
+[31m[1m_____________________________ TestLinAlg.test_eigh _____________________________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestLinAlg object at 0x70840018efa0>
+
+    @needs_array_function
+    def test_eigh(self):
+>       w, v = np.linalg.eigh(self.q)
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:2135: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+[1m[31mastropy/units/quantity.py[0m:1884: in __array_function__
+    return self._result_as_quantity(result, unit, out=out)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Quantity [[ 1., -1.,  2.],
+           [ 0.,  3., -1.],
+           [-1., -1.,  1.]] m>
+result = EighResult(eigenvalues=array([-0.17008649,  1.68889218,  3.4811943 ]), eigenvectors=array([[ 0.63178128,  0.75578934,  0.17214786],
+       [ 0.23319198, -0.39711255,  0.88765034],
+       [ 0.73923874, -0.52065737, -0.42713229]]))
+unit = (Unit("m"), Unit(dimensionless)), out = (None, None)
+
+    def _result_as_quantity(self, result, unit, out):
+        """Turn result into a quantity with the given unit.
+    
+        If no output is given, it will take a view of the array as a quantity,
+        and set the unit.  If output is given, those should be quantity views
+        of the result arrays, and the function will just set the unit.
+    
+        Parameters
+        ----------
+        result : ndarray or tuple thereof
+            Array(s) which need to be turned into quantity.
+        unit : `~astropy.units.Unit`
+            Unit for the quantities to be returned (or `None` if the result
+            should not be a quantity).  Should be tuple if result is a tuple.
+        out : `~astropy.units.Quantity` or None
+            Possible output quantity. Should be `None` or a tuple if result
+            is a tuple.
+    
+        Returns
+        -------
+        out : `~astropy.units.Quantity`
+           With units set.
+        """
+        if isinstance(result, (tuple, list)):
+            if out is None:
+                out = (None,) * len(result)
+>           return result.__class__(
+                self._result_as_quantity(result_, unit_, out_)
+                for (result_, unit_, out_) in zip(result, unit, out)
+            )
+[1m[31mE           TypeError: <lambda>() missing 1 required positional argument: 'eigenvectors'[0m
+
+[1m[31mastropy/units/quantity.py[0m:734: TypeError
+[31m[1m__________________________ test_testing_completeness ___________________________[0m
+
+    @needs_array_function
+    def test_testing_completeness():
+        assert not CoverageMeta.covered.intersection(untested_functions)
+>       assert all_wrapped == (CoverageMeta.covered | untested_functions)
+[1m[31mE       assert {<function te...107e0b0>, ...} == {<function te...107e0b0>, ...}[0m
+[1m[31mE         Extra items in the left set:[0m
+[1m[31mE         <function min at 0x7084017252b0>[0m
+[1m[31mE         <function round at 0x708401725bb0>[0m
+[1m[31mE         <function max at 0x70840171ff70>[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:2308: AssertionError
+[31m[1m______________ TestFunctionHelpersCompleteness.test_all_included _______________[0m
+
+self = <astropy.units.tests.test_quantity_non_ufuncs.TestFunctionHelpersCompleteness object at 0x7084001ab0a0>
+
+    @needs_array_function
+    def test_all_included(self):
+        included_in_helpers = (
+            SUBCLASS_SAFE_FUNCTIONS
+            | UNSUPPORTED_FUNCTIONS
+            | set(FUNCTION_HELPERS.keys())
+            | set(DISPATCHED_FUNCTIONS.keys())
+        )
+>       assert all_wrapped == included_in_helpers
+[1m[31mE       assert {<function te...107e0b0>, ...} == {<function te...1124130>, ...}[0m
+[1m[31mE         Extra items in the left set:[0m
+[1m[31mE         <function min at 0x7084017252b0>[0m
+[1m[31mE         <function round_ at 0x7084017283b0>[0m
+[1m[31mE         <function max at 0x70840171ff70>[0m
+[1m[31mE         Use -v to get more diff[0m
+
+[1m[31mastropy/units/tests/test_quantity_non_ufuncs.py[0m:2335: AssertionError
+[36m[1m=========================== short test summary info ============================[0m
+[31mFAILED[0m astropy/units/tests/test_quantity_array_methods.py::[1mTestQuantityStatsFuncs::test_min[0m - astropy.utils.exceptions.AstropyWarning: function 'min' is not known to ast...
+[31mFAILED[0m astropy/units/tests/test_quantity_array_methods.py::[1mTestQuantityStatsFuncs::test_min_inplace[0m - astropy.utils.exceptions.AstropyWarning: function 'min' is not known to ast...
+[31mFAILED[0m astropy/units/tests/test_quantity_array_methods.py::[1mTestQuantityStatsFuncs::test_min_where[0m - astropy.utils.exceptions.AstropyWarning: function 'min' is not known to ast...
+[31mFAILED[0m astropy/units/tests/test_quantity_array_methods.py::[1mTestQuantityStatsFuncs::test_max[0m - astropy.utils.exceptions.AstropyWarning: function 'max' is not known to ast...
+[31mFAILED[0m astropy/units/tests/test_quantity_array_methods.py::[1mTestQuantityStatsFuncs::test_max_inplace[0m - astropy.utils.exceptions.AstropyWarning: function 'max' is not known to ast...
+[31mFAILED[0m astropy/units/tests/test_quantity_array_methods.py::[1mTestQuantityStatsFuncs::test_max_where[0m - astropy.utils.exceptions.AstropyWarning: function 'max' is not known to ast...
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestUfuncReductions::test_sometrue[0m - DeprecationWarning: `sometrue` is deprecated as of NumPy 1.25.0, and will b...
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestUfuncReductions::test_alltrue[0m - DeprecationWarning: `alltrue` is deprecated as of NumPy 1.25.0, and will be...
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestUfuncReductions::test_product[0m - DeprecationWarning: `product` is deprecated as of NumPy 1.25.0, and will be...
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestUfuncReductions::test_cumproduct[0m - DeprecationWarning: `cumproduct` is deprecated as of NumPy 1.25.0, and will...
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestUfuncLike::test_round_[0m - DeprecationWarning: `round_` is deprecated as of NumPy 1.25.0, and will be ...
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestLinAlg::test_svd[0m - TypeError: <lambda>() missing 2 required positional arguments: 'S' and 'Vh'
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestLinAlg::test_qr[0m - TypeError: <lambda>() missing 1 required positional argument: 'R'
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestLinAlg::test_eig[0m - TypeError: <lambda>() missing 1 required positional argument: 'eigenvectors'
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestLinAlg::test_eigh[0m - TypeError: <lambda>() missing 1 required positional argument: 'eigenvectors'
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mtest_testing_completeness[0m - assert {<function te...107e0b0>, ...} == {<function te...107e0b0>, ...}
+[31mFAILED[0m astropy/units/tests/test_quantity_non_ufuncs.py::[1mTestFunctionHelpersCompleteness::test_all_included[0m - assert {<function te...107e0b0>, ...} == {<function te...1124130>, ...}
+[31m============ [31m[1m17 failed[0m, [32m2903 passed[0m, [33m6 skipped[0m, [33m4 xfailed[0m[31m in 14.39s[0m[31m ============[0m
+
+the Check also fails on the tree as the run found it (baseline-check.log): nothing it says counts, the judge decides
+scope: astropy/units/quantity.py astropy/units/quantity_helper.py astropy/units/tests
+OUTSIDE THE SCOPE: CHANGES.rst +5 -0 (undo it: git checkout the file, or delete it when the run made it)
+changed: astropy/units/quantity.py +27 -3
+changed: astropy/units/tests/test_quantity_ufuncs.py +38 -0

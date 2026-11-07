@@ -1,0 +1,11 @@
+check: python tests/runtests.py httpwrappers
+Testing against Django installed in '/testbed/django' with up to 8 processes
+System check identified no issues (0 silenced).
+.................................................................
+----------------------------------------------------------------------
+Ran 65 tests in 0.127s
+
+OK
+scope: django/http/response.py tests/httpwrappers
+changed: django/http/response.py +2 -2
+OUTSIDE THE SCOPE: tests/responses/test_cookie.py +5 -0 (undo it: git checkout the file, or delete it when the run made it)

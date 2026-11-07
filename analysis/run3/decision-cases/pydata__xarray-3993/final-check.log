@@ -1,0 +1,785 @@
+check: python -m pytest xarray/tests/test_dataarray.py xarray/tests/test_dataset.py
+============================= test session starts ==============================
+platform linux -- Python 3.10.15, pytest-7.4.0, pluggy-1.5.0
+rootdir: /testbed
+configfile: setup.cfg
+plugins: cov-5.0.0, hypothesis-6.114.0, xdist-3.6.1, env-1.1.5
+collected 1834 items
+
+xarray/tests/test_dataarray.py ......................................... [  2%]
+........................................................x............... [  6%]
+......................................................s................. [ 10%]
+.................................F...............................xX..... [ 14%]
+....................................................................x... [ 17%]
+........x.....................................x.......x................. [ 21%]
+........................................................................ [ 25%]
+........................................................................ [ 29%]
+........................................................................ [ 33%]
+........................................................................ [ 37%]
+........................................................................ [ 41%]
+........................................................................ [ 45%]
+..........................................................               [ 48%]
+xarray/tests/test_dataset.py ........................................... [ 50%]
+.FF..F.................................................xX............... [ 54%]
+.....................................................................F.. [ 58%]
+........................................................................ [ 62%]
+..........F............................................................. [ 66%]
+........................................................................ [ 70%]
+........................................................................ [ 74%]
+........................................................................ [ 78%]
+..........................ssssssssssssssss.............................. [ 82%]
+........................................................................ [ 86%]
+........................................................................ [ 90%]
+........................................................................ [ 94%]
+........................................................................ [ 98%]
+................XX..................                                     [100%]
+
+=================================== FAILURES ===================================
+__________________ TestDataArray.test_from_series_multiindex ___________________
+
+self = <xarray.tests.test_dataarray.TestDataArray object at 0x7e630a7807f0>
+
+    def test_from_series_multiindex(self):
+        # GH:3951
+        df = pd.DataFrame({"B": [1, 2, 3], "A": [4, 5, 6]})
+        df = df.rename_axis("num").rename_axis("alpha", axis=1)
+>       actual = df.stack("alpha").to_xarray()
+
+/testbed/xarray/tests/test_dataarray.py:3670: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/core/generic.py:3222: in to_xarray
+    xarray = import_optional_dependency("xarray")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'xarray', extra = '', errors = 'raise', min_version = None
+
+    def import_optional_dependency(
+        name: str,
+        extra: str = "",
+        errors: str = "raise",
+        min_version: str | None = None,
+    ):
+        """
+        Import an optional dependency.
+    
+        By default, if a dependency is missing an ImportError with a nice
+        message will be raised. If a dependency is present, but too old,
+        we raise.
+    
+        Parameters
+        ----------
+        name : str
+            The module name.
+        extra : str
+            Additional text to include in the ImportError message.
+        errors : str {'raise', 'warn', 'ignore'}
+            What to do when a dependency is not found or its version is too old.
+    
+            * raise : Raise an ImportError
+            * warn : Only applicable when a module's version is to old.
+              Warns that the version is too old and returns None
+            * ignore: If the module is not installed, return None, otherwise,
+              return the module, even if the version is too old.
+              It's expected that users validate the version locally when
+              using ``errors="ignore"`` (see. ``io/html.py``)
+        min_version : str, default None
+            Specify a minimum version that is different from the global pandas
+            minimum version required.
+        Returns
+        -------
+        maybe_module : Optional[ModuleType]
+            The imported module, when found and the version is correct.
+            None is returned when the package is not found and `errors`
+            is False, or when the package's version is too old and `errors`
+            is ``'warn'``.
+        """
+    
+        assert errors in {"warn", "raise", "ignore"}
+    
+        package_name = INSTALL_MAPPING.get(name)
+        install_name = package_name if package_name is not None else name
+    
+        msg = (
+            f"Missing optional dependency '{install_name}'. {extra} "
+            f"Use pip or conda to install {install_name}."
+        )
+        try:
+            module = importlib.import_module(name)
+        except ImportError:
+            if errors == "raise":
+                raise ImportError(msg)
+            else:
+                return None
+    
+        # Handle submodules: if we have submodule, grab parent module from sys.modules
+        parent = name.split(".")[0]
+        if parent != name:
+            install_name = parent
+            module_to_get = sys.modules[install_name]
+        else:
+            module_to_get = module
+        minimum_version = min_version if min_version is not None else VERSIONS.get(parent)
+        if minimum_version:
+            version = get_version(module_to_get)
+            if version and Version(version) < Version(minimum_version):
+                msg = (
+                    f"Pandas requires version '{minimum_version}' or newer of '{parent}' "
+                    f"(version '{version}' currently installed)."
+                )
+                if errors == "warn":
+                    warnings.warn(
+                        msg,
+                        UserWarning,
+                        stacklevel=find_stack_level(),
+                    )
+                    return None
+                elif errors == "raise":
+>                   raise ImportError(msg)
+E                   ImportError: Pandas requires version '0.19.0' or newer of 'xarray' (version '0.16.3.dev94+g8cc34cb41' currently installed).
+
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/compat/_optional.py:171: ImportError
+_______________________ TestDataset.test_sel_categorical _______________________
+
+self = <xarray.tests.test_dataset.TestDataset object at 0x7e6309285630>
+
+    def test_sel_categorical(self):
+        ind = pd.Series(["foo", "bar"], dtype="category")
+        df = pd.DataFrame({"ind": ind, "values": [1, 2]})
+>       ds = df.set_index("ind").to_xarray()
+
+/testbed/xarray/tests/test_dataset.py:1432: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/core/generic.py:3222: in to_xarray
+    xarray = import_optional_dependency("xarray")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'xarray', extra = '', errors = 'raise', min_version = None
+
+    def import_optional_dependency(
+        name: str,
+        extra: str = "",
+        errors: str = "raise",
+        min_version: str | None = None,
+    ):
+        """
+        Import an optional dependency.
+    
+        By default, if a dependency is missing an ImportError with a nice
+        message will be raised. If a dependency is present, but too old,
+        we raise.
+    
+        Parameters
+        ----------
+        name : str
+            The module name.
+        extra : str
+            Additional text to include in the ImportError message.
+        errors : str {'raise', 'warn', 'ignore'}
+            What to do when a dependency is not found or its version is too old.
+    
+            * raise : Raise an ImportError
+            * warn : Only applicable when a module's version is to old.
+              Warns that the version is too old and returns None
+            * ignore: If the module is not installed, return None, otherwise,
+              return the module, even if the version is too old.
+              It's expected that users validate the version locally when
+              using ``errors="ignore"`` (see. ``io/html.py``)
+        min_version : str, default None
+            Specify a minimum version that is different from the global pandas
+            minimum version required.
+        Returns
+        -------
+        maybe_module : Optional[ModuleType]
+            The imported module, when found and the version is correct.
+            None is returned when the package is not found and `errors`
+            is False, or when the package's version is too old and `errors`
+            is ``'warn'``.
+        """
+    
+        assert errors in {"warn", "raise", "ignore"}
+    
+        package_name = INSTALL_MAPPING.get(name)
+        install_name = package_name if package_name is not None else name
+    
+        msg = (
+            f"Missing optional dependency '{install_name}'. {extra} "
+            f"Use pip or conda to install {install_name}."
+        )
+        try:
+            module = importlib.import_module(name)
+        except ImportError:
+            if errors == "raise":
+                raise ImportError(msg)
+            else:
+                return None
+    
+        # Handle submodules: if we have submodule, grab parent module from sys.modules
+        parent = name.split(".")[0]
+        if parent != name:
+            install_name = parent
+            module_to_get = sys.modules[install_name]
+        else:
+            module_to_get = module
+        minimum_version = min_version if min_version is not None else VERSIONS.get(parent)
+        if minimum_version:
+            version = get_version(module_to_get)
+            if version and Version(version) < Version(minimum_version):
+                msg = (
+                    f"Pandas requires version '{minimum_version}' or newer of '{parent}' "
+                    f"(version '{version}' currently installed)."
+                )
+                if errors == "warn":
+                    warnings.warn(
+                        msg,
+                        UserWarning,
+                        stacklevel=find_stack_level(),
+                    )
+                    return None
+                elif errors == "raise":
+>                   raise ImportError(msg)
+E                   ImportError: Pandas requires version '0.19.0' or newer of 'xarray' (version '0.16.3.dev94+g8cc34cb41' currently installed).
+
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/compat/_optional.py:171: ImportError
+____________________ TestDataset.test_sel_categorical_error ____________________
+
+self = <xarray.tests.test_dataset.TestDataset object at 0x7e6309129510>
+
+    def test_sel_categorical_error(self):
+        ind = pd.Series(["foo", "bar"], dtype="category")
+        df = pd.DataFrame({"ind": ind, "values": [1, 2]})
+>       ds = df.set_index("ind").to_xarray()
+
+/testbed/xarray/tests/test_dataset.py:1440: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/core/generic.py:3222: in to_xarray
+    xarray = import_optional_dependency("xarray")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'xarray', extra = '', errors = 'raise', min_version = None
+
+    def import_optional_dependency(
+        name: str,
+        extra: str = "",
+        errors: str = "raise",
+        min_version: str | None = None,
+    ):
+        """
+        Import an optional dependency.
+    
+        By default, if a dependency is missing an ImportError with a nice
+        message will be raised. If a dependency is present, but too old,
+        we raise.
+    
+        Parameters
+        ----------
+        name : str
+            The module name.
+        extra : str
+            Additional text to include in the ImportError message.
+        errors : str {'raise', 'warn', 'ignore'}
+            What to do when a dependency is not found or its version is too old.
+    
+            * raise : Raise an ImportError
+            * warn : Only applicable when a module's version is to old.
+              Warns that the version is too old and returns None
+            * ignore: If the module is not installed, return None, otherwise,
+              return the module, even if the version is too old.
+              It's expected that users validate the version locally when
+              using ``errors="ignore"`` (see. ``io/html.py``)
+        min_version : str, default None
+            Specify a minimum version that is different from the global pandas
+            minimum version required.
+        Returns
+        -------
+        maybe_module : Optional[ModuleType]
+            The imported module, when found and the version is correct.
+            None is returned when the package is not found and `errors`
+            is False, or when the package's version is too old and `errors`
+            is ``'warn'``.
+        """
+    
+        assert errors in {"warn", "raise", "ignore"}
+    
+        package_name = INSTALL_MAPPING.get(name)
+        install_name = package_name if package_name is not None else name
+    
+        msg = (
+            f"Missing optional dependency '{install_name}'. {extra} "
+            f"Use pip or conda to install {install_name}."
+        )
+        try:
+            module = importlib.import_module(name)
+        except ImportError:
+            if errors == "raise":
+                raise ImportError(msg)
+            else:
+                return None
+    
+        # Handle submodules: if we have submodule, grab parent module from sys.modules
+        parent = name.split(".")[0]
+        if parent != name:
+            install_name = parent
+            module_to_get = sys.modules[install_name]
+        else:
+            module_to_get = module
+        minimum_version = min_version if min_version is not None else VERSIONS.get(parent)
+        if minimum_version:
+            version = get_version(module_to_get)
+            if version and Version(version) < Version(minimum_version):
+                msg = (
+                    f"Pandas requires version '{minimum_version}' or newer of '{parent}' "
+                    f"(version '{version}' currently installed)."
+                )
+                if errors == "warn":
+                    warnings.warn(
+                        msg,
+                        UserWarning,
+                        stacklevel=find_stack_level(),
+                    )
+                    return None
+                elif errors == "raise":
+>                   raise ImportError(msg)
+E                   ImportError: Pandas requires version '0.19.0' or newer of 'xarray' (version '0.16.3.dev94+g8cc34cb41' currently installed).
+
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/compat/_optional.py:171: ImportError
+___________________ TestDataset.test_categorical_multiindex ____________________
+
+self = <xarray.tests.test_dataset.TestDataset object at 0x7e630912a590>
+
+    def test_categorical_multiindex(self):
+        i1 = pd.Series([0, 0])
+        cat = pd.CategoricalDtype(categories=["foo", "baz", "bar"])
+        i2 = pd.Series(["baz", "bar"], dtype=cat)
+    
+        df = pd.DataFrame({"i1": i1, "i2": i2, "values": [1, 2]}).set_index(
+            ["i1", "i2"]
+        )
+>       actual = df.to_xarray()
+
+/testbed/xarray/tests/test_dataset.py:1487: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/core/generic.py:3222: in to_xarray
+    xarray = import_optional_dependency("xarray")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'xarray', extra = '', errors = 'raise', min_version = None
+
+    def import_optional_dependency(
+        name: str,
+        extra: str = "",
+        errors: str = "raise",
+        min_version: str | None = None,
+    ):
+        """
+        Import an optional dependency.
+    
+        By default, if a dependency is missing an ImportError with a nice
+        message will be raised. If a dependency is present, but too old,
+        we raise.
+    
+        Parameters
+        ----------
+        name : str
+            The module name.
+        extra : str
+            Additional text to include in the ImportError message.
+        errors : str {'raise', 'warn', 'ignore'}
+            What to do when a dependency is not found or its version is too old.
+    
+            * raise : Raise an ImportError
+            * warn : Only applicable when a module's version is to old.
+              Warns that the version is too old and returns None
+            * ignore: If the module is not installed, return None, otherwise,
+              return the module, even if the version is too old.
+              It's expected that users validate the version locally when
+              using ``errors="ignore"`` (see. ``io/html.py``)
+        min_version : str, default None
+            Specify a minimum version that is different from the global pandas
+            minimum version required.
+        Returns
+        -------
+        maybe_module : Optional[ModuleType]
+            The imported module, when found and the version is correct.
+            None is returned when the package is not found and `errors`
+            is False, or when the package's version is too old and `errors`
+            is ``'warn'``.
+        """
+    
+        assert errors in {"warn", "raise", "ignore"}
+    
+        package_name = INSTALL_MAPPING.get(name)
+        install_name = package_name if package_name is not None else name
+    
+        msg = (
+            f"Missing optional dependency '{install_name}'. {extra} "
+            f"Use pip or conda to install {install_name}."
+        )
+        try:
+            module = importlib.import_module(name)
+        except ImportError:
+            if errors == "raise":
+                raise ImportError(msg)
+            else:
+                return None
+    
+        # Handle submodules: if we have submodule, grab parent module from sys.modules
+        parent = name.split(".")[0]
+        if parent != name:
+            install_name = parent
+            module_to_get = sys.modules[install_name]
+        else:
+            module_to_get = module
+        minimum_version = min_version if min_version is not None else VERSIONS.get(parent)
+        if minimum_version:
+            version = get_version(module_to_get)
+            if version and Version(version) < Version(minimum_version):
+                msg = (
+                    f"Pandas requires version '{minimum_version}' or newer of '{parent}' "
+                    f"(version '{version}' currently installed)."
+                )
+                if errors == "warn":
+                    warnings.warn(
+                        msg,
+                        UserWarning,
+                        stacklevel=find_stack_level(),
+                    )
+                    return None
+                elif errors == "raise":
+>                   raise ImportError(msg)
+E                   ImportError: Pandas requires version '0.19.0' or newer of 'xarray' (version '0.16.3.dev94+g8cc34cb41' currently installed).
+
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/compat/_optional.py:171: ImportError
+_________________ TestDataset.test_from_dataframe_categorical __________________
+
+self = <xarray.tests.test_dataset.TestDataset object at 0x7e630a69fd30>
+
+    def test_from_dataframe_categorical(self):
+        cat = pd.CategoricalDtype(
+            categories=["foo", "bar", "baz", "qux", "quux", "corge"]
+        )
+        i1 = pd.Series(["foo", "bar", "foo"], dtype=cat)
+        i2 = pd.Series(["bar", "bar", "baz"], dtype=cat)
+    
+        df = pd.DataFrame({"i1": i1, "i2": i2, "values": [1, 2, 3]})
+>       ds = df.set_index("i1").to_xarray()
+
+/testbed/xarray/tests/test_dataset.py:4131: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/core/generic.py:3222: in to_xarray
+    xarray = import_optional_dependency("xarray")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+name = 'xarray', extra = '', errors = 'raise', min_version = None
+
+    def import_optional_dependency(
+        name: str,
+        extra: str = "",
+        errors: str = "raise",
+        min_version: str | None = None,
+    ):
+        """
+        Import an optional dependency.
+    
+        By default, if a dependency is missing an ImportError with a nice
+        message will be raised. If a dependency is present, but too old,
+        we raise.
+    
+        Parameters
+        ----------
+        name : str
+            The module name.
+        extra : str
+            Additional text to include in the ImportError message.
+        errors : str {'raise', 'warn', 'ignore'}
+            What to do when a dependency is not found or its version is too old.
+    
+            * raise : Raise an ImportError
+            * warn : Only applicable when a module's version is to old.
+              Warns that the version is too old and returns None
+            * ignore: If the module is not installed, return None, otherwise,
+              return the module, even if the version is too old.
+              It's expected that users validate the version locally when
+              using ``errors="ignore"`` (see. ``io/html.py``)
+        min_version : str, default None
+            Specify a minimum version that is different from the global pandas
+            minimum version required.
+        Returns
+        -------
+        maybe_module : Optional[ModuleType]
+            The imported module, when found and the version is correct.
+            None is returned when the package is not found and `errors`
+            is False, or when the package's version is too old and `errors`
+            is ``'warn'``.
+        """
+    
+        assert errors in {"warn", "raise", "ignore"}
+    
+        package_name = INSTALL_MAPPING.get(name)
+        install_name = package_name if package_name is not None else name
+    
+        msg = (
+            f"Missing optional dependency '{install_name}'. {extra} "
+            f"Use pip or conda to install {install_name}."
+        )
+        try:
+            module = importlib.import_module(name)
+        except ImportError:
+            if errors == "raise":
+                raise ImportError(msg)
+            else:
+                return None
+    
+        # Handle submodules: if we have submodule, grab parent module from sys.modules
+        parent = name.split(".")[0]
+        if parent != name:
+            install_name = parent
+            module_to_get = sys.modules[install_name]
+        else:
+            module_to_get = module
+        minimum_version = min_version if min_version is not None else VERSIONS.get(parent)
+        if minimum_version:
+            version = get_version(module_to_get)
+            if version and Version(version) < Version(minimum_version):
+                msg = (
+                    f"Pandas requires version '{minimum_version}' or newer of '{parent}' "
+                    f"(version '{version}' currently installed)."
+                )
+                if errors == "warn":
+                    warnings.warn(
+                        msg,
+                        UserWarning,
+                        stacklevel=find_stack_level(),
+                    )
+                    return None
+                elif errors == "raise":
+>                   raise ImportError(msg)
+E                   ImportError: Pandas requires version '0.19.0' or newer of 'xarray' (version '0.16.3.dev94+g8cc34cb41' currently installed).
+
+/opt/miniconda3/envs/testbed/lib/python3.10/site-packages/pandas/compat/_optional.py:171: ImportError
+______________________ TestDataset.test_polyfit_warnings _______________________
+
+self = <xarray.tests.test_dataset.TestDataset object at 0x7e630a6785e0>
+
+    def test_polyfit_warnings(self):
+        ds = create_test_data(seed=1)
+    
+        with warnings.catch_warnings(record=True) as ws:
+            ds.var1.polyfit("dim2", 10, full=False)
+>           assert len(ws) == 1
+E           assert 3 == 1
+E            +  where 3 = len([<warnings.WarningMessage object at 0x7e62fdb11870>, <warnings.WarningMessage object at 0x7e62fdc1f1f0>, <warnings.WarningMessage object at 0x7e62fdc1f850>])
+
+/testbed/xarray/tests/test_dataset.py:5783: AssertionError
+=============================== warnings summary ===============================
+xarray/__init__.py:1
+  /testbed/xarray/__init__.py:1: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+    import pkg_resources
+
+xarray/core/dask_array_compat.py:61
+xarray/core/dask_array_compat.py:61
+  /testbed/xarray/core/dask_array_compat.py:61: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    if LooseVersion(dask_version) > LooseVersion("2.9.0"):
+
+xarray/core/pdcompat.py:45
+  /testbed/xarray/core/pdcompat.py:45: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    if LooseVersion(pd.__version__) < "0.25.0":
+
+../opt/miniconda3/envs/testbed/lib/python3.10/site-packages/setuptools/_distutils/version.py:345: 2 warnings
+xarray/tests/test_dataarray.py: 6 warnings
+xarray/tests/test_dataset.py: 4 warnings
+  /opt/miniconda3/envs/testbed/lib/python3.10/site-packages/setuptools/_distutils/version.py:345: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    other = LooseVersion(other)
+
+xarray/tests/__init__.py:59
+xarray/tests/__init__.py:59
+xarray/tests/__init__.py:59
+xarray/tests/__init__.py:59
+xarray/tests/__init__.py:59
+xarray/tests/test_dataarray.py::TestDataArray::test_constructor_from_self_described
+  /testbed/xarray/tests/__init__.py:59: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    return version.LooseVersion(vstring)
+
+xarray/tests/test_dataarray.py: 60 warnings
+xarray/tests/test_dataset.py: 48 warnings
+  /testbed/xarray/core/dataset.py:3864: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    or LooseVersion(np.__version__) < LooseVersion("1.17")
+
+xarray/tests/test_dataarray.py: 10 warnings
+xarray/tests/test_dataset.py: 5 warnings
+  /testbed/xarray/core/groupby.py:207: FutureWarning: is_monotonic is deprecated and will be removed in a future version. Use is_monotonic_increasing instead.
+    return index.is_unique and index.is_monotonic
+
+xarray/tests/test_dataarray.py::TestDataArray::test_stack_unstack
+  /testbed/xarray/tests/test_dataarray.py:2169: FutureWarning: pandas.Int64Index is deprecated and will be removed from pandas in a future version. Use pandas.Index with the appropriate dtype instead.
+    levels=[pd.Int64Index([]), pd.Int64Index([0])],
+
+xarray/tests/test_dataarray.py: 12 warnings
+xarray/tests/test_dataset.py: 64 warnings
+  /testbed/xarray/core/variable.py:1942: DeprecationWarning: the `interpolation=` argument to nanquantile was renamed to `method=`, which has additional options.
+  Users of the modes 'nearest', 'lower', 'higher', or 'midpoint' are encouraged to review the method they used. (Deprecated NumPy 1.22)
+    return np.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
+
+xarray/tests/test_dataarray.py: 12 warnings
+xarray/tests/test_dataset.py: 64 warnings
+  /testbed/xarray/core/variable.py:1942: DeprecationWarning: the `interpolation=` argument to quantile was renamed to `method=`, which has additional options.
+  Users of the modes 'nearest', 'lower', 'higher', or 'midpoint' are encouraged to review the method they used. (Deprecated NumPy 1.22)
+    return np.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
+
+xarray/tests/test_dataarray.py::TestDataArray::test_groupby_bins_sort
+  /testbed/xarray/tests/test_dataarray.py:2980: FutureWarning: is_monotonic is deprecated and will be removed in a future version. Use is_monotonic_increasing instead.
+    assert binned_mean.to_index().is_monotonic
+
+xarray/tests/test_dataarray.py: 47 warnings
+xarray/tests/test_dataset.py: 13 warnings
+  /testbed/xarray/core/groupby.py:349: FutureWarning: is_monotonic is deprecated and will be removed in a future version. Use is_monotonic_increasing instead.
+    if not index.is_monotonic:
+
+xarray/tests/test_dataarray.py::TestDataArray::test_resample
+  /testbed/xarray/tests/test_dataarray.py:2994: FutureWarning: 'loffset' in .resample() and in Grouper() is deprecated.
+  
+  >>> df.resample(freq="3s", loffset="8H")
+  
+  becomes:
+  
+  >>> from pandas.tseries.frequencies import to_offset
+  >>> df = df.resample(freq="3s").mean()
+  >>> df.index = df.index.to_timestamp() + to_offset("8H")
+  
+    expected = DataArray(array.to_series().resample("24H", loffset="-12H").mean())
+
+xarray/tests/test_dataarray.py: 49 warnings
+xarray/tests/test_dataset.py: 1 warning
+  /testbed/xarray/core/missing.py:548: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    if np.issubdtype(new_x.dtype, np.datetime64) and LooseVersion(
+
+xarray/tests/test_dataarray.py: 49 warnings
+xarray/tests/test_dataset.py: 1 warning
+  /testbed/xarray/core/missing.py:550: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    ) < LooseVersion("1.18"):
+
+xarray/tests/test_dataarray.py: 13 warnings
+xarray/tests/test_dataset.py: 1 warning
+  /testbed/xarray/core/missing.py:559: FutureWarning: Passing method to DatetimeIndex.get_loc is deprecated and will raise in a future version. Use index.get_indexer([item], method=...) instead.
+    imin = index.get_loc(minval, method="nearest")
+
+xarray/tests/test_dataarray.py: 13 warnings
+xarray/tests/test_dataset.py: 1 warning
+  /testbed/xarray/core/missing.py:560: FutureWarning: Passing method to DatetimeIndex.get_loc is deprecated and will raise in a future version. Use index.get_indexer([item], method=...) instead.
+    imax = index.get_loc(maxval, method="nearest")
+
+xarray/tests/test_dataarray.py::TestDataArray::test_upsample
+  /testbed/xarray/tests/test_dataarray.py:3120: FutureWarning: pad is deprecated and will be removed in a future version. Use ffill instead.
+    expected = DataArray(array.to_series().resample("3H").pad())
+
+xarray/tests/test_dataarray.py::TestDataArray::test_from_multiindex_series_sparse
+xarray/tests/test_dataset.py::TestDataset::test_from_dataframe_sparse
+  /testbed/xarray/core/dataset.py:5017: FutureWarning: MultiIndex.is_lexsorted is deprecated as a public function, users should use MultiIndex.is_monotonic_increasing instead.
+    is_sorted = idx.is_lexsorted()
+
+xarray/tests/test_dataarray.py::TestDataArray::test_to_and_from_cdms2_classic
+xarray/tests/test_dataarray.py::TestIrisConversion::test_to_and_from_iris
+xarray/tests/test_dataarray.py::TestIrisConversion::test_to_and_from_iris
+xarray/tests/test_dataarray.py::TestIrisConversion::test_to_and_from_iris_dask
+xarray/tests/test_dataarray.py::TestIrisConversion::test_to_and_from_iris_dask
+  /testbed/xarray/coding/times.py:247: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    if LooseVersion(pd.__version__) < "0.25.0":
+
+xarray/tests/test_dataarray.py::TestDataArray::test_to_and_from_cdms2_sgrid
+xarray/tests/test_dataarray.py::TestDataArray::test_to_and_from_cdms2_sgrid
+xarray/tests/test_dataarray.py::TestDataArray::test_to_and_from_cdms2_sgrid
+xarray/tests/test_dataarray.py::TestDataArray::test_to_and_from_cdms2_sgrid
+  /opt/miniconda3/envs/testbed/lib/python3.10/site-packages/numpy/ma/core.py:7939: DeprecationWarning: elementwise comparison failed; this will raise an error in the future.
+    if not np.all(xinf == filled(np.isinf(y), False)):
+
+xarray/tests/test_dataarray.py::TestDataArray::test_polyfit[True-True]
+xarray/tests/test_dataarray.py::TestDataArray::test_polyfit[True-False]
+xarray/tests/test_dataarray.py::TestDataArray::test_polyfit[False-True]
+xarray/tests/test_dataarray.py::TestDataArray::test_polyfit[False-False]
+  /testbed/xarray/core/missing.py:265: FutureWarning: is_monotonic is deprecated and will be removed in a future version. Use is_monotonic_increasing instead.
+    if not index.is_monotonic:
+
+xarray/tests/test_dataarray.py::TestDataArray::test_polyfit[True-True]
+xarray/tests/test_dataarray.py::TestDataArray::test_polyfit[True-False]
+xarray/tests/test_dataarray.py::TestDataArray::test_polyfit[False-True]
+xarray/tests/test_dataarray.py::TestDataArray::test_polyfit[False-False]
+  /testbed/xarray/core/dataset.py:6418: RuntimeWarning: overflow encountered in multiply
+    scale = np.sqrt((lhs * lhs).sum(axis=0))
+
+xarray/tests/test_dataarray.py: 12 warnings
+  /opt/miniconda3/envs/testbed/lib/python3.10/site-packages/numpy/core/fromnumeric.py:86: RuntimeWarning: invalid value encountered in reduce
+    return ufunc.reduce(obj, axis, dtype, out, **passkwargs)
+
+xarray/tests/test_dataarray.py::test_coarsen_keep_attrs
+  /testbed/xarray/tests/test_dataarray.py:6315: UserWarning: Parsing dates in DD/MM/YYYY format when dayfirst=False (the default) was specified. This may lead to inconsistently parsed dates! Specify a format to ensure consistent parsing.
+    coords={"time": pd.date_range("15/12/1999", periods=364)},
+
+xarray/tests/test_dataarray.py::test_raise_no_warning_for_nan_in_binary_ops
+xarray/tests/test_dataset.py::TestDataset::test_reindex_warning
+xarray/tests/test_dataset.py::test_raise_no_warning_for_nan_in_binary_ops
+  /opt/miniconda3/envs/testbed/lib/python3.10/site-packages/_pytest/python.py:194: PytestRemovedIn8Warning: Passing None has been deprecated.
+  See https://docs.pytest.org/en/latest/how-to/capture-warnings.html#additional-use-cases-of-warnings-in-tests for alternatives in common use cases.
+    result = testfunction(**testargs)
+
+xarray/tests/test_dataset.py::TestDataset::test_constructor_pandas_single
+  /testbed/xarray/core/merge.py:394: FutureWarning: iteritems is deprecated and will be removed in a future version. Use .items instead.
+    obj = dict(obj.iteritems())
+
+xarray/tests/test_dataset.py::TestDataset::test_dask_is_lazy
+xarray/tests/test_dataset.py::TestDataset::test_dask_is_lazy
+xarray/tests/test_dataset.py::TestDataset::test_dask_is_lazy
+xarray/tests/test_dataset.py::TestDataset::test_dask_is_lazy
+  /testbed/xarray/core/variable.py:1078: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    if LooseVersion(dask.__version__) < "2.0.0":
+
+xarray/tests/test_dataset.py::TestDataset::test_sel_method
+xarray/tests/test_dataset.py::TestDataset::test_sel_method
+xarray/tests/test_dataset.py::TestDataset::test_sel_method
+  /testbed/xarray/core/indexing.py:191: FutureWarning: Passing method to Float64Index.get_loc is deprecated and will raise in a future version. Use index.get_indexer([item], method=...) instead.
+    indexer = index.get_loc(label_value, method=method, tolerance=tolerance)
+
+xarray/tests/test_dataset.py: 14 warnings
+  /testbed/xarray/coding/cftimeindex.py:122: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    if LooseVersion(cftime.__version__) < LooseVersion("1.0.4"):
+
+xarray/tests/test_dataset.py: 54 warnings
+  /testbed/xarray/coding/cftime_offsets.py:242: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    if LooseVersion(cftime.__version__) < LooseVersion("1.0.4"):
+
+xarray/tests/test_dataset.py::TestDataset::test_resample_loffset
+  /testbed/xarray/tests/test_dataset.py:3904: FutureWarning: 'loffset' in .resample() and in Grouper() is deprecated.
+  
+  >>> df.resample(freq="3s", loffset="8H")
+  
+  becomes:
+  
+  >>> from pandas.tseries.frequencies import to_offset
+  >>> df = df.resample(freq="3s").mean()
+  >>> df.index = df.index.to_timestamp() + to_offset("8H")
+  
+    ds.bar.to_series().resample("24H", loffset="-12H").mean()
+
+xarray/tests/test_dataset.py::test_coarsen_coords[1-True]
+xarray/tests/test_dataset.py::test_coarsen_coords[1-False]
+  /testbed/xarray/tests/test_dataset.py:6012: UserWarning: Parsing dates in DD/MM/YYYY format when dayfirst=False (the default) was specified. This may lead to inconsistently parsed dates! Specify a format to ensure consistent parsing.
+    coords={"time": pd.date_range("15/12/1999", periods=364)},
+
+xarray/tests/test_dataset.py::test_trapz_datetime[np-True]
+xarray/tests/test_dataset.py::test_trapz_datetime[cftime-True]
+  /opt/miniconda3/envs/testbed/lib/python3.10/site-packages/dask/array/core.py:1706: FutureWarning: The `numpy.trapz` function is not implemented by Dask array. You may want to use the da.map_blocks function or something similar to silence this warning. Your code may stop working in a future release.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED xarray/tests/test_dataarray.py::TestDataArray::test_from_series_multiindex
+FAILED xarray/tests/test_dataset.py::TestDataset::test_sel_categorical - Impo...
+FAILED xarray/tests/test_dataset.py::TestDataset::test_sel_categorical_error
+FAILED xarray/tests/test_dataset.py::TestDataset::test_categorical_multiindex
+FAILED xarray/tests/test_dataset.py::TestDataset::test_from_dataframe_categorical
+FAILED xarray/tests/test_dataset.py::TestDataset::test_polyfit_warnings - ass...
+= 6 failed, 1800 passed, 17 skipped, 7 xfailed, 4 xpassed, 605 warnings in 87.72s (0:01:27) =
+
+the Check fails on the tree as the run found it too (baseline-check.log), and this change adds no failing test to it: it passes
+scope: xarray/core/dataarray.py xarray/tests/test_dataarray.py xarray/tests/test_dataset.py doc/whats-new.rst
+changed: doc/whats-new.rst +4 -0
+changed: xarray/core/dataarray.py +32 -4
+changed: xarray/tests/test_dataset.py +9 -0

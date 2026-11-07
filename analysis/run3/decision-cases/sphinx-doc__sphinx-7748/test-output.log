@@ -1,0 +1,281 @@
+check: make test TEST=tests/test_ext_autodoc.py
+============================= test session starts ==============================
+platform linux -- Python 3.9.20, pytest-8.3.3, pluggy-1.5.0 -- /opt/miniconda3/envs/testbed/bin/python3
+cachedir: .pytest_cache
+libraries: Sphinx-3.1.0+/9ae68cef7, docutils-0.21.2
+base tempdir: /tmp/pytest-of-root/pytest-13
+rootdir: /testbed
+configfile: setup.cfg
+plugins: cov-5.0.0
+collecting ... collected 53 items
+
+tests/test_ext_autodoc.py::test_parse_name PASSED                        [  1%]
+tests/test_ext_autodoc.py::test_format_signature PASSED                  [  3%]
+tests/test_ext_autodoc.py::test_autodoc_process_signature_typehints PASSED [  5%]
+tests/test_ext_autodoc.py::test_get_doc PASSED                           [  7%]
+tests/test_ext_autodoc.py::test_new_documenter PASSED                    [  9%]
+tests/test_ext_autodoc.py::test_attrgetter_using PASSED                  [ 11%]
+tests/test_ext_autodoc.py::test_py_module PASSED                         [ 13%]
+tests/test_ext_autodoc.py::test_autodoc_decorator PASSED                 [ 15%]
+tests/test_ext_autodoc.py::test_autodoc_exception PASSED                 [ 16%]
+tests/test_ext_autodoc.py::test_autodoc_warnings PASSED                  [ 18%]
+tests/test_ext_autodoc.py::test_autodoc_attributes PASSED                [ 20%]
+tests/test_ext_autodoc.py::test_autodoc_members PASSED                   [ 22%]
+tests/test_ext_autodoc.py::test_autodoc_exclude_members PASSED           [ 24%]
+tests/test_ext_autodoc.py::test_autodoc_undoc_members PASSED             [ 26%]
+tests/test_ext_autodoc.py::test_autodoc_inherited_members PASSED         [ 28%]
+tests/test_ext_autodoc.py::test_autodoc_inherited_members_Base PASSED    [ 30%]
+tests/test_ext_autodoc.py::test_autodoc_inherited_members_None PASSED    [ 32%]
+tests/test_ext_autodoc.py::test_autodoc_imported_members PASSED          [ 33%]
+tests/test_ext_autodoc.py::test_autodoc_special_members PASSED           [ 35%]
+tests/test_ext_autodoc.py::test_autodoc_ignore_module_all PASSED         [ 37%]
+tests/test_ext_autodoc.py::test_autodoc_noindex PASSED                   [ 39%]
+tests/test_ext_autodoc.py::test_autodoc_subclass_of_builtin_class PASSED [ 41%]
+tests/test_ext_autodoc.py::test_autodoc_inner_class PASSED               [ 43%]
+tests/test_ext_autodoc.py::test_autodoc_classmethod PASSED               [ 45%]
+tests/test_ext_autodoc.py::test_autodoc_staticmethod PASSED              [ 47%]
+tests/test_ext_autodoc.py::test_autodoc_descriptor PASSED                [ 49%]
+tests/test_ext_autodoc.py::test_autodoc_member_order PASSED              [ 50%]
+tests/test_ext_autodoc.py::test_autodoc_module_member_order PASSED       [ 52%]
+tests/test_ext_autodoc.py::test_autodoc_module_scope PASSED              [ 54%]
+tests/test_ext_autodoc.py::test_autodoc_class_scope PASSED               [ 56%]
+tests/test_ext_autodoc.py::test_class_attributes PASSED                  [ 58%]
+tests/test_ext_autodoc.py::test_instance_attributes PASSED               [ 60%]
+tests/test_ext_autodoc.py::test_slots PASSED                             [ 62%]
+tests/test_ext_autodoc.py::test_enum_class PASSED                        [ 64%]
+tests/test_ext_autodoc.py::test_descriptor_class PASSED                  [ 66%]
+tests/test_ext_autodoc.py::test_automethod_for_builtin PASSED            [ 67%]
+tests/test_ext_autodoc.py::test_automethod_for_decorated PASSED          [ 69%]
+tests/test_ext_autodoc.py::test_abstractmethods PASSED                   [ 71%]
+tests/test_ext_autodoc.py::test_partialfunction PASSED                   [ 73%]
+tests/test_ext_autodoc.py::test_imported_partialfunction_should_not_shown_without_imported_members PASSED [ 75%]
+tests/test_ext_autodoc.py::test_bound_method PASSED                      [ 77%]
+tests/test_ext_autodoc.py::test_coroutine PASSED                         [ 79%]
+tests/test_ext_autodoc.py::test_partialmethod PASSED                     [ 81%]
+tests/test_ext_autodoc.py::test_partialmethod_undoc_members PASSED       [ 83%]
+tests/test_ext_autodoc.py::test_autodoc_typed_instance_variables PASSED  [ 84%]
+tests/test_ext_autodoc.py::test_autodoc_Annotated PASSED                 [ 86%]
+tests/test_ext_autodoc.py::test_autodoc_for_egged_code PASSED            [ 88%]
+tests/test_ext_autodoc.py::test_singledispatch PASSED                    [ 90%]
+tests/test_ext_autodoc.py::test_singledispatchmethod PASSED              [ 92%]
+tests/test_ext_autodoc.py::test_singledispatchmethod_automethod PASSED   [ 94%]
+tests/test_ext_autodoc.py::test_cython PASSED                            [ 96%]
+tests/test_ext_autodoc.py::test_final PASSED                             [ 98%]
+tests/test_ext_autodoc.py::test_autodoc FAILED                           [100%]
+
+=================================== FAILURES ===================================
+_________________________________ test_autodoc _________________________________
+
+app = <SphinxTestApp buildername='dummy'>
+status = <_io.StringIO object at 0x7d7e71ca4b80>
+warning = <_io.StringIO object at 0x7d7e71ca4c10>
+
+    @pytest.mark.sphinx('dummy', testroot='ext-autodoc')
+    def test_autodoc(app, status, warning):
+        app.builder.build_all()
+    
+        content = app.env.get_doctree('index')
+        assert isinstance(content[3], addnodes.desc)
+        assert content[3][0].astext() == 'autodoc_dummy_module.test()'
+        assert content[3][1].astext() == 'Dummy function using dummy.*'
+    
+        # issue sphinx-doc/sphinx#2437
+        assert content[11][-1].astext() == """Dummy class Bar with alias.
+    
+    
+    
+    my_name
+    
+    alias of bug2437.autodoc_dummy_foo.Foo"""
+>       assert warning.getvalue() == ''
+E       AssertionError: assert '\x1b[91mWARN...b[39;49;00m\n' == ''
+E         
+E         + [91mWARNING: while setting up extension sphinx.addnodes: node class 'meta' is already registered, its visitors will be overridden[39;49;00m
+
+tests/test_ext_autodoc.py:1776: AssertionError
+--------------------------- Captured stdout teardown ---------------------------
+# testroot: root
+# builder: dummy
+# srcdir: /tmp/pytest-of-root/pytest-13/ext-autodoc
+# outdir: /tmp/pytest-of-root/pytest-13/ext-autodoc/_build/dummy
+# status: 
+[01mRunning Sphinx v3.1.0+/9ae68cef7[39;49;00m
+[01mbuilding [dummy]: [39;49;00mall source files
+[01mupdating environment: [39;49;00m[new config] 1 added, 0 changed, 0 removed
+[01mreading sources... [39;49;00m[100%] [35mindex[39;49;00m                                                
+[01mlooking for now-outdated files... [39;49;00mnone found
+[01mpickling environment... [39;49;00mdone
+[01mchecking consistency... [39;49;00mdone
+[01mpreparing documents... [39;49;00mdone
+[01mwriting output... [39;49;00m[100%] [32mindex[39;49;00m                                                 
+
+# warning: 
+[91mWARNING: while setting up extension sphinx.addnodes: node class 'meta' is already registered, its visitors will be overridden[39;49;00m
+
+=============================== warnings summary ===============================
+sphinx/util/docutils.py:45
+  /testbed/sphinx/util/docutils.py:45: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    __version_info__ = tuple(LooseVersion(docutils.__version__).version)
+
+sphinx/registry.py:22
+  /testbed/sphinx/registry.py:22: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+    from pkg_resources import iter_entry_points
+
+../opt/miniconda3/envs/testbed/lib/python3.9/site-packages/pkg_resources/__init__.py:3154
+../opt/miniconda3/envs/testbed/lib/python3.9/site-packages/pkg_resources/__init__.py:3154
+../opt/miniconda3/envs/testbed/lib/python3.9/site-packages/pkg_resources/__init__.py:3154
+../opt/miniconda3/envs/testbed/lib/python3.9/site-packages/pkg_resources/__init__.py:3154
+  /opt/miniconda3/envs/testbed/lib/python3.9/site-packages/pkg_resources/__init__.py:3154: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+sphinx/directives/patches.py:15
+  /testbed/sphinx/directives/patches.py:15: DeprecationWarning: The `docutils.parsers.rst.directive.html` module will be removed in Docutils 2.0. Since Docutils 0.18, the "Meta" node is defined in `docutils.parsers.rst.directives.misc`.
+    from docutils.parsers.rst.directives import images, html, tables
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:211: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse():  # type: Node
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/i18n.py:88: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(addnodes.translatable):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:111: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for ref in self.document.traverse(nodes.substitution_reference):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:132: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.target):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:151: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.block_quote):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:176: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.Element):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:223: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(addnodes.index):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/references.py:30: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.substitution_definition):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:190: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.section):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:280: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.doctest_block):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/domains/citation.py:117: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.citation):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/domains/citation.py:136: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.citation_reference):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/builders/latex/transforms.py:37: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(matcher):  # type: nodes.Element
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:292: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(matcher):  # type: Element
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/util/compat.py:44: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(addnodes.index):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/domains/index.py:52: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in document.traverse(addnodes.index):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/domains/math.py:85: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    self.data['has_equations'][docname] = any(document.traverse(math_node))
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/environment/collectors/asset.py:47: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in doctree.traverse(nodes.image):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/environment/collectors/asset.py:124: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in doctree.traverse(addnodes.download_reference):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/environment/collectors/title.py:46: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in doctree.traverse(nodes.section):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:302: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.system_message):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/__init__.py:391: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(addnodes.manpage):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/i18n.py:484: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for inline in self.document.traverse(matcher):  # type: nodes.inline
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/domains/cpp.py:6877: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(AliasNode):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/post_transforms/__init__.py:71: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(addnodes.pending_xref):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/util/nodes.py:596: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in document.traverse(addnodes.only):
+
+tests/test_ext_autodoc.py::test_autodoc
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/post_transforms/images.py:35: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.image):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/post_transforms/__init__.py:215: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(addnodes.desc_sig_element):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/builders/latex/transforms.py:595: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(nodes.title):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/post_transforms/code.py:44: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for node in self.document.traverse(addnodes.highlightlang):
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/post_transforms/code.py:99: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for lbnode in self.document.traverse(nodes.literal_block):  # type: nodes.literal_block
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/transforms/post_transforms/code.py:103: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for dbnode in self.document.traverse(nodes.doctest_block):  # type: nodes.doctest_block
+
+tests/test_ext_autodoc.py::test_autodoc
+  /testbed/sphinx/environment/__init__.py:541: PendingDeprecationWarning: nodes.Node.traverse() is obsoleted by Node.findall().
+    for toctreenode in doctree.traverse(addnodes.toctree):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_ext_autodoc.py::test_autodoc - AssertionError: assert '\x1b...
+================== 1 failed, 52 passed, 41 warnings in 4.66s ===================
+make: *** [Makefile:73: test] Error 1
+
+the Check fails on the tree as the run found it too (baseline-check.log), and this change adds no failing test to it: it passes
+scope: sphinx/ext/autodoc/__init__.py tests
+OUTSIDE THE SCOPE: CHANGES +3 -0 (undo it: git checkout the file, or delete it when the run made it)
+OUTSIDE THE SCOPE: doc/usage/extensions/autodoc.rst +8 -0 (undo it: git checkout the file, or delete it when the run made it)
+changed: sphinx/ext/autodoc/__init__.py +39 -11
+changed: tests/roots/test-ext-autodoc/target/__init__.py +10 -0
+changed: tests/test_ext_autodoc_configs.py +20 -0
