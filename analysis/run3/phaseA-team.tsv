@@ -1,0 +1,189 @@
+instance	team	direct	check_kind	reproduction	direct_status	keep	repro_part	wf	seconds	cost
+astropy__astropy-12907	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	133s	cost=0.008784
+astropy__astropy-13033	UNRESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge no	0	wf=0	231s	cost=0.024623
+astropy__astropy-13236	UNRESOLVED	RESOLVED	command	n	0	kept: the repair (check 0, judge PASS; t		wf=0	1831s	cost=0.034549
+astropy__astropy-13398	UNRESOLVED	UNRESOLVED	command	n	1	kept: the team's work (check 0, judge PA		wf=0	1640s	cost=0.078906
+astropy__astropy-13453	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	161s	cost=0.016474
+astropy__astropy-13579	RESOLVED	RESOLVED	command	rejected	1	kept: the team's work (check 0, judge PA		wf=0	4955s	cost=0.065308
+astropy__astropy-13977	UNRESOLVED	UNRESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	650s	cost=0.040954
+astropy__astropy-14096	RESOLVED	RESOLVED	judge	n	0	kept: the direct attempt, untouched		wf=0	418s	cost=0.021675
+astropy__astropy-14182	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	189s	cost=0.017162
+astropy__astropy-14309	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	125s	cost=0.009775
+astropy__astropy-14365	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	115s	cost=0.007291
+astropy__astropy-14369	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	284s	cost=0.021371
+astropy__astropy-14508	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	703s	cost=0.045554
+astropy__astropy-14539	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	240s	cost=0.022601
+astropy__astropy-14598	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	749s	cost=0.041471
+astropy__astropy-14995	RESOLVED	RESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	114s	cost=0.010854
+astropy__astropy-7166	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	98s	cost=0.007445
+astropy__astropy-7336	UNRESOLVED	UNRESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	260s	cost=0.013216
+astropy__astropy-7606	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	250s	cost=0.013392
+astropy__astropy-7671	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	154s	cost=0.015646
+astropy__astropy-8707	RESOLVED	RESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	210s	cost=0.010437
+astropy__astropy-8872	RESOLVED	RESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	1552s	cost=0.020113
+django__django-10097	RESOLVED	RESOLVED	command+repro	y	1	kept: the team's work (check 0, judge PA	0	wf=0	2050s	cost=0.099103
+django__django-10554	UNRESOLVED	UNRESOLVED	command	n	1	put back: the direct attempt (the team's		wf=2	6348s	cost=0.265853
+django__django-10880	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	154s	cost=0.016034
+django__django-10914	RESOLVED		command+repro	y	0	kept: the repair (check 0, judge PASS; t	0	wf=0	198s	cost=0.016996
+django__django-10973	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	77s	cost=0.006100
+django__django-10999	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	101s	cost=0.006037
+django__django-11066	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	289s	cost=0.016940
+django__django-11087	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1513s	cost=0.031074
+django__django-11095	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	117s	cost=0.004180
+django__django-11099	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	103s	cost=0.005309
+django__django-11119	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	83s	cost=0.005364
+django__django-11133	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	65s	cost=0.005441
+django__django-11138	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	410s	cost=0.043700
+django__django-11141	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	690s	cost=0.050026
+django__django-11149	RESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge no	0	wf=0	1388s	cost=0.112489
+django__django-11163	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	63s	cost=0.004980
+django__django-11179	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	162s	cost=0.010328
+django__django-11206	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	189s	cost=0.010672
+django__django-11211	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1488s	cost=0.026738
+django__django-11239	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	128s	cost=0.009712
+django__django-11265	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	119s	cost=0.007775
+django__django-11276	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	444s	cost=0.010594
+django__django-11292	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	261s	cost=0.010237
+django__django-11299	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	191s	cost=0.012837
+django__django-11333	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1508s	cost=0.021292
+django__django-11400	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	339s	cost=0.034651
+django__django-11433	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	299s	cost=0.018907
+django__django-11451	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	108s	cost=0.006678
+django__django-11477	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	153s	cost=0.014841
+django__django-11490	RESOLVED	RESOLVED	judge	n	0	kept: the direct attempt, untouched		wf=0	730s	cost=0.003861
+django__django-11532	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	147s	cost=0.015199
+django__django-11551	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	272s	cost=0.015567
+django__django-11555	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	937s	cost=0.082230
+django__django-11603	RESOLVED	RESOLVED	command+repro	y	1	kept: the team's work (check 0, judge PA	0	wf=0	260s	cost=0.016274
+django__django-11728	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	210s	cost=0.017020
+django__django-11734	UNRESOLVED	UNRESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	696s	cost=0.062953
+django__django-11740	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	240s	cost=0.021448
+django__django-11749	UNRESOLVED	UNRESOLVED	judge	n	0	kept: the direct attempt, untouched		wf=0	1382s	cost=0.021553
+django__django-11790	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	182s	cost=0.012885
+django__django-11815	RESOLVED	RESOLVED	command+repro	y	0	kept: the repair (check 0, judge PASS; t	0	wf=0	378s	cost=0.020948
+django__django-11820	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	675s	cost=0.036049
+django__django-11848	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	249s	cost=0.013878
+django__django-11880	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	83s	cost=0.004938
+django__django-11885	UNRESOLVED	UNRESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	847s	cost=0.031038
+django__django-11951	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	126s	cost=0.006685
+django__django-11964	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	194s	cost=0.012322
+django__django-12039	RESOLVED	RESOLVED	command+repro	y	0	kept: the repair (check 0, judge PASS; t	0	wf=0	230s	cost=0.014690
+django__django-12050	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	153s	cost=0.009457
+django__django-12125	RESOLVED	RESOLVED	command+repro	y	1	kept: the team's work (check 0, judge no	0	wf=0	1709s	cost=0.093587
+django__django-12143	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	171s	cost=0.005780
+django__django-12155	RESOLVED	RESOLVED	command+repro	y	0	kept: the repair (check 0, judge PASS; t	0	wf=0	306s	cost=0.017786
+django__django-12193	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	144s	cost=0.009845
+django__django-12209	RESOLVED	RESOLVED	command+repro	y	1	put back: the direct attempt (the team's	1	wf=2	4981s	cost=0.112360
+django__django-12262	RESOLVED	RESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	1366s	cost=0.011434
+django__django-12273	UNRESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge no	0	wf=0	675s	cost=0.054079
+django__django-12276	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	141s	cost=0.007680
+django__django-12304	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	180s	cost=0.014512
+django__django-12308	UNRESOLVED	RESOLVED	command+repro	y	1	kept: the team's work (check 0, judge PA	0	wf=0	229s	cost=0.016399
+django__django-12325	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	2688s	cost=0.019985
+django__django-12406	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1504s	cost=0.030571
+django__django-12419	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	177s	cost=0.011092
+django__django-12663	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1213s	cost=0.103842
+django__django-12708	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	306s	cost=0.022982
+django__django-12713	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	342s	cost=0.016221
+django__django-12741	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	1507s	cost=0.014995
+django__django-12754	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	204s	cost=0.017427
+django__django-12774	RESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge PA	0	wf=0	300s	cost=0.020860
+django__django-12858	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	297s	cost=0.015092
+django__django-12965	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1427s	cost=0.013303
+django__django-13012	RESOLVED	RESOLVED	command+repro	y	0	kept: the repair (check 0, judge PASS; t	0	wf=0	299s	cost=0.016163
+django__django-13023	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	83s	cost=0.006560
+django__django-13028	RESOLVED	RESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	201s	cost=0.017849
+django__django-13033	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	831s	cost=0.049748
+django__django-13089	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	197s	cost=0.017326
+django__django-13109	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	158s	cost=0.009148
+django__django-13112	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1724s	cost=0.061035
+django__django-13121	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1886s	cost=0.124936
+django__django-13128	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	318s	cost=0.021468
+django__django-13158	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	204s	cost=0.018071
+django__django-13195	UNRESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge PA	0	wf=0	249s	cost=0.016407
+django__django-13212	UNRESOLVED	UNRESOLVED	judge	n	0	kept: the direct attempt, untouched		wf=2	1411s	cost=0.011141
+django__django-13279	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	252s	cost=0.019820
+django__django-13297	UNRESOLVED	UNRESOLVED	judge	n	1	kept: the team's work (check none, judge		wf=0	4781s	cost=0.072606
+django__django-13315	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	1336s	cost=0.039851
+django__django-13343	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	116s	cost=0.008355
+django__django-13344	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	2520s	cost=0.128426
+django__django-13346	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	171s	cost=0.016573
+django__django-13363	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	192s	cost=0.010476
+django__django-13401	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	378s	cost=0.028408
+django__django-13406	RESOLVED	RESOLVED	judge	n	0	kept: the direct attempt, untouched		wf=0	2503s	cost=0.012522
+django__django-13410	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	150s	cost=0.007265
+django__django-13417	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	117s	cost=0.007337
+django__django-13449	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1019s	cost=0.079115
+django__django-13512	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	155s	cost=0.008434
+django__django-13513	UNRESOLVED	UNRESOLVED	command	n	1	kept: the team's work (check 0, judge no		wf=0	3857s	cost=0.248698
+django__django-13516	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	273s	cost=0.013016
+django__django-13551	UNRESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge PA	0	wf=0	291s	cost=0.017104
+django__django-13568	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	333s	cost=0.017082
+django__django-13569	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	189s	cost=0.011887
+django__django-13590	RESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge PA	0	wf=0	350s	cost=0.021820
+django__django-13658	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	273s	cost=0.012541
+django__django-13670	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	74s	cost=0.004388
+django__django-13741	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	62s	cost=0.003362
+django__django-13786	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	107s	cost=0.007310
+django__django-13794	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	180s	cost=0.013326
+django__django-13807	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1471s	cost=0.019603
+django__django-13809	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	208s	cost=0.006238
+django__django-13810	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	282s	cost=0.015758
+django__django-13820	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	192s	cost=0.016772
+django__django-13821	RESOLVED	RESOLVED	command	n	0	put back: the direct attempt, which pass		wf=0	490s	cost=0.028474
+django__django-13837	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	256s	cost=0.021210
+django__django-13925	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	453s	cost=0.035015
+django__django-13933	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	164s	cost=0.012004
+django__django-13964	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	210s	cost=0.016805
+django__django-14007	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	373s	cost=0.026578
+django__django-14011	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	433s	cost=0.039891
+django__django-14017	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	477s	cost=0.032590
+django__django-14034	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	255s	cost=0.019340
+django__django-14053	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	312s	cost=0.023138
+django__django-14089	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	33s	cost=0.001960
+django__django-14122	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	402s	cost=0.038247
+django__django-14140	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	116s	cost=0.004733
+django__django-14155	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	209s	cost=0.016209
+django__django-14170	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	216s	cost=0.018398
+django__django-14238	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	309s	cost=0.020380
+django__django-14311	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	297s	cost=0.021388
+django__django-14315	UNRESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge PA	0	wf=0	258s	cost=0.019249
+django__django-14349	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	294s	cost=0.017207
+django__django-14373	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	72s	cost=0.004200
+django__django-14376	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the repair (check 0, judge PASS; t	0	wf=0	195s	cost=0.012747
+django__django-14404	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	231s	cost=0.015495
+django__django-14434	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	185s	cost=0.013106
+django__django-14493	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	172s	cost=0.010419
+django__django-14500	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	399s	cost=0.023163
+django__django-14534	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	219s	cost=0.015139
+django__django-14539	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	84s	cost=0.004602
+django__django-14559	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	71s	cost=0.004111
+django__django-14580	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	278s	cost=0.018052
+django__django-14608	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	141s	cost=0.010927
+django__django-14631	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	142s	cost=0.010223
+django__django-14672	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	191s	cost=0.013615
+django__django-14725	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	153s	cost=0.013762
+django__django-14752	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	55s	cost=0.004726
+django__django-14771	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	162s	cost=0.008718
+django__django-14787	RESOLVED	RESOLVED	judge	n	0	put back: the direct attempt, which pass		wf=2	1427s	cost=0.019195
+django__django-14792	UNRESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge no	0	wf=0	2643s	cost=0.065511
+django__django-14999	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1456s	cost=0.016964
+django__django-15103	RESOLVED	RESOLVED	command	n	0	kept: the direct attempt, untouched		wf=0	87s	cost=0.004850
+django__django-15128	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1907s	cost=0.126378
+django__django-15161	RESOLVED	RESOLVED	command+repro	y	0	put back: the direct attempt, which pass	0	wf=0	1766s	cost=0.043295
+django__django-15268	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	212s	cost=0.017149
+django__django-15277	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	95s	cost=0.004581
+django__django-15368	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	131s	cost=0.006921
+django__django-15503	RESOLVED	RESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	1439s	cost=0.060764
+django__django-15629	UNRESOLVED	UNRESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	3701s	cost=0.165488
+matplotlib__matplotlib-24627	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1658s	cost=0.045389
+matplotlib__matplotlib-25332	RESOLVED	RESOLVED	judge	n	0	kept: the direct attempt, untouched		wf=2	2859s	cost=0.017479
+pylint-dev__pylint-7080	UNRESOLVED	UNRESOLVED	command	y	0	kept: the direct attempt, untouched		wf=0	2922s	cost=0.089875
+pytest-dev__pytest-6197	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	1472s	cost=0.094332
+sphinx-doc__sphinx-7440	RESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge no	0	wf=0	585s	cost=0.050201
+sphinx-doc__sphinx-8056	UNRESOLVED	UNRESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	732s	cost=0.058890
+sphinx-doc__sphinx-9461	UNRESOLVED	UNRESOLVED	command+repro	y	1	kept: the team's work (check 0, judge no	0	wf=0	2192s	cost=0.084225
+sympy__sympy-11618	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	208s	cost=0.009834
+sympy__sympy-12419	RESOLVED	RESOLVED	repro	y	0	kept: the direct attempt, untouched	0	wf=0	1670s	cost=0.084622
+sympy__sympy-22456	RESOLVED	RESOLVED	command+repro	y	0	kept: the direct attempt, untouched	0	wf=0	874s	cost=0.051462
+sympy__sympy-24562	RESOLVED	RESOLVED	judge	n	0	kept: the direct attempt, untouched		wf=0	2546s	cost=0.010836

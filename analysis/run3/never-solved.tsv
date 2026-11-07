@@ -1,0 +1,83 @@
+instance	class	what the hidden test checks	why our patch failed
+astropy__astropy-13033	PARTLY	hidden test pins the exact message string and keeps the single-column messages	chose its own wording and changed the single-column message
+astropy__astropy-13398	UNSPECIFIED	new ITRS location attribute	-
+astropy__astropy-13977	PARTLY	also duck-typed out= arrays	only inputs wrapped
+astropy__astropy-14369	PARTLY	also rejects km/s.Mpc-1	precedence made . bind tighter
+astropy__astropy-14598	SPECIFIED	round-trip of long strings with '' across CONTINUE cards, the general form of the issue's examples	incomplete: left the unanchored _strg_comment_RE, long values still mangled
+django__django-10554	SPECIFIED	union ordered by an unselected column, the general form	no patch produced
+django__django-10999	UNSPECIFIED	leading sign applies to every component	-
+django__django-11087	PARTLY	exact SELECT, all fields with signal receivers	selected the wrong fields
+django__django-11141	SPECIFIED	a migrations dir without __init__.py containing 0001_initial is loaded	broke the existing test_load_empty_dir by rewriting it
+django__django-11477	PARTLY	resolver-level kwargs contract	patched the symptom in translate_url
+django__django-11734	SPECIFIED	OuterRef in exclude on an m2m relation lookup: the general form	fixed the example path only
+django__django-11749	SPECIFIED	call_command with a required mutually exclusive group	logic right; created the same new file as the hidden test patch, collision
+django__django-11820	PARTLY	also requires E015 for a lookup past a non-relation field	fixed only the pk alias
+django__django-11885	SPECIFIED	2 queries via OR-combined fast deletes	broke the batching tests
+django__django-13195	PARTLY	also secure for samesite none and sessions middleware	only added the kwarg, missed the issue's own messages caller
+django__django-13212	PARTLY	also DecimalField NaN and FileExtensionValidator	incomplete coverage
+django__django-13513	UNSPECIFIED	tests a different bug (context with no traceback)	-
+django__django-13837	SPECIFIED	-m package child arguments	code right; rewrote overlapping tests, possible test-patch conflict
+django__django-14034	UNSPECIFIED	HTML required attribute per subwidget	-
+django__django-14155	UNSPECIFIED	repr format change	-
+django__django-14170	UNSPECIFIED	issue says drop BETWEEN for iso_year; tests keep BETWEEN with correct bounds	-
+django__django-14311	SPECIFIED	dotted non-package module	code right; edited inside the hidden hunk context, possible conflict
+django__django-14315	PARTLY	env=None for {} too	passes merged copy
+django__django-14376	PARTLY	dbshell keeps deprecated db/passwd	replaced instead of fell back
+django__django-15098	PARTLY	also pins tags outside the grammar the issue quotes (i-mingo, de-1996)	strict RFC 5646 regex rejects i-mingo
+django__django-15127	PARTLY	base.LEVEL_TAGS constant updated	removed the constant
+django__django-15252	UNSPECIFIED	migrate(plan=[]) makes no queries	-
+django__django-15563	SPECIFIED	grandparent through child, the general form	direct parents only
+django__django-15695	UNSPECIFIED	issue says backward restores the name; test keeps backward a no-op	-
+django__django-15732	SPECIFIED	unique_together on a unique=True field, the title's case	fixed the description's pk case only
+django__django-16256	SPECIFIED	also the generic-relation related manager	missed GenericRelatedObjectManager
+django__django-16263	PARTLY	unreferenced aggregate still forces a subquery	removed it
+django__django-16502	PARTLY	also requires no Content-Length and no Connection: close in HEAD	sets Content-Length: 0
+django__django-16631	PARTLY	rewrites the stored hash	did not store the hash
+django__django-16667	PARTLY	pins "0-0-0"	returns a pseudo-ISO string
+django__django-16877	SPECIFIED	escapeseq like escape: conditional_escape	used escape; also created the hidden test's file, collision
+matplotlib__matplotlib-23476	PARTLY	pins that the unpickled dpi is the unscaled original	another valid approach keeps the scaled dpi
+matplotlib__matplotlib-25479	PARTLY	__eq__ ignores name	kept name comparison
+matplotlib__matplotlib-25960	SPECIFIED	subfigure bboxes per the docstring definition	rewrote transform, broke 4 tests
+matplotlib__matplotlib-26208	PARTLY	twin shares units	patched the symptom
+matplotlib__matplotlib-26466	PARTLY	also requires OffsetFrom to copy ref_coord	copied only xy
+mwaskom__seaborn-3069	PARTLY	user limit kept	inverted unconditionally
+mwaskom__seaborn-3187	PARTLY	full value in labels	fixed one of the two paths the issue names
+psf__requests-1724	SPECIFIED	unicode method with files	F2P pass; broke 3 existing tests
+psf__requests-1766	SPECIFIED	qop="auth" quoted	FAIL_TO_PASS pass; broken PASS_TO_PASS look environmental
+psf__requests-1921	SPECIFIED	None header left out	core passes; rest environmental
+psf__requests-2317	SPECIFIED	request(b'GET') works	F2P main case passes; rest looks environmental
+pydata__xarray-3993	PARTLY	FutureWarning	used DeprecationWarning
+pydata__xarray-6938	PARTLY	pins the copy in IndexVariable.to_index_variable	wrong place: guard in Dataset.swap_dims
+pydata__xarray-6992	UNSPECIFIED	reset_index redesign	-
+pydata__xarray-7229	PARTLY	edge cases: scalar x, Dataset y	leaves cond's attrs
+pylint-dev__pylint-4551	UNSPECIFIED	new API	-
+pylint-dev__pylint-4604	PARTLY	test imports a new constant IS_PYPY	no IS_PYPY: whole test module fails at import
+pylint-dev__pylint-4661	UNSPECIFIED	cache dir, issue asks data dir	-
+pylint-dev__pylint-4970	PARTLY	symilar prints nothing at all	still prints TOTAL
+pylint-dev__pylint-7080	PARTLY	./ prefix normalization	never normalized
+pylint-dev__pylint-8898	PARTLY	only braces protect commas, parentheses do not	also tracks () and [] depth
+pytest-dev__pytest-5840	UNSPECIFIED	internal dict keyed by resolve()	-
+scikit-learn__scikit-learn-25747	PARTLY	same-length output keeps its own index	only on length mismatch
+sphinx-doc__sphinx-10614	PARTLY	external URLs keep no ../	patch did not apply
+sphinx-doc__sphinx-11510	PARTLY	docname, start-line slicing, not for literal, nested includes	no patch produced
+sphinx-doc__sphinx-7462	PARTLY	second unparse function	fixed one of two
+sphinx-doc__sphinx-7590	PARTLY	mangled ID format and suffix split	invented ID scheme
+sphinx-doc__sphinx-7748	PARTLY	backslash continuation	not handled
+sphinx-doc__sphinx-8056	PARTLY	split only when napoleon_use_param=True	split unconditionally
+sphinx-doc__sphinx-8595	SPECIFIED	__all__ = [] documents no members	code identical to reference; created the hidden test's new file, collision
+sphinx-doc__sphinx-8638	SPECIFIED	var field name not linked	kept the xref, scoped it
+sphinx-doc__sphinx-9229	PARTLY	plain class alias path	no patch
+sphinx-doc__sphinx-9461	PARTLY	pins the prefix "class property "	used "classmethod property"
+sphinx-doc__sphinx-9602	PARTLY	plain Text nodes	other node types
+sympy__sympy-13798	PARTLY	whitespace symbols fall back to cdot between numbers	no fallback
+sympy__sympy-13852	PARTLY	polylog(2, 2) closed form	example only
+sympy__sympy-15017	PARTLY	also rank0[0] == x and shape (0,) len 0	raised on integer indexing of rank 0
+sympy__sympy-16597	PARTLY	rational etc imply finite	integer only
+sympy__sympy-18199	UNSPECIFIED	composite moduli	-
+sympy__sympy-18763	PARTLY	always wrap Subs	by precedence
+sympy__sympy-20428	PARTLY	Poly(expr) itself equals zero: EX zero detection	wrong place: stripped in clear_denoms
+sympy__sympy-20438	PARTLY	Set Eq via is_subset	guarded one call
+sympy__sympy-20916	PARTLY	Unicode digits as subscripts	kept [0-9]
+sympy__sympy-21596	PARTLY	more imageset cases	example only
+sympy__sympy-21930	PARTLY	also pins AntiSymmetricTensor latex	wrapped only Bd/Fd
+sympy__sympy-22080	PARTLY	exact printer strings	always parenthesized

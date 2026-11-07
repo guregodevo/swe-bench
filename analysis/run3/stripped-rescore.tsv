@@ -1,0 +1,11 @@
+arm	instance
+team	django__django-11749
+team	django__django-13837
+team	django__django-14311
+team	sphinx-doc__sphinx-8269
+team	sphinx-doc__sphinx-8595
+single	django__django-11749
+single	django__django-13837
+single	django__django-14311
+single	sphinx-doc__sphinx-8595
+single	astropy__astropy-7336
