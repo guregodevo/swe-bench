@@ -105,5 +105,5 @@ PY
 }
 export -f one spent_total; export O M
 if [ -n "${2:-}" ]; then cat "$2"; else python3 -c "import json; [print(r['instance_id']) for r in json.load(open('$HOME/verified.json'))]"; fi \
-  | while read id; do for v in ${ARMS:-single team}; do echo "$id $v"; done; done | xargs -P $((K*2)) -L 1 bash -c 'one "$0" "$1"'
+  | while read id; do for v in ${ARMS:-single team}; do echo "$id $v"; done; done | xargs -P $((K * $(echo ${ARMS:-single team} | wc -w))) -L 1 bash -c 'one "$0" "$1"'
 touch $O/run-finished   # the list (all of Verified, or a shard) is done
