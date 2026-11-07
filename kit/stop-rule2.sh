@@ -27,7 +27,8 @@ for l in open(f"{O}/results.tsv") if os.path.exists(f"{O}/results.tsv") else []:
     f = l.rstrip("\n").split("\t")
     if len(f) >= 3 and f[2] == "docker-failed":
         print(f"ALERT (kit): {f[0]} {f[1]} docker-failed after three starts")
-    if len(f) >= 3 and f[1] == "team" and f[2].startswith("wf="):
+    # A run the kit itself killed (a restart: wf=137, 143) or could not exec (125 to 127) did not finish: not a result.
+    if len(f) >= 3 and f[1] == "team" and f[2].startswith("wf=") and f[2][3:].isdigit() and int(f[2][3:]) < 125:
         ran.append(f[0])
 # Every finished team run reached keep (its folder has keep.txt).
 repros = 0
