@@ -39,7 +39,7 @@ one() { # instance variant
   # tries again, as long as it takes (a kit fault that spent a machine's pulls in minutes stopped phase A, 2026-11-07).
   while :; do
     if ! flock "$lock" docker pull -q "$img" >> $O/logs/$id-$v.docker 2>&1; then
-      if tail -15 $O/logs/$id-$v.docker | grep -qi "rate limit"; then
+      if tail -15 $O/logs/$id-$v.docker | grep -qiE "rate limit|too ?many ?requests|: 429"; then
         echo "$(date -u +%FT%TZ) $id $v: Docker Hub's pull rate limit; waiting 10 min" >> $O/pulls.log; sleep 600; continue
       fi
       n=$((n + 1)); [ $n -ge 3 ] && break; sleep $((n * 20)); continue
@@ -51,7 +51,9 @@ one() { # instance variant
     docker rm -f "$c" >/dev/null 2>&1; docker rmi -f "$img" >/dev/null 2>&1
     n=$((n + 1)); [ $n -ge 3 ] && break; sleep $((n * 20))
   done
-  if [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" != true ]; then printf '%s\t%s\tdocker-failed\n' "$id" "$v" >> $O/results.tsv; return; fi
+  # A container that never started is no result: the id keeps no row, so the next start of the runner takes it
+  # again (a docker-failed row once stopped all four machines for a pull Docker Hub refused, 2026-11-07).
+  if [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" != true ]; then echo "$(date -u +%FT%TZ) $id $v: the container never started after three tries ($O/logs/$id-$v.docker)" >> $O/docker-failed.log; return; fi
   # Only the problem statement goes in: never the patch, the tests or the hints.
   python3 -c "import json; print([x for x in json.load(open('$HOME/verified.json')) if x['instance_id']=='$id'][0]['problem_statement'])" | docker exec -i "$c" sh -c 'cat > /tmp/prompt.txt'
   local t0=$(date +%s)

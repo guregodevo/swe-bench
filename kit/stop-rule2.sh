@@ -4,7 +4,7 @@
 # the fix the run starts again from the first instance, so every published run is one pass on one version (pass@1).
 # The separate single run is another sample of the same model: it shows the spread, it does not stop the run.
 # A kit fault stops the run too, as its own alert: a score the harness could not give (ERROR) or a run whose
-# container never started (docker-failed). Run 1 (2026-11-06) was stopped by an ERROR counted as team failing.
+# container never started is no result and runs again later (docker-failed.log). Run 1 (2026-11-06) was stopped by an ERROR counted as team failing.
 # Partial results not as expected stop it too (the maintainer, 2026-11-07, "fail fast if partial results are not
 # as expected"): a team run that ended without keep.txt (the run did not reach keep and verify, #151); twenty
 # team runs and not one reproduction written (#150); and, from twenty team scores on, this machine losing to the
@@ -25,8 +25,6 @@ for (i, var), s in sorted(v.items()):
 ran = []
 for l in open(f"{O}/results.tsv") if os.path.exists(f"{O}/results.tsv") else []:
     f = l.rstrip("\n").split("\t")
-    if len(f) >= 3 and f[2] == "docker-failed":
-        print(f"ALERT (kit): {f[0]} {f[1]} docker-failed after three starts")
     # A run the kit itself killed (a restart: wf=137, 143) or could not exec (125 to 127) did not finish: not a result.
     if len(f) >= 3 and f[1] == "team" and f[2].startswith("wf=") and f[2][3:].isdigit() and int(f[2][3:]) < 125:
         ran.append(f[0])
