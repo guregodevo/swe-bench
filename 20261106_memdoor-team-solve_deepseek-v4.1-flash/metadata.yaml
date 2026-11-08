@@ -4,6 +4,9 @@ info:
   report: https://github.com/guregodevo/swe-bench
   authors: guregodevo
   logo: https://memdoor.ai/memdoor-logo.png
+  resolved: 80.0
+  commit: d98f2db
+  memdoor_version: 1.798.0
 tags:
   checked: false
   model:
@@ -18,3 +21,7 @@ tags:
   agent_org: Memdoor
   model_display: DeepSeek V4.1 Flash
   model_org: DeepSeek
+assets:
+  repo: https://github.com/guregodevo/swe-bench
+  logs: https://github.com/guregodevo/swe-bench/tree/main/20261106_memdoor-team-solve_deepseek-v4.1-flash/logs
+  trajs: https://github.com/guregodevo/swe-bench/tree/main/20261106_memdoor-team-solve_deepseek-v4.1-flash/trajs
