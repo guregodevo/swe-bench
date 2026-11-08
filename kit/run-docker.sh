@@ -58,6 +58,9 @@ one() { # instance variant
   python3 -c "import json; print([x for x in json.load(open('$HOME/verified.json')) if x['instance_id']=='$id'][0]['problem_statement'])" | docker exec -i "$c" sh -c 'cat > /tmp/prompt.txt'
   local t0=$(date +%s)
   docker exec -i "$c" bash -c '
+    # The maintainer own run: memdoor v1.808.0 and later mark the version check of this gateway and this workflow
+    # run ?me=1 (memdoor#185), so the run is not a visit. An older binary ignores the variable.
+    export MEMDOOR_OWNER=1
     cd /testbed; git config --global --add safe.directory /testbed; git rev-parse HEAD > /tmp/base
     mkdir -p .memdoor/workflows; cp -R /kit/workflows/team-solve /kit/workflows/single .memdoor/workflows/
     /kit/memdoor gateway --port 18797 > /tmp/gateway.log 2>&1 &
