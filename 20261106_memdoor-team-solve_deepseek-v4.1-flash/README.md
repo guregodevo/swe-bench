@@ -14,4 +14,4 @@ The team-solve workflow: a direct attempt checked with the project's own tests; 
 Resolution was re-derived from each instance's `test_output.txt` by
 `swebench submit package`, not taken from the run's own report;
 `swebench submit verify` passes. How it was run, what was run again and
-why: [../README.md](../README.md).
+why: [../runs/2026-11-06.md](../runs/2026-11-06.md).
