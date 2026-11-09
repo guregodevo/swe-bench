@@ -1,101 +1,101 @@
-problem	result	seconds
-arc196_a	arc196_a: 43/43 tests passed (all tests)	2608
-abc400_e	abc400_e: 5/5 tests passed (all tests)	195
-arc196_d	arc196_d: 42/42 tests passed (all tests)	3417
-arc196_b	arc196_b: 2/2 tests passed (all tests)	3780
-3717	3717: 42/42 tests passed (all tests)	192
-3765	3765: 42/42 tests passed (all tests)	288
-3777	3777: 43/43 tests passed (all tests)	4666
-3744	3744: 42/42 tests passed (all tests)	1004
-arc195_e	arc195_e: 43/43 tests passed (all tests)	1235
-abc398_d	abc398_d: 43/43 tests passed (all tests)	1238
-abc398_f	abc398_f: 43/43 tests passed (all tests)	1767
-abc399_e	abc399_e: 32/44 tests passed (all tests)	2548
-abc399_f	abc399_f: 43/43 tests passed (all tests)	1797
-arc195_b	arc195_b: 43/43 tests passed (all tests)	1905
-arc196_c	no solution.py	7202
-3801	3801: 42/42 tests passed (all tests)	1656
-3784	3784: 42/42 tests passed (all tests)	1818
-abc397_d	abc397_d: 41/43 tests passed (all tests)	1325
-abc400_g	abc400_g: 6/6 tests passed (all tests)	5690
-abc397_f	abc397_f: 42/42 tests passed (all tests)	2061
-arc195_c	arc195_c: 5/5 tests passed (all tests)	3873
-abc398_g	abc398_g: 18/43 tests passed (all tests)	2908
-abc397_e	abc397_e: 42/42 tests passed (all tests)	1129
-arc195_d	arc195_d: 2/2 tests passed (all tests)	4314
-abc397_g	abc397_g: 43/43 tests passed (all tests)	2412
-arc194_c	arc194_c: 43/43 tests passed (all tests)	1776
-arc194_b	arc194_b: 43/43 tests passed (all tests)	1824
-arc194_d	arc194_d: 42/42 tests passed (all tests)	1076
-3789	3789: 42/42 tests passed (all tests)	1103
-abc396_g	abc396_g: 36/36 tests passed (all tests)	1028
-abc396_f	abc396_f: 43/43 tests passed (all tests)	848
-abc396_e	abc396_e: 4/43 tests passed (all tests)	845
-3783	3783: 43/43 tests passed (all tests)	426
-abc395_f	abc395_f: 44/44 tests passed (all tests)	679
-3770	3770: 43/43 tests passed (all tests)	1042
-arc193_a	arc193_a: 42/42 tests passed (all tests)	1881
-arc193_b	arc193_b: 42/42 tests passed (all tests)	2251
-abc395_e	abc395_e: 44/44 tests passed (all tests)	2382
-3781	3781: 43/43 tests passed (all tests)	2212
-abc394_f	abc394_f: 43/43 tests passed (all tests)	1980
-3733	3733: 44/44 tests passed (all tests)	940
-abc393_f	abc393_f: 42/42 tests passed (all tests)	775
-3692	timeout occured: alarm went off	977
-abc393_d	abc393_d: 43/43 tests passed (all tests)	258
-abc393_e	abc393_e: 43/43 tests passed (all tests)	904
-abc394_g	abc394_g: 41/41 tests passed (all tests)	2653
-arc192_b	arc192_b: 20/43 tests passed (all tests)	925
-3696	3696: 43/43 tests passed (all tests)	835
-arc192_e	arc192_e: 43/43 tests passed (all tests)	1140
-arc192_d	arc192_d: 43/43 tests passed (all tests)	1004
-abc394_e	abc394_e: 42/42 tests passed (all tests)	2540
-arc194_e	arc194_e: 42/42 tests passed (all tests)	6095
-abc392_f	abc392_f: 16/42 tests passed (all tests)	856
-3697	3697: 43/43 tests passed (all tests)	1103
-3762	3762: 42/42 tests passed (all tests)	2125
-abc391_f	abc391_f: 43/43 tests passed (all tests)	1118
-abc391_e	abc391_e: 42/42 tests passed (all tests)	808
-abc391_g	abc391_g: 43/43 tests passed (all tests)	598
-3701	3701: 43/43 tests passed (all tests)	1346
-abc390_e	abc390_e: 42/42 tests passed (all tests)	1051
-arc191_c	arc191_c: 2/2 tests passed (all tests)	1269
-arc193_d	arc193_d: 2/2 tests passed (all tests)	6795
-abc390_g	abc390_g: 43/43 tests passed (all tests)	1205
-abc390_f	abc390_f: 43/43 tests passed (all tests)	1178
-3725	3725: 42/42 tests passed (all tests)	1169
-abc392_g	abc392_g: 43/43 tests passed (all tests)	2789
-3687	3687: 42/42 tests passed (all tests)	394
-3739	3739: 42/42 tests passed (all tests)	1043
-abc389_e	abc389_e: 42/42 tests passed (all tests)	1238
-abc389_f	abc389_f: 43/43 tests passed (all tests)	1262
-abc389_g	abc389_g: 43/43 tests passed (all tests)	1530
-abc388_e	abc388_e: 43/43 tests passed (all tests)	1761
-abc388_g	abc388_g: 42/42 tests passed (all tests)	2140
-3674	3674: 42/42 tests passed (all tests)	2595
-arc191_d	arc191_d: 43/43 tests passed (all tests)	5082
-arc190_d	arc190_d: 43/43 tests passed (all tests)	3532
-abc388_f	abc388_f: 43/43 tests passed (all tests)	2910
-3688	3688: 42/42 tests passed (all tests)	913
-3682	3682: 43/43 tests passed (all tests)	776
-abc387_f	abc387_f: 43/43 tests passed (all tests)	887
-abc386_d	abc386_d: 44/44 tests passed (all tests)	481
-abc386_e	abc386_e: 42/42 tests passed (all tests)	1085
-3690	3690: 43/43 tests passed (all tests)	486
-3700	3700: 43/43 tests passed (all tests)	676
-abc386_f	abc386_f: 43/43 tests passed (all tests)	992
-arc190_a	arc190_a: 6/44 tests passed (all tests)	6121
-abc385_d	abc385_d: 42/42 tests passed (all tests)	1458
-abc385_f	abc385_f: 44/44 tests passed (all tests)	1810
-abc385_e	abc385_e: 43/43 tests passed (all tests)	1605
-3562	3562: 42/42 tests passed (all tests)	3635
-3638	3638: 43/43 tests passed (all tests)	1828
-abc384_e	abc384_e: 43/43 tests passed (all tests)	1392
-arc190_c	arc190_c: 42/42 tests passed (all tests)	7587
-abc384_f	abc384_f: 43/43 tests passed (all tests)	1455
-arc189_c	arc189_c: 44/44 tests passed (all tests)	1966
-arc189_b	arc189_b: 42/42 tests passed (all tests)	1521
-3680	3680: 42/42 tests passed (all tests)	1572
-abc383_e	abc383_e: 42/42 tests passed (all tests)	929
-arc189_d	arc189_d: 42/42 tests passed (all tests)	2092
-abc384_g	abc384_g: 32/32 tests passed (all tests)	8551
+problem	result	seconds	all tests
+arc196_a	arc196_a: 43/43 tests passed (all tests)	2608	yes
+abc400_e	abc400_e: 5/5 tests passed (all tests)	195	yes
+arc196_d	arc196_d: 42/42 tests passed (all tests)	3417	yes
+arc196_b	arc196_b: 2/2 tests passed (all tests)	3780	yes
+3717	3717: 42/42 tests passed (all tests)	192	yes
+3765	3765: 42/42 tests passed (all tests)	288	yes
+3777	3777: 43/43 tests passed (all tests)	4666	yes
+3744	3744: 42/42 tests passed (all tests)	1004	yes
+arc195_e	arc195_e: 43/43 tests passed (all tests)	1235	yes
+abc398_d	abc398_d: 43/43 tests passed (all tests)	1238	yes
+abc398_f	abc398_f: 43/43 tests passed (all tests)	1767	yes
+abc399_e	abc399_e: 32/44 tests passed (all tests)	2548	no
+abc399_f	abc399_f: 43/43 tests passed (all tests)	1797	yes
+arc195_b	arc195_b: 43/43 tests passed (all tests)	1905	yes
+arc196_c	no solution.py	7202	no
+3801	3801: 42/42 tests passed (all tests)	1656	yes
+3784	3784: 42/42 tests passed (all tests)	1818	yes
+abc397_d	abc397_d: 41/43 tests passed (all tests)	1325	no
+abc400_g	abc400_g: 6/6 tests passed (all tests)	5690	yes
+abc397_f	abc397_f: 42/42 tests passed (all tests)	2061	yes
+arc195_c	arc195_c: 5/5 tests passed (all tests)	3873	yes
+abc398_g	abc398_g: 18/43 tests passed (all tests)	2908	no
+abc397_e	abc397_e: 42/42 tests passed (all tests)	1129	yes
+arc195_d	arc195_d: 2/2 tests passed (all tests)	4314	yes
+abc397_g	abc397_g: 43/43 tests passed (all tests)	2412	yes
+arc194_c	arc194_c: 43/43 tests passed (all tests)	1776	yes
+arc194_b	arc194_b: 43/43 tests passed (all tests)	1824	yes
+arc194_d	arc194_d: 42/42 tests passed (all tests)	1076	yes
+3789	3789: 42/42 tests passed (all tests)	1103	yes
+abc396_g	abc396_g: 36/36 tests passed (all tests)	1028	yes
+abc396_f	abc396_f: 43/43 tests passed (all tests)	848	yes
+abc396_e	abc396_e: 4/43 tests passed (all tests)	845	no
+3783	3783: 43/43 tests passed (all tests)	426	yes
+abc395_f	abc395_f: 44/44 tests passed (all tests)	679	yes
+3770	3770: 43/43 tests passed (all tests)	1042	yes
+arc193_a	arc193_a: 42/42 tests passed (all tests)	1881	yes
+arc193_b	arc193_b: 42/42 tests passed (all tests)	2251	yes
+abc395_e	abc395_e: 44/44 tests passed (all tests)	2382	yes
+3781	3781: 43/43 tests passed (all tests)	2212	yes
+abc394_f	abc394_f: 43/43 tests passed (all tests)	1980	yes
+3733	3733: 44/44 tests passed (all tests)	940	yes
+abc393_f	abc393_f: 42/42 tests passed (all tests)	775	yes
+3692	timeout occured: alarm went off	977	no
+abc393_d	abc393_d: 43/43 tests passed (all tests)	258	yes
+abc393_e	abc393_e: 43/43 tests passed (all tests)	904	yes
+abc394_g	abc394_g: 41/41 tests passed (all tests)	2653	yes
+arc192_b	arc192_b: 20/43 tests passed (all tests)	925	no
+3696	3696: 43/43 tests passed (all tests)	835	yes
+arc192_e	arc192_e: 43/43 tests passed (all tests)	1140	yes
+arc192_d	arc192_d: 43/43 tests passed (all tests)	1004	yes
+abc394_e	abc394_e: 42/42 tests passed (all tests)	2540	yes
+arc194_e	arc194_e: 42/42 tests passed (all tests)	6095	yes
+abc392_f	abc392_f: 16/42 tests passed (all tests)	856	no
+3697	3697: 43/43 tests passed (all tests)	1103	yes
+3762	3762: 42/42 tests passed (all tests)	2125	yes
+abc391_f	abc391_f: 43/43 tests passed (all tests)	1118	yes
+abc391_e	abc391_e: 42/42 tests passed (all tests)	808	yes
+abc391_g	abc391_g: 43/43 tests passed (all tests)	598	yes
+3701	3701: 43/43 tests passed (all tests)	1346	yes
+abc390_e	abc390_e: 42/42 tests passed (all tests)	1051	yes
+arc191_c	arc191_c: 2/2 tests passed (all tests)	1269	yes
+arc193_d	arc193_d: 2/2 tests passed (all tests)	6795	yes
+abc390_g	abc390_g: 43/43 tests passed (all tests)	1205	yes
+abc390_f	abc390_f: 43/43 tests passed (all tests)	1178	yes
+3725	3725: 42/42 tests passed (all tests)	1169	yes
+abc392_g	abc392_g: 43/43 tests passed (all tests)	2789	yes
+3687	3687: 42/42 tests passed (all tests)	394	yes
+3739	3739: 42/42 tests passed (all tests)	1043	yes
+abc389_e	abc389_e: 42/42 tests passed (all tests)	1238	yes
+abc389_f	abc389_f: 43/43 tests passed (all tests)	1262	yes
+abc389_g	abc389_g: 43/43 tests passed (all tests)	1530	yes
+abc388_e	abc388_e: 43/43 tests passed (all tests)	1761	yes
+abc388_g	abc388_g: 42/42 tests passed (all tests)	2140	yes
+3674	3674: 42/42 tests passed (all tests)	2595	yes
+arc191_d	arc191_d: 43/43 tests passed (all tests)	5082	yes
+arc190_d	arc190_d: 43/43 tests passed (all tests)	3532	yes
+abc388_f	abc388_f: 43/43 tests passed (all tests)	2910	yes
+3688	3688: 42/42 tests passed (all tests)	913	yes
+3682	3682: 43/43 tests passed (all tests)	776	yes
+abc387_f	abc387_f: 43/43 tests passed (all tests)	887	yes
+abc386_d	abc386_d: 44/44 tests passed (all tests)	481	yes
+abc386_e	abc386_e: 42/42 tests passed (all tests)	1085	yes
+3690	3690: 43/43 tests passed (all tests)	486	yes
+3700	3700: 43/43 tests passed (all tests)	676	yes
+abc386_f	abc386_f: 43/43 tests passed (all tests)	992	yes
+arc190_a	arc190_a: 6/44 tests passed (all tests)	6121	no
+abc385_d	abc385_d: 42/42 tests passed (all tests)	1458	yes
+abc385_f	abc385_f: 44/44 tests passed (all tests)	1810	yes
+abc385_e	abc385_e: 43/43 tests passed (all tests)	1605	yes
+3562	3562: 42/42 tests passed (all tests)	3635	yes
+3638	3638: 43/43 tests passed (all tests)	1828	yes
+abc384_e	abc384_e: 43/43 tests passed (all tests)	1392	yes
+arc190_c	arc190_c: 42/42 tests passed (all tests)	7587	yes
+abc384_f	abc384_f: 43/43 tests passed (all tests)	1455	yes
+arc189_c	arc189_c: 44/44 tests passed (all tests)	1966	yes
+arc189_b	arc189_b: 42/42 tests passed (all tests)	1521	yes
+3680	3680: 42/42 tests passed (all tests)	1572	yes
+abc383_e	abc383_e: 42/42 tests passed (all tests)	929	yes
+arc189_d	arc189_d: 42/42 tests passed (all tests)	2092	yes
+abc384_g	abc384_g: 32/32 tests passed (all tests)	8551	yes

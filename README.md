@@ -14,7 +14,7 @@
 | 2026-11-09 | team-solve-fanout | 1017 | 116, stopped | 92 (79.3%) | [analysis](analysis/fanout-2026-11-09.md) |
 
 Only the 2026-11-06 runs cover all 500. LiveCodeBench, GVS5H's 100 hardest:
-team-solve-fanout 98 of 100 ([analysis](analysis/fanout-2026-11-09.md#livecodebench-the-100-hardest)).
+team-solve-fanout 91 of 100 ([analysis](analysis/fanout-2026-11-09.md#livecodebench-the-100-hardest)).
 
 ## Analysis
 
