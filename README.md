@@ -23,7 +23,7 @@ For reference, Claude Fable 5, not run here:
 
 | benchmark | Fable 5 | $ / instance | source |
 |---|---|---|---|
-| SWE-bench Verified (500) | 95.0%, Anthropic's own agent harness | not published; our runs' tokens at Fable 5's list price ($10 / M in, $1 / M cached, $50 / M out) come to about 2 (single call) and 12 (team-solve-fanout), an estimate | Anthropic; [vals.ai](https://benchmarklist.com/benchmarks/vals_swebench/) lists 95.00% |
+| SWE-bench Verified (500) | 95.0%, mini-SWE-agent harness | 2.05 (722.57k tokens, 5m56s per instance) | [vals.ai](https://www.vals.ai/benchmarks/swebench), updated 2026-09-01 |
 | LiveCodeBench, GVS5H's 100 | 90.4%, single call, thinking on | 0.61 | GVS5H's paper |
 
 Only the 2026-11-06 runs cover all 500. LiveCodeBench, GVS5H's 100 hardest:
