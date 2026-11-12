@@ -6,13 +6,25 @@
 
 ## Results
 
-| date | workflow | model build | instances | resolved | report |
-|---|---|---|---|---|---|
-| 2026-11-06 | team-solve | 0910 | 500 | **400** (80.0%) | [run](runs/2026-11-06.md), [entry](20261106_memdoor-team-solve_deepseek-v4.1-flash/) |
-| 2026-11-06 | single call | 0910 | 500 | 388 (77.6%) | [run](runs/2026-11-06.md), [entry](20261106_memdoor_deepseek-v4.1-flash/) |
-| 2026-11-09 | team-solve-fanout | 0910 | 91, stopped | 74 (81.3%) | [analysis](analysis/fanout-2026-11-09.md) |
-| 2026-11-09 | team-solve-fanout | 1017 | 116, stopped | 92 (79.3%) | [analysis](analysis/fanout-2026-11-09.md) |
-| 2026-11-12 | team-solve-fanout, fixes found by the pass | 1017 | 100 | **81** (team-solve 79, single call 75 on the same 100) | [analysis](analysis/fanout-2026-11-12.md) |
+| date | workflow | model build | instances | resolved | $ / instance | report |
+|---|---|---|---|---|---|---|
+| 2026-11-06 | team-solve | 0910 | 500 | **400** (80.0%) | 0.022 | [run](runs/2026-11-06.md), [entry](20261106_memdoor-team-solve_deepseek-v4.1-flash/) |
+| 2026-11-06 | single call | 0910 | 500 | 388 (77.6%) | 0.012 | [run](runs/2026-11-06.md), [entry](20261106_memdoor_deepseek-v4.1-flash/) |
+| 2026-11-09 | team-solve-fanout | 0910 | 91, stopped | 74 (81.3%) | 0.050 | [analysis](analysis/fanout-2026-11-09.md) |
+| 2026-11-09 | team-solve-fanout | 1017 | 116, stopped | 92 (79.3%) | 0.065 | [analysis](analysis/fanout-2026-11-09.md) |
+| 2026-11-12 | team-solve-fanout, fixes found by the pass | 1017 | 100 | **81** (81%) | 0.125 | [analysis](analysis/fanout-2026-11-12.md) |
+
+$ / instance is OpenRouter's `cost_usd`, summed from each run's meter. On the 100
+instances of the 2026-11-12 pass: team-solve 79 and the single call 75 (0910 build),
+the 2026-11-09 fan-out 76 (1017 build). No single call or team-solve run on the 1017
+build yet.
+
+For reference, Claude Fable 5, not run here:
+
+| benchmark | Fable 5 | $ / instance | source |
+|---|---|---|---|
+| SWE-bench Verified (500) | 95.0%, mini-SWE-agent harness | 2.05 (722.57k tokens, 5m56s per instance) | [vals.ai](https://www.vals.ai/benchmarks/swebench), updated 2026-09-01 |
+| LiveCodeBench, GVS5H's 100 | 90.4%, single call, thinking on | 0.61 | GVS5H's paper |
 
 Only the 2026-11-06 runs cover all 500. LiveCodeBench, GVS5H's 100 hardest:
 team-solve-fanout 91 of 100 ([analysis](analysis/fanout-2026-11-09.md#livecodebench-the-100-hardest)).
