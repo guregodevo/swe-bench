@@ -12,6 +12,7 @@
 | 2026-11-06 | single call | 0910 | 500 | 388 (77.6%) | [run](runs/2026-11-06.md), [entry](20261106_memdoor_deepseek-v4.1-flash/) |
 | 2026-11-09 | team-solve-fanout | 0910 | 91, stopped | 74 (81.3%) | [analysis](analysis/fanout-2026-11-09.md) |
 | 2026-11-09 | team-solve-fanout | 1017 | 116, stopped | 92 (79.3%) | [analysis](analysis/fanout-2026-11-09.md) |
+| 2026-11-12 | team-solve-fanout, fixes found by the pass | 1017 | 100 | **81** (team-solve 79, single call 75 on the same 100) | [analysis](analysis/fanout-2026-11-12.md) |
 
 Only the 2026-11-06 runs cover all 500. LiveCodeBench, GVS5H's 100 hardest:
 team-solve-fanout 91 of 100 ([analysis](analysis/fanout-2026-11-09.md#livecodebench-the-100-hardest)).
@@ -26,6 +27,9 @@ team-solve-fanout 91 of 100 ([analysis](analysis/fanout-2026-11-09.md#livecodebe
   instances whose needed file no step touched.
 - [fanout-2026-11-09.md](analysis/fanout-2026-11-09.md): team-solve-fanout, two
   partial SWE-bench runs and LiveCodeBench.
+- [fanout-2026-11-12.md](analysis/fanout-2026-11-12.md): team-solve-fanout on
+  100 instances, run as a loop that stopped at each regression; how the fan-out
+  works and what improves the result.
 
 ## Files
 
