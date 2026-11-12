@@ -19,6 +19,13 @@ instances of the 2026-11-12 pass: team-solve 79 and the single call 75 (0910 bui
 the 2026-11-09 fan-out 76 (1017 build). No single call or team-solve run on the 1017
 build yet.
 
+For reference, Claude Fable 5, not run here:
+
+| benchmark | Fable 5 | $ / instance | source |
+|---|---|---|---|
+| SWE-bench Verified (500) | 95.0%, Anthropic's own agent harness | not published; our runs' tokens at Fable 5's list price ($10 / M in, $1 / M cached, $50 / M out) come to about 2 (single call) and 12 (team-solve-fanout), an estimate | Anthropic; [vals.ai](https://benchmarklist.com/benchmarks/vals_swebench/) lists 95.00% |
+| LiveCodeBench, GVS5H's 100 | 90.4%, single call, thinking on | 0.61 | GVS5H's paper |
+
 Only the 2026-11-06 runs cover all 500. LiveCodeBench, GVS5H's 100 hardest:
 team-solve-fanout 91 of 100 ([analysis](analysis/fanout-2026-11-09.md#livecodebench-the-100-hardest)).
 
